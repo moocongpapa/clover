@@ -25,9 +25,32 @@
   padding: 12px 16px;
   background: var(--accent-soft);
   border-radius: var(--radius-m);
-  margin-bottom: var(--space-4);
+  margin-bottom: 0;
   font-size: 15px;
   color: var(--ink);
+}
+
+.info-banner--warn {
+  background: #fff4e5;
+  color: #8a5a00;
+}
+
+.join-status-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: var(--space-4);
+}
+
+.join-status-row .info-banner {
+  width: 100%;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin: -4px 0 12px;
 }
 
 .invite-box {

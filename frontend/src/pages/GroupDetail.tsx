@@ -41,10 +41,20 @@ export default function GroupDetail() {
   const handleJoin = async () => {
     try {
       await api.joinGroup(group.id);
-      setMessage('가입 신청이 완료되었습니다. 운영진 승인을 기다려 주세요.');
+      setMessage('가입 신청이 완료되었습니다. 회장 승인을 기다려 주세요.');
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : '가입 실패');
+    }
+  };
+
+  const handleCancelJoin = async () => {
+    try {
+      await api.cancelJoinGroup(group.id);
+      setMessage('가입 신청을 취소했습니다.');
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '취소 실패');
     }
   };
 
@@ -95,7 +105,21 @@ export default function GroupDetail() {
       )}
 
       {membership?.status === 'PENDING' && (
-        <p className="info-banner">가입 승인 대기 중입니다.</p>
+        <div className="join-status-row">
+          <p className="info-banner">가입 승인 대기 중입니다. 회장이 확인할 때까지 기다려 주세요.</p>
+          <button type="button" className="btn-ghost" onClick={handleCancelJoin}>
+            신청 취소
+          </button>
+        </div>
+      )}
+
+      {membership?.status === 'REJECTED' && (
+        <div className="join-status-row">
+          <p className="info-banner info-banner--warn">가입이 거절되었습니다.</p>
+          <button type="button" className="btn-primary" onClick={handleJoin}>
+            다시 신청
+          </button>
+        </div>
       )}
 
       {isApproved && (
@@ -105,9 +129,10 @@ export default function GroupDetail() {
         </section>
       )}
 
-      {isOfficer && group.pendingRequests.length > 0 && (
+      {isPresident && group.pendingRequests.length > 0 && (
         <section className="section-block">
           <h2>가입 신청 ({group.pendingRequests.length})</h2>
+          <p className="section-desc">회장만 승인·거절할 수 있어요.</p>
           <ul className="member-list">
             {group.pendingRequests.map((m) => (
               <li key={m.id}>

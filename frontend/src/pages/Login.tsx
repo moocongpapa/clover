@@ -15,7 +15,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      navigate('/my-groups');
+      navigate('/');
     }
   }, [user, navigate]);
 
@@ -27,7 +27,7 @@ export default function Login() {
         .kakaoCallback(code)
         .then((res) => {
           loginWithToken(res.accessToken, res.user);
-          navigate('/my-groups');
+          navigate('/');
         })
         .catch((e) => setError(e.message))
         .finally(() => setLoading(false));
@@ -45,7 +45,7 @@ export default function Login() {
     setError('');
     try {
       await login(name.trim());
-      navigate('/my-groups');
+      navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : '로그인 실패');
     } finally {
@@ -57,7 +57,7 @@ export default function Login() {
     <div className="login-page">
       <div className="login-card">
         <h1>로그인</h1>
-        <p className="login-sub">모임표에 오신 것을 환영합니다</p>
+        <p className="login-sub">Clover에 오신 것을 환영해요</p>
 
         {kakaoUrl && (
           <a href={kakaoUrl} className="btn-kakao">

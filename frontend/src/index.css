@@ -54,16 +54,16 @@
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --dur-base: 200ms;
 
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
 
-  /* Mobile layout */
-  --page-padding: 16px;
-  --tab-bar-height: 56px;
-  --touch-min: 44px;
-  --btn-height: 52px;
-  --btn-height-lg: 56px;
+  /* Mobile layout — compact */
+  --page-padding: 12px;
+  --tab-bar-height: 48px;
+  --touch-min: 40px;
+  --btn-height: 40px;
+  --btn-height-lg: 44px;
 }
 
 *,
@@ -75,7 +75,7 @@
 body {
   margin: 0;
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   letter-spacing: -0.005em;
   background: var(--bg);
@@ -89,6 +89,34 @@ body {
   min-height: 100vh;
 }
 
+/* 카드형 링크 — 기본 링크 스타일 제거 */
+a.group-card,
+a.cal-list-item,
+a.event-item,
+a.cal-month-event {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.group-card h3,
+a.group-card p,
+a.group-card .group-meta {
+  color: inherit;
+}
+
+a.group-card h3 {
+  color: var(--ink);
+}
+
+a.group-card p {
+  color: var(--ink-muted);
+}
+
+a.group-card .group-meta {
+  color: var(--ink-tertiary);
+}
+
+/* 일반 텍스트 링크 */
 a {
   color: var(--accent);
   text-decoration: none;
@@ -98,7 +126,6 @@ a:hover {
   text-decoration: none;
 }
 
-/* 텍스트 링크만 밑줄 */
 .link-text {
   color: var(--accent);
   font-weight: 600;
@@ -141,7 +168,7 @@ h3 {
   border: none;
   border-radius: var(--radius-l);
   font-weight: 700;
-  font-size: 17px;
+  font-size: 15px;
   letter-spacing: -0.005em;
   text-decoration: none;
   transition: background var(--dur-base) var(--ease);
@@ -174,7 +201,7 @@ h3 {
   border: none;
   border-radius: var(--radius-l);
   font-weight: 700;
-  font-size: 17px;
+  font-size: 15px;
   text-decoration: none;
   transition: background var(--dur-base) var(--ease);
 }
@@ -216,7 +243,7 @@ h3 {
   min-height: var(--btn-height-lg);
   height: var(--btn-height-lg);
   padding: 0 24px;
-  font-size: 17px;
+  font-size: 15px;
   border-radius: var(--radius-xl);
 }
 
@@ -224,12 +251,12 @@ h3 {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: var(--space-4);
 }
 
 .page-header h1 {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0;
@@ -249,7 +276,7 @@ h3 {
   }
 
   .page-header h1 {
-    font-size: 28px;
+    font-size: 22px;
   }
 
   .page-header .btn-primary,

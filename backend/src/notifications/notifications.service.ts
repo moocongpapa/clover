@@ -4,6 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { MemberStatus, NotificationType } from '@prisma/client';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
+import { addDays, localDayStart } from '../common/utils/group.utils';
 
 type NotifyType = 'CREATED' | 'CHANGED' | 'CANCELLED' | 'REMINDER';
 
@@ -49,17 +50,15 @@ export class NotificationsService {
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async sendReminderNotifications() {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDate = new Date(
-      tomorrow.getFullYear(),
-      tomorrow.getMonth(),
-      tomorrow.getDate(),
-    );
+    const tomorrowStart = localDayStart(addDays(new Date(), 1));
+    const dayAfterTomorrow = addDays(tomorrowStart, 1);
 
     const events = await this.prisma.event.findMany({
       where: {
-        date: tomorrowDate,
+        date: {
+          gte: tomorrowStart,
+          lt: dayAfterTomorrow,
+        },
         status: 'ACTIVE',
       },
       include: {

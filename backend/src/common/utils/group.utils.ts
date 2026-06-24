@@ -25,3 +25,19 @@ export function eventStartAt(date: Date, startTime: string): Date {
   start.setHours(hours, minutes, 0, 0);
   return start;
 }
+
+/** YYYY-MM-DD → 로컬 자정 (타임존 불일치 방지) */
+export function parseEventDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+export function localDayStart(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}

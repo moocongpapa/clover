@@ -78,6 +78,25 @@ docker compose up -d
 
 자세한 요구사항은 [docs/PRD.md](docs/PRD.md)를 참고하세요.
 
+## E2E 테스트 (Playwright + Chrome)
+
+전체 플로우(모임 생성·회원 가입·일정·투표·마감·알림)를 Chrome 브라우저로 자동 검증합니다.
+
+```bash
+cd e2e
+npm install
+npx playwright install chromium
+
+# Chrome 창을 띄워 실행
+npm run test:headed
+
+# 헤드리스 실행
+npm test
+```
+
+테스트는 별도 SQLite DB(`backend/prisma/e2e.db`)를 사용합니다.  
+리마인더 알림은 `POST /notifications/dev/trigger-reminders` (개발 모드 전용)로 수동 트리거합니다.
+
 ## 카카오 연동
 
 `backend/.env`에 다음 값을 설정하세요.

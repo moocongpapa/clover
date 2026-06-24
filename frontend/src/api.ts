@@ -85,6 +85,8 @@ export const api = {
     request<Group>('/groups', { method: 'POST', body: JSON.stringify(data) }),
   joinGroup: (id: string) =>
     request('/groups/' + id + '/join', { method: 'POST' }),
+  cancelJoinGroup: (id: string) =>
+    request(`/groups/${id}/join/cancel`, { method: 'POST' }),
   joinByInvite: (code: string) => request(`/groups/join/${code}`),
   leaveGroup: (id: string) =>
     request(`/groups/${id}/leave`, { method: 'POST' }),
@@ -142,6 +144,7 @@ export interface Group {
   isPublic: boolean;
   inviteCode: string;
   _count?: { members: number };
+  myMembership?: { status: string; role: string } | null;
 }
 
 export interface MyGroup extends Group {

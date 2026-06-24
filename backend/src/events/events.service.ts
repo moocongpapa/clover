@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GroupsService } from '../groups/groups.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateEventDto, UpdateEventDto } from './dto/events.dto';
-import { isOfficer } from '../common/utils/group.utils';
+import { isOfficer, parseEventDate } from '../common/utils/group.utils';
 
 @Injectable()
 export class EventsService {
@@ -66,7 +66,7 @@ export class EventsService {
       data: {
         groupId,
         title: dto.title,
-        date: new Date(dto.date),
+        date: parseEventDate(dto.date),
         startTime: dto.startTime,
         location: dto.location,
         description: dto.description,
@@ -90,7 +90,7 @@ export class EventsService {
       where: { id: event.id },
       data: {
         title: dto.title,
-        date: new Date(dto.date),
+        date: parseEventDate(dto.date),
         startTime: dto.startTime,
         location: dto.location,
         description: dto.description,

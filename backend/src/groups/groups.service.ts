@@ -22,8 +22,8 @@ import {
 export class GroupsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listPublic(search?: string, category?: string) {
-    return this.prisma.group.findMany({
+  async listPublic(search?: string, category?: string, userId?: string) {
+    const groups = await this.prisma.group.findMany({
       where: {
         isPublic: true,
         ...(search ? { name: { contains: search } } : {}),
@@ -33,6 +33,25 @@ export class GroupsService {
         _count: { select: { members: { where: { status: MemberStatus.APPROVED } } } },
       },
       orderBy: { createdAt: 'desc' },
+    });
+
+    if (!userId) {
+      return groups.map((g) => ({ ...g, myMembership: null }));
+    }
+
+    const memberships = await this.prisma.groupMember.findMany({
+      where: { userId, groupId: { in: groups.map((g) => g.id) } },
+    });
+    const byGroup = new Map(memberships.map((m) => [m.groupId, m]));
+
+    return groups.map((g) => {
+      const m = byGroup.get(g.id);
+      return {
+        ...g,
+        myMembership: m
+          ? { status: m.status, role: m.role }
+          : null,
+      };
     });
   }
 
@@ -121,7 +140,7 @@ export class GroupsService {
         where: { userId_groupId: { userId, groupId } },
       });
 
-      if (myMembership && isOfficer(myMembership.role)) {
+      if (myMembership?.role === MemberRole.PRESIDENT) {
         pendingRequests = await this.prisma.groupMember.findMany({
           where: { groupId, status: MemberStatus.PENDING },
           include: {
@@ -205,6 +224,10 @@ export class GroupsService {
       throw new NotFoundException('회원을 찾을 수 없습니다.');
     }
 
+    if (dto.status !== undefined) {
+      await this.requirePresident(groupId, actorUserId);
+    }
+
     if (dto.role === MemberRole.PRESIDENT) {
       throw new ForbiddenException('회장 지정은 양도 API를 사용하세요.');
     }
@@ -261,6 +284,19 @@ export class GroupsService {
       }),
     ]);
 
+    return { success: true };
+  }
+
+  async cancelJoinRequest(groupId: string, userId: string) {
+    const membership = await this.prisma.groupMember.findUnique({
+      where: { userId_groupId: { userId, groupId } },
+    });
+
+    if (!membership || membership.status !== MemberStatus.PENDING) {
+      throw new BadRequestException('취소할 가입 신청이 없습니다.');
+    }
+
+    await this.prisma.groupMember.delete({ where: { id: membership.id } });
     return { success: true };
   }
 

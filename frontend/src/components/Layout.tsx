@@ -20,18 +20,21 @@ export default function Layout() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <Link to={user ? '/my-groups' : '/'} className="brand">
-          <span className="brand-mark">M</span>
-          <span className="brand-text">모임표</span>
+        <Link to="/" className="brand">
+          <span className="brand-mark">C</span>
+          <span className="brand-text">Clover</span>
         </Link>
 
         {user && (
           <nav className="site-nav site-nav--desktop" aria-label="주요 메뉴">
-            <NavLink to="/groups" className={navClass}>
-              모임 찾기
+            <NavLink to="/" end className={navClass}>
+              홈
             </NavLink>
             <NavLink to="/my-groups" className={navClass}>
               내 모임
+            </NavLink>
+            <NavLink to="/groups" className={navClass}>
+              모임 찾기
             </NavLink>
             <NavLink to="/calendar" className={navClass}>
               캘린더
@@ -74,11 +77,14 @@ export default function Layout() {
 
       {user && (
         <nav className="tab-bar" aria-label="하단 메뉴">
-          <NavLink to="/groups" className={tabClass}>
-            <span className="tab-bar__label">모임 찾기</span>
+          <NavLink to="/" end className={tabClass}>
+            <span className="tab-bar__label">홈</span>
           </NavLink>
           <NavLink to="/my-groups" className={tabClass}>
             <span className="tab-bar__label">내 모임</span>
+          </NavLink>
+          <NavLink to="/groups" className={tabClass}>
+            <span className="tab-bar__label">모임 찾기</span>
           </NavLink>
           <NavLink to="/calendar" className={tabClass}>
             <span className="tab-bar__label">캘린더</span>

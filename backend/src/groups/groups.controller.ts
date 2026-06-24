@@ -10,7 +10,11 @@ import {
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
+import {
+  CurrentUser,
+  OptionalUser,
+} from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import {
   CreateGroupDto,
@@ -23,11 +27,13 @@ export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   listPublic(
+    @OptionalUser() user: AuthUser | null,
     @Query('search') search?: string,
     @Query('category') category?: string,
   ) {
-    return this.groupsService.listPublic(search, category);
+    return this.groupsService.listPublic(search, category, user?.id);
   }
 
   @Get('mine')
@@ -61,6 +67,12 @@ export class GroupsController {
   @UseGuards(JwtAuthGuard)
   join(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.groupsService.joinByGroupId(id, user.id);
+  }
+
+  @Post(':id/join/cancel')
+  @UseGuards(JwtAuthGuard)
+  cancelJoin(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.groupsService.cancelJoinRequest(id, user.id);
   }
 
   @Post(':id/leave')
