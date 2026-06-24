@@ -1,0 +1,112 @@
+.login-page {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-2);
+}
+
+.login-card h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.login-sub {
+  color: var(--ink-muted);
+  font-size: 15px;
+  margin-bottom: var(--space-5);
+}
+
+.btn-kakao {
+  display: block;
+  width: 100%;
+  height: 48px;
+  line-height: 48px;
+  background: #fee500;
+  color: #191919;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 17px;
+  border-radius: var(--radius-l);
+  margin-bottom: var(--space-4);
+  transition: opacity var(--dur-base) var(--ease);
+}
+
+.btn-kakao:hover {
+  opacity: 0.92;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+  color: var(--ink-tertiary);
+  font-size: 13px;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.login-card label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--ink-muted);
+}
+
+.login-card input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  margin-bottom: var(--space-4);
+  font-size: 15px;
+  background: var(--grey-100);
+  transition: border-color var(--dur-base) var(--ease),
+    background var(--dur-base) var(--ease);
+}
+
+.login-card input:focus {
+  outline: none;
+  background: var(--white);
+  border-color: var(--accent);
+  border-width: 1.5px;
+  padding: 0 13.5px;
+}
+
+.login-card .btn-primary {
+  width: 100%;
+  min-height: var(--btn-height-lg);
+}
+
+.login-note {
+  margin-top: var(--space-4);
+  font-size: 13px;
+  color: var(--ink-tertiary);
+  text-align: center;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 15px;
+  margin-top: 12px;
+}

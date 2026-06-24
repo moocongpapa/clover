@@ -1,0 +1,353 @@
+.group-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.group-hero h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 8px 0;
+}
+
+.group-stats {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  margin-top: 0.5rem;
+}
+
+.info-banner {
+  padding: 12px 16px;
+  background: var(--accent-soft);
+  border-radius: var(--radius-m);
+  margin-bottom: var(--space-4);
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.invite-box {
+  padding: 1rem;
+  background: var(--surface-alt);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.invite-box code {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  word-break: break-all;
+  color: var(--ink-muted);
+}
+
+.section-block {
+  margin-bottom: 2rem;
+}
+
+.section-block h2 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  margin-bottom: 12px;
+}
+
+.member-list,
+.event-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.member-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.role-badge {
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.35rem;
+}
+
+.btn-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.event-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-subtle);
+  text-decoration: none;
+  color: inherit;
+  margin-bottom: 8px;
+  transition: box-shadow var(--dur-base) var(--ease);
+}
+
+.event-item:hover {
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-2);
+}
+
+.vote-btn {
+  padding: 12px 24px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--dur-base) var(--ease),
+    background var(--dur-base) var(--ease);
+}
+
+.vote-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.vote-btn.active-attend {
+  border-color: var(--green-500);
+  background: rgba(3, 178, 108, 0.08);
+  color: var(--green-500);
+}
+
+.vote-btn.active-absent {
+  border-color: var(--red-500);
+  background: rgba(240, 68, 82, 0.08);
+  color: var(--red-500);
+}
+
+.vote-btn.active-late {
+  border-color: var(--orange-500);
+  background: rgba(254, 107, 23, 0.08);
+  color: var(--orange-500);
+}
+
+.event-meta {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  margin-top: 0.25rem;
+}
+
+.status-cancelled {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--danger);
+  background: #fde8e8;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.vote-pill {
+  font-size: 0.8rem;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 0.3rem 0.6rem;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.empty-inline {
+  color: var(--ink-muted);
+  font-size: 0.95rem;
+}
+
+.event-detail-header {
+  margin-bottom: 2rem;
+}
+
+.event-detail-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.event-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.info-cell label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  margin-bottom: 0.2rem;
+}
+
+.vote-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.vote-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.vote-btn {
+  width: 100%;
+  min-height: var(--btn-height);
+}
+
+@media (min-width: 480px) {
+  .vote-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .vote-btn {
+    width: auto;
+    min-height: var(--btn-height);
+  }
+}
+
+
+.vote-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vote-summary {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.summary-chip {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.summary-chip.attend {
+  background: #e8f5ee;
+  color: var(--vote-attend);
+}
+
+.summary-chip.absent {
+  background: #fdeaea;
+  color: var(--vote-absent);
+}
+
+.summary-chip.late {
+  background: #fff8e6;
+  color: var(--vote-late);
+}
+
+.voter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.voter-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-alt);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.voter-card .stamp {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.stamp-attend {
+  background: #e8f5ee;
+  color: var(--vote-attend);
+}
+
+.stamp-absent {
+  background: #fdeaea;
+  color: var(--vote-absent);
+}
+
+.stamp-late {
+  background: #fff8e6;
+  color: var(--vote-late);
+}
+
+.calendar-list {
+  list-style: none;
+  padding: 0;
+}
+
+.calendar-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+}
+
+.calendar-date {
+  flex-shrink: 0;
+  width: 3.5rem;
+  text-align: center;
+}
+
+.calendar-date .day {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.calendar-date .month {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.calendar-body strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.calendar-body span {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.not-voted-tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--danger);
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
