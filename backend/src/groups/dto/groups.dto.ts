@@ -28,6 +28,27 @@ export class CreateGroupDto {
   isPublic!: boolean;
 }
 
+export class UpdateGroupDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  description!: string;
+
+  @IsOptional()
+  @IsString()
+  profileImageUrl?: string | null;
+
+  @IsString()
+  @IsNotEmpty()
+  category!: string;
+
+  @IsBoolean()
+  isPublic!: boolean;
+}
+
 export class UpdateMemberDto {
   @IsOptional()
   @IsEnum(MemberStatus)

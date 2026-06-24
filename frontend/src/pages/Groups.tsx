@@ -150,18 +150,9 @@ export default function Groups() {
   }, [load, user?.id]);
 
   return (
-    <div className="groups-page">
+    <div className="groups-page groups-browse">
       <div className="page-header">
         <h1>모임 찾기</h1>
-        {user ? (
-          <Link to="/groups/new" className="btn-primary">
-            모임 만들기
-          </Link>
-        ) : (
-          <Link to="/login" className="btn-primary">
-            로그인
-          </Link>
-        )}
       </div>
 
       <div className="filters">
@@ -189,11 +180,6 @@ export default function Groups() {
       ) : groups.length === 0 ? (
         <div className="empty-state">
           <p>공개된 모임이 없어요.</p>
-          {user && (
-            <Link to="/groups/new" className="link-text">
-              첫 모임 만들기
-            </Link>
-          )}
         </div>
       ) : (
         <div className="group-grid">

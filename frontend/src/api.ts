@@ -83,6 +83,28 @@ export const api = {
   getGroup: (id: string) => request<GroupDetail>(`/groups/${id}`),
   createGroup: (data: CreateGroupInput) =>
     request<Group>('/groups', { method: 'POST', body: JSON.stringify(data) }),
+  updateGroup: (id: string, data: UpdateGroupInput) =>
+    request<Group>(`/groups/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  uploadGroupImage: async (file: File) => {
+    const token = getToken();
+    const form = new FormData();
+    form.append('image', file);
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/uploads/group-image`, {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? `업로드 실패 (${res.status})`);
+    }
+    return res.json() as Promise<{ url: string; filename: string }>;
+  },
   joinGroup: (id: string) =>
     request('/groups/' + id + '/join', { method: 'POST' }),
   cancelJoinGroup: (id: string) =>
@@ -170,6 +192,14 @@ export interface CreateGroupInput {
   name: string;
   description: string;
   profileImageUrl?: string;
+  category: string;
+  isPublic: boolean;
+}
+
+export interface UpdateGroupInput {
+  name: string;
+  description: string;
+  profileImageUrl?: string | null;
   category: string;
   isPublic: boolean;
 }

@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Groups from './pages/Groups';
 import MyGroups from './pages/MyGroups';
 import CreateGroup from './pages/CreateGroup';
+import EditGroup from './pages/EditGroup';
 import GroupDetail from './pages/GroupDetail';
 import CreateEvent from './pages/CreateEvent';
 import EventDetail from './pages/EventDetail';
@@ -38,6 +39,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <CreateGroup />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="groups/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <EditGroup />
                 </ProtectedRoute>
               }
             />

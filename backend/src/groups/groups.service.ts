@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateGroupDto,
   TransferPresidentDto,
+  UpdateGroupDto,
   UpdateMemberDto,
 } from './dto/groups.dto';
 import {
@@ -100,6 +101,33 @@ export class GroupsService {
     });
 
     return group;
+  }
+
+  async update(groupId: string, userId: string, dto: UpdateGroupDto) {
+    await this.requireOfficer(groupId, userId);
+
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+    });
+    if (!group) {
+      throw new NotFoundException('모임을 찾을 수 없습니다.');
+    }
+
+    return this.prisma.group.update({
+      where: { id: groupId },
+      data: {
+        name: dto.name,
+        description: dto.description,
+        category: dto.category,
+        isPublic: dto.isPublic,
+        ...(dto.profileImageUrl !== undefined
+          ? { profileImageUrl: dto.profileImageUrl }
+          : {}),
+      },
+      include: {
+        _count: { select: { members: true } },
+      },
+    });
   }
 
   async getById(groupId: string, userId?: string) {

@@ -8,6 +8,7 @@ import { EventsModule } from './events/events.module';
 import { VotesModule } from './votes/votes.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CalendarModule } from './calendar/calendar.module';
     VotesModule,
     NotificationsModule,
     CalendarModule,
+    UploadsModule,
   ],
 })
 export class AppModule {}

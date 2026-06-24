@@ -1,0 +1,67 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Clover: 백엔드 시작",
+      "type": "shell",
+      "command": "npm run start:dev",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "nestjs",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Starting compilation",
+          "endsPattern": "API running on"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "clover-servers"
+      }
+    },
+    {
+      "label": "Clover: 프론트엔드 시작",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE",
+          "endsPattern": "ready in"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "clover-servers"
+      }
+    },
+    {
+      "label": "Clover: Simple Browser 열기",
+      "type": "vscode",
+      "command": "simpleBrowser.show",
+      "args": ["http://localhost:5173"]
+    },
+    {
+      "label": "Clover: 서버 시작 + 미리보기",
+      "dependsOn": [
+        "Clover: 백엔드 시작",
+        "Clover: 프론트엔드 시작",
+        "Clover: Simple Browser 열기"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -79,16 +79,28 @@ export default function GroupDetail() {
   return (
     <div className="group-detail">
       <header className="group-hero">
-        <div>
-          <span className="group-category">{group.category}</span>
-          <h1>{group.name}</h1>
-          <p>{group.description}</p>
-          <p className="group-stats">
-            회원 {group._count.members}명 · 이벤트 {group._count.events}개
-          </p>
+        <div className="group-hero__main">
+          {group.profileImageUrl && (
+            <img
+              src={group.profileImageUrl}
+              alt=""
+              className="group-hero__avatar"
+            />
+          )}
+          <div>
+            <span className="group-category">{group.category}</span>
+            <h1>{group.name}</h1>
+            <p>{group.description}</p>
+            <p className="group-stats">
+              회원 {group._count.members}명 · 이벤트 {group._count.events}개
+            </p>
+          </div>
         </div>
         {isOfficer && (
           <div className="group-actions">
+            <Link to={`/groups/${group.id}/edit`} className="btn-outline">
+              프로필 수정
+            </Link>
             <Link to={`/groups/${group.id}/events/new`} className="btn-primary">
               이벤트 등록
             </Link>

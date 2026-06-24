@@ -19,6 +19,7 @@ import type { AuthUser } from '../common/decorators/current-user.decorator';
 import {
   CreateGroupDto,
   TransferPresidentDto,
+  UpdateGroupDto,
   UpdateMemberDto,
 } from './dto/groups.dto';
 
@@ -46,6 +47,16 @@ export class GroupsController {
   @UseGuards(JwtAuthGuard)
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateGroupDto) {
     return this.groupsService.create(user.id, dto);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  update(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateGroupDto,
+  ) {
+    return this.groupsService.update(id, user.id, dto);
   }
 
   @Get('join/:inviteCode')
