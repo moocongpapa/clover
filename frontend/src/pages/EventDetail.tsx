@@ -102,61 +102,77 @@ export default function EventDetailPage() {
       </header>
 
       <section className="vote-section">
-        <h2>참석 투표</h2>
+        <div className="vote-section__head">
+          <h2>참석 투표</h2>
+          {myChoice && (
+            <span className={`vote-my-badge vote-my-badge--${myChoice.toLowerCase()}`}>
+              {VOTE_LABELS[myChoice]}
+            </span>
+          )}
+        </div>
 
         {!votes.myVote && !locked && (
-          <p className="not-voted-tag">아직 투표하지 않았습니다</p>
+          <p className="vote-hint">참석 여부를 선택해 주세요</p>
         )}
 
         {locked ? (
-          <p className="info-banner">투표가 마감되었습니다.</p>
+          <p className="vote-locked-banner">투표가 마감되었습니다</p>
         ) : (
-          <div className="vote-buttons">
+          <div className="vote-segment" role="group" aria-label="참석 투표">
             {(['ATTEND', 'ABSENT', 'LATE'] as VoteChoice[]).map((c) => (
               <button
                 key={c}
                 type="button"
-                className={`vote-btn ${
-                  myChoice === c
-                    ? c === 'ATTEND'
-                      ? 'active-attend'
-                      : c === 'ABSENT'
-                        ? 'active-absent'
-                        : 'active-late'
-                    : ''
+                className={`vote-segment__btn vote-segment__btn--${c.toLowerCase()}${
+                  myChoice === c ? ' is-selected' : ''
                 }`}
                 disabled={voting}
                 onClick={() => handleVote(c)}
               >
-                {VOTE_LABELS[c]}
+                <span className="vote-segment__label">{VOTE_LABELS[c]}</span>
+                <span className="vote-segment__count">{votes.counts[c]}</span>
               </button>
             ))}
           </div>
         )}
 
-        <div className="vote-summary">
-          <span className="summary-chip attend">
-            참석 {votes.counts.ATTEND}
-          </span>
-          <span className="summary-chip absent">
-            불참 {votes.counts.ABSENT}
-          </span>
-          <span className="summary-chip late">늦참 {votes.counts.LATE}</span>
+        {locked && (
+          <div className="vote-segment vote-segment--readonly" aria-hidden>
+            {(['ATTEND', 'ABSENT', 'LATE'] as VoteChoice[]).map((c) => (
+              <div
+                key={c}
+                className={`vote-segment__btn vote-segment__btn--${c.toLowerCase()}${
+                  myChoice === c ? ' is-selected' : ''
+                }`}
+              >
+                <span className="vote-segment__label">{VOTE_LABELS[c]}</span>
+                <span className="vote-segment__count">{votes.counts[c]}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="vote-section__subhead">
+          <h3>투표 현황</h3>
+          <span className="vote-section__total">{votes.votes.length}명</span>
         </div>
 
-        <h3>투표 현황</h3>
-        <div className="voter-grid">
-          {votes.votes.map((v) => (
-            <div key={v.id} className="voter-card">
-              <span>{v.user.displayName}</span>
-              <span
-                className={`stamp stamp-${v.choice.toLowerCase()}`}
-              >
-                {v.choiceLabel}
-              </span>
-            </div>
-          ))}
-        </div>
+        {votes.votes.length === 0 ? (
+          <p className="vote-empty">아직 투표한 회원이 없습니다</p>
+        ) : (
+          <ul className="voter-list">
+            {votes.votes.map((v) => (
+              <li key={v.id} className="voter-list__item">
+                <span className="voter-list__name">{v.user.displayName}</span>
+                <span
+                  className={`voter-list__badge voter-list__badge--${v.choice.toLowerCase()}`}
+                >
+                  {v.choiceLabel}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {error && <p className="form-error">{error}</p>}
