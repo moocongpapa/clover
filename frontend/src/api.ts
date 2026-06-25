@@ -418,6 +418,16 @@ export function formatEventDate(date: string | Date) {
   return `${year}-${month}-${day}`;
 }
 
+export function formatEventSchedule(
+  date: string | Date,
+  startTime: string,
+  endTime?: string | null,
+) {
+  const d = new Date(date);
+  const weekday = d.toLocaleDateString('ko-KR', { weekday: 'short' });
+  return `${formatEventDate(date)} (${weekday}) ${formatEventTimeRange(startTime, endTime)}`;
+}
+
 export function formatDateTime(date: string | Date) {
   const d = new Date(date);
   if (Number.isNaN(d.getTime())) return '';

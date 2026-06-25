@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   api,
-  formatEventDate,
-  formatEventTimeRange,
+  formatEventSchedule,
   formatMemberDisplayName,
   formatTeamLabel,
   groupVotesByChoice,
@@ -129,25 +128,13 @@ export default function EventDetailPage() {
             </button>
           )}
         </div>
-        <p>{event.description}</p>
+        <p className="event-detail-header__desc">{event.description}</p>
 
-        <div className="event-info-grid">
-          <div className="info-cell">
-            <label>날짜</label>
-            <span>{formatEventDate(event.date)}</span>
-          </div>
-          <div className="info-cell">
-            <label>시간</label>
-            <span>{formatEventTimeRange(event.startTime, event.endTime)}</span>
-          </div>
-          <div className="info-cell">
-            <label>장소</label>
-            <span>{event.location}</span>
-          </div>
-          <div className="info-cell">
-            <label>등록자</label>
-            <span>{event.createdBy.displayName}</span>
-          </div>
+        <div className="event-detail-meta">
+          <p className="event-detail-meta__line">
+            {formatEventSchedule(event.date, event.startTime, event.endTime)}
+          </p>
+          <p className="event-detail-meta__line">{event.location}</p>
         </div>
       </header>
 

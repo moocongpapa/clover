@@ -396,6 +396,28 @@
   margin: 0;
 }
 
+.event-detail-header__desc {
+  margin-top: 4px;
+}
+
+.event-detail-meta {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.event-detail-meta__line {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.event-detail-meta__line + .event-detail-meta__line {
+  margin-top: 4px;
+  color: var(--ink-muted);
+}
+
 .event-info-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
