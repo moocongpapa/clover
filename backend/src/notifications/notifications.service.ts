@@ -4,11 +4,11 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { MemberStatus, NotificationType } from '@prisma/client';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
-import { addDays, localDayStart } from '../common/utils/group.utils';
+import { addDays, isOfficer, localDayStart } from '../common/utils/group.utils';
 
-type NotifyType = 'CREATED' | 'CHANGED' | 'CANCELLED' | 'REMINDER';
+type EventNotifyType = 'CREATED' | 'CHANGED' | 'CANCELLED' | 'REMINDER';
 
-const MESSAGE_TEMPLATES: Record<NotifyType, (title: string) => string> = {
+const MESSAGE_TEMPLATES: Record<EventNotifyType, (title: string) => string> = {
   CREATED: (title) => `새 이벤트가 등록되었습니다: ${title}`,
   CHANGED: (title) => `이벤트 일정이 변경되었습니다: ${title}`,
   CANCELLED: (title) => `이벤트가 취소되었습니다: ${title}`,
@@ -24,7 +24,10 @@ export class NotificationsService {
     private readonly config: ConfigService,
   ) {}
 
-  async notifyGroupMembers(eventId: string, type: Exclude<NotifyType, 'REMINDER'>) {
+  async notifyGroupMembers(
+    eventId: string,
+    type: Exclude<EventNotifyType, 'REMINDER'>,
+  ) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: {
@@ -44,8 +47,48 @@ export class NotificationsService {
     const message = MESSAGE_TEMPLATES[type](event.title);
 
     for (const member of event.group.members) {
-      await this.sendToUser(member.userId, eventId, type, message);
+      await this.sendEventNotification(member.userId, eventId, type, message);
     }
+  }
+
+  async notifyJoinRequest(groupId: string, requesterUserId: string) {
+    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    const requester = await this.prisma.user.findUnique({
+      where: { id: requesterUserId },
+    });
+    if (!group || !requester) return;
+
+    const members = await this.prisma.groupMember.findMany({
+      where: { groupId, status: MemberStatus.APPROVED },
+    });
+    const officers = members.filter((m) => isOfficer(m.role));
+
+    const message = `${requester.displayName}님이 「${group.name}」 모임 가입을 요청했습니다`;
+
+    for (const officer of officers) {
+      if (officer.userId === requesterUserId) continue;
+      await this.createInAppNotification({
+        userId: officer.userId,
+        type: NotificationType.JOIN_REQUEST,
+        message,
+        groupId,
+        actorUserId: requesterUserId,
+      });
+    }
+  }
+
+  async notifyJoinApproved(groupId: string, memberUserId: string) {
+    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    if (!group) return;
+
+    const message = `「${group.name}」 모임 가입이 승인되었습니다`;
+
+    await this.createInAppNotification({
+      userId: memberUserId,
+      type: NotificationType.JOIN_APPROVED,
+      message,
+      groupId,
+    });
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
@@ -91,7 +134,7 @@ export class NotificationsService {
 
         if (alreadySent) continue;
 
-        await this.sendToUser(
+        await this.sendEventNotification(
           member.userId,
           event.id,
           'REMINDER',
@@ -108,21 +151,65 @@ export class NotificationsService {
         event: {
           select: { id: true, title: true, date: true, startTime: true },
         },
+        group: {
+          select: { id: true, name: true },
+        },
+        actor: {
+          select: { id: true, displayName: true, profileImageUrl: true },
+        },
       },
       orderBy: { sentAt: 'desc' },
       take: 50,
     });
   }
 
-  private async sendToUser(
+  async getUnreadCount(userId: string) {
+    return this.prisma.notificationLog.count({
+      where: { userId, readAt: null },
+    });
+  }
+
+  async markAllAsRead(userId: string) {
+    await this.prisma.notificationLog.updateMany({
+      where: { userId, readAt: null },
+      data: { readAt: new Date() },
+    });
+    return { ok: true };
+  }
+
+  private async sendEventNotification(
     userId: string,
     eventId: string,
-    type: NotifyType,
+    type: EventNotifyType,
     message: string,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
 
+    await this.sendExternalIfConfigured(user, message);
+    await this.createInAppNotification({
+      userId,
+      type: type as NotificationType,
+      message,
+      eventId,
+    });
+  }
+
+  private async createInAppNotification(data: {
+    userId: string;
+    type: NotificationType;
+    message: string;
+    eventId?: string;
+    groupId?: string;
+    actorUserId?: string;
+  }) {
+    await this.prisma.notificationLog.create({ data });
+  }
+
+  private async sendExternalIfConfigured(
+    user: { id: string; displayName: string; kakaoChannelUserKey: string | null },
+    message: string,
+  ) {
     const channelToken = this.config.get<string>('KAKAO_CHANNEL_ACCESS_TOKEN');
 
     if (channelToken && user.kakaoChannelUserKey) {
@@ -148,20 +235,10 @@ export class NotificationsService {
           },
         );
       } catch (error) {
-        this.logger.warn(`카카오 알림 발송 실패 (${userId}): ${error}`);
+        this.logger.warn(`카카오 알림 발송 실패 (${user.id}): ${error}`);
       }
     } else {
-      this.logger.log(
-        `[Mock 알림] ${user.displayName} ← ${type}: ${message}`,
-      );
+      this.logger.log(`[Mock 알림] ${user.displayName} ← ${message}`);
     }
-
-    await this.prisma.notificationLog.create({
-      data: {
-        userId,
-        eventId,
-        type: type as NotificationType,
-      },
-    });
   }
 }

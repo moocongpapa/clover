@@ -7,6 +7,7 @@ import {
 import { MemberRole, MemberStatus } from '@prisma/client';
 import { nanoid } from 'nanoid';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   CreateGroupDto,
   TransferPresidentDto,
@@ -24,7 +25,10 @@ import {
 
 @Injectable()
 export class GroupsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async listPublic(search?: string, category?: string, userId?: string) {
     const groups = await this.prisma.group.findMany({
@@ -232,6 +236,8 @@ export class GroupsService {
       where: { userId_groupId: { userId, groupId } },
     });
 
+    let result;
+
     if (existing) {
       if (existing.status === MemberStatus.APPROVED) {
         throw new BadRequestException('이미 가입된 모임입니다.');
@@ -239,15 +245,18 @@ export class GroupsService {
       if (existing.status === MemberStatus.PENDING) {
         throw new BadRequestException('이미 가입 신청 중입니다.');
       }
-      return this.prisma.groupMember.update({
+      result = await this.prisma.groupMember.update({
         where: { id: existing.id },
         data: { status: MemberStatus.PENDING },
       });
+    } else {
+      result = await this.prisma.groupMember.create({
+        data: { userId, groupId, status: MemberStatus.PENDING },
+      });
     }
 
-    return this.prisma.groupMember.create({
-      data: { userId, groupId, status: MemberStatus.PENDING },
-    });
+    await this.notifications.notifyJoinRequest(groupId, userId);
+    return result;
   }
 
   async updateMember(
@@ -284,7 +293,7 @@ export class GroupsService {
       throw new ForbiddenException('회장 역할은 양도 API를 사용하세요.');
     }
 
-    return this.prisma.groupMember.update({
+    const updated = await this.prisma.groupMember.update({
       where: { id: target.id },
       data: {
         ...(dto.status !== undefined ? { status: dto.status } : {}),
@@ -296,6 +305,12 @@ export class GroupsService {
         },
       },
     });
+
+    if (dto.status === MemberStatus.APPROVED) {
+      await this.notifications.notifyJoinApproved(groupId, targetUserId);
+    }
+
+    return updated;
   }
 
   async transferPresident(

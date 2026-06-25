@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CloverLogo from './CloverLogo';
+import NotificationBell from './NotificationBell';
 import './Layout.css';
 
 export default function Layout() {
@@ -48,6 +49,7 @@ export default function Layout() {
         <div className="header-actions">
           {user ? (
             <>
+              <NotificationBell />
               <Link to="/profile" className="user-chip" aria-label="내 프로필 수정">
                 {user.profileImageUrl ? (
                   <img src={user.profileImageUrl} alt="" />

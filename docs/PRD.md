@@ -1,8 +1,8 @@
-# PRD: 모임 이벤트 등록 & 참석 투표 시스템
+# PRD: Clover — 모임 이벤트 등록 & 참석 투표 시스템
 
-**Status:** ready-for-agent  
-**Stack:** Node.js (NestJS) + PostgreSQL + React (웹)  
-**Version:** MVP 1.0
+**Status:** in-development  
+**Stack:** Node.js (NestJS) + Prisma + SQLite/PostgreSQL + React (Vite, 웹)  
+**Version:** MVP 1.1
 
 ---
 
@@ -12,9 +12,9 @@
 
 ## Solution
 
-**모임(그룹) 단위**로 이벤트를 등록하고, 회원이 **참석 / 불참 / 늦참**으로 투표할 수 있는 웹 서비스를 제공합니다. 카카오 로그인으로 간편히 가입하고, **이벤트 생성 시 전체 알림**과 **하루 전 미투표자 대상 자동 알림**을 카카오 채널로 보냅니다. 가입한 모든 모임 일정은 통합 캘린더에서 한눈에 볼 수 있습니다.
+**모임(그룹) 단위**로 이벤트를 등록하고, 회원이 **참석 / 불참 / 늦참**으로 투표할 수 있는 웹 서비스를 제공합니다. 카카오 로그인(또는 개발 로그인)으로 간편히 가입하고, **이벤트 생성 시 전체 알림**, **하루 전 미투표자 대상 자동 알림**, **가입 요청·승인 알림**을 앱 내 알림함과 카카오 채널로 전달합니다. 가입한 모든 모임 일정은 통합 캘린더에서 한눈에 볼 수 있고, 참석자를 **자동으로 조 편성**할 수도 있습니다.
 
-핵심 가치: **미투표자에게 자동으로 알림이 가는 것** — 기존 수동 독촉을 대체합니다.
+핵심 가치: **미투표자에게 자동으로 알림이 가는 것** — 기존 수동 독촉을 대체합니다. 모임 운영에 필요한 가입 요청·승인 알림도 앱 내에서 실시간으로 확인합니다.
 
 ---
 
@@ -73,28 +73,44 @@
 37. As a member who has not voted, I want to clearly see that I have not yet responded, so that I am reminded to vote.
 38. As a non-member, I want to be prevented from viewing or voting on a 모임's events, so that group privacy is maintained.
 
-### 알림 (카카오 채널)
+### 알림 (앱 내 알림함 + 카카오 채널)
 
-39. As a 모임 member, I want to receive a Kakao channel notification when a new event is created, so that I know about upcoming meetings immediately.
-40. As a member who has not voted, I want to receive a Kakao channel reminder one day before the event, so that I do not forget to respond.
+39. As a 모임 member, I want to receive a notification when a new event is created, so that I know about upcoming meetings immediately.
+40. As a member who has not voted, I want to receive a reminder one day before the event (매일 09:00 배치), so that I do not forget to respond.
 41. As a member who has already voted, I want to NOT receive the one-day-before reminder, so that I am not spammed with unnecessary notifications.
-42. As a member, I want to receive a Kakao notification when an event schedule changes, so that I am aware of updates.
-43. As a member, I want to receive a Kakao notification when an event is cancelled, so that I do not make plans around a dead event.
+42. As a member, I want to receive a notification when an event schedule changes, so that I am aware of updates.
+43. As a member, I want to receive a notification when an event is cancelled, so that I do not make plans around a dead event.
 44. As a user, I want to link my Kakao account for channel notifications during or after login, so that the system can reach me on Kakao.
+45. As a 회장/운영진, I want to receive a notification when a user requests to join my 모임, so that I can process the request promptly.
+46. As a join applicant, I want to receive a notification when my membership is approved, so that I know I can now participate.
+47. As a signed-in user, I want a bell icon in the header showing my unread notification count, so that I can see at a glance whether something needs my attention.
+48. As a signed-in user, I want notifications to be marked as read when I open the notification panel, so that the unread badge clears.
+49. As a signed-in user, I want to click a notification to jump to the related 모임 또는 이벤트 페이지, so that I can act on it immediately.
+
+### 조 편성 (팀 나누기)
+
+50. As an 운영진 member, I want to automatically split 참석 voters into balanced teams (2~4개 조) shortly before the event starts, so that I can organize activities quickly.
+51. As an 운영진 member, I want team splitting to be locked until 30 minutes before the event start, so that the roster reflects final attendance.
+52. As a member, I want to see which 조 I am assigned to, so that I know my group for the activity.
+
+### 프로필 & 활동 지역
+
+53. As a signed-in user, I want to edit my profile photo and bio, so that other members can recognize me.
+54. As a 회장, I want to set my 모임's 활동 지역 (시/도·시군구·읍면동) and 모임 통장 정보, so that members understand where the group meets and how to pay dues.
 
 ### 화면 & 탐색 (웹)
 
-45. As a member, I want to see a list of upcoming and past events within each 모임, so that I can review that group's schedule.
-46. As a member of multiple 모임, I want to see a unified calendar of all events across my groups, so that I can manage my personal schedule.
-47. As a member, I want to click an event to see its full details and current vote results, so that I have all information in one place.
-48. As a member, I want the web app to work on both desktop and mobile browsers, so that I can vote from any device.
-49. As a visitor, I want to see a landing page explaining the service, so that I understand what the platform does before signing in.
+55. As a member, I want to see a list of upcoming and past events within each 모임, so that I can review that group's schedule.
+56. As a member of multiple 모임, I want to see a unified calendar (목록/달력 전환) of all events across my groups, so that I can manage my personal schedule.
+57. As a member, I want to click an event to see its full details and current vote results, so that I have all information in one place.
+58. As a member, I want the web app to work on both desktop and mobile browsers (하단 탭 바 + 상단 헤더), so that I can vote from any device.
+59. As a visitor, I want to see a landing page explaining the service, so that I understand what the platform does before signing in.
 
 ### 운영진 역할 관리
 
-50. As a 회장, I want to see who is currently in the 운영진, so that I know who can register events.
-51. As a member, I want to see who the 회장 and 운영진 are, so that I know who to contact for group matters.
-52. As a former 회장 after transferring the role, I want to remain in the group (as 운영진 or regular member based on configuration), so that I can still participate without managing leadership duties.
+60. As a 회장, I want to see who is currently in the 운영진, so that I know who can register events.
+61. As a member, I want to see who the 회장 and 운영진 are, so that I know who to contact for group matters.
+62. As a former 회장 after transferring the role, I want to remain in the group (as 운영진 or regular member based on configuration), so that I can still participate without managing leadership duties.
 
 ---
 
@@ -103,36 +119,39 @@
 ### Tech Stack
 
 - **Runtime:** Node.js (LTS)
-- **Backend framework:** NestJS — 모듈 단위로 Auth, Groups, Events, Votes, Notifications 도메인을 분리하기에 적합
-- **Frontend:** React + Vite (SPA) — 웹 MVP, 모바일 브라우저 대응
-- **Database:** PostgreSQL — 관계형 데이터(모임-회원-이벤트-투표)에 적합
+- **Backend framework:** NestJS — 모듈 단위로 Auth, Groups, Events, Votes, Notifications, Calendar, Regions, Uploads 도메인을 분리
+- **Frontend:** React + Vite + TypeScript (SPA) — 웹 MVP, 모바일 브라우저 우선(반응형)
+- **Database:** SQLite (로컬·E2E 기본) / PostgreSQL (프로덕션) — `schema.prisma`의 provider 교체로 전환
 - **ORM:** Prisma — 스키마 관리 및 타입 안전성
-- **Auth:** Kakao OAuth 2.0 (카카오 로그인) — JWT 세션 토큰 발급
-- **Notifications:** Kakao Channel Message API (알림톡/친구톡) — 비즈니스 채널 연동 필요
-- **Scheduler:** `@nestjs/schedule` 또는 BullMQ — 하루 전 미투표자 알림 배치 작업
+- **Auth:** Kakao OAuth 2.0 (카카오 로그인) + 개발 로그인(`DEV_LOGIN_ENABLED`) — JWT 세션 토큰 발급
+- **Notifications:** 앱 내 알림함(NotificationLog, 읽음 상태 관리) + Kakao Channel Message API — 채널 토큰 미설정 시 콘솔 mock 발송
+- **Scheduler:** `@nestjs/schedule` Cron — 매일 09:00 하루 전 미투표자 알림 배치
+- **Uploads:** multer 디스크 스토리지 — 모임/프로필 이미지 업로드 (`/uploads` 정적 서빙)
 
 ### Domain Model (Core Entities)
 
 ```
 User
   - kakaoId (unique)
-  - displayName
-  - profileImageUrl
+  - displayName, profileImageUrl
+  - gender, birthYear, birthDate, phoneNumber, bio (선택)
   - kakaoChannelUserKey (nullable, for notifications)
 
 Group (모임)
   - name, description, profileImageUrl, category
+  - activitySido / activitySigungu / activityDistrict / activityTown / activityRegion (활동 지역)
+  - bankName / bankAccountNumber / bankAccountHolder (모임 통장)
   - isPublic (검색·목록 노출 여부)
   - inviteCode (초대 링크용, unique)
 
 GroupMember
   - userId, groupId
-  - role: MEMBER | OFFICER | PRESIDENT
+  - role: MEMBER | OFFICER | SECRETARY | VICE_PRESIDENT | PRESIDENT
   - status: PENDING | APPROVED | REJECTED
 
 Event
   - groupId
-  - title, date, startTime, location, description
+  - title, date, startTime, endTime (선택), location, description
   - status: ACTIVE | CANCELLED
   - createdBy (userId)
 
@@ -141,60 +160,91 @@ Vote
   - choice: ATTEND | ABSENT | LATE
   - votedAt, updatedAt
 
+EventTeamSplit / EventTeamAssignment (조 편성)
+  - eventId(unique), teamCount, createdBy
+  - assignment: userId, teamLabel
+
 NotificationLog
-  - userId, eventId, type (CREATED | REMINDER | CHANGED | CANCELLED)
-  - sentAt
+  - userId, type (CREATED | REMINDER | CHANGED | CANCELLED | JOIN_REQUEST | JOIN_APPROVED)
+  - message, readAt (nullable), sentAt
+  - eventId? / groupId? / actorUserId? (관련 대상 참조)
 ```
 
 ### Role & Permission Rules
 
 - **PRESIDENT (회장):** 운영진 지정/해제, 회장 양도, 가입 승인/거절, 회원 제거, 이벤트 등록·수정·취소
-- **OFFICER (운영진):** 가입 승인/거절, 이벤트 등록·수정·취소
+- **운영진(OFFICER · SECRETARY 총무 · VICE_PRESIDENT 부회장):** 가입 승인/거절, 이벤트 등록·수정·취소, 조 편성
 - **MEMBER:** 이벤트 열람, 투표, 모임 탈퇴
-- 회장 양도 시: 기존 회장은 OFFICER로 강등 (또는 MEMBER — MVP에서는 OFFICER로 유지)
-- 이벤트 등록·수정·취소는 PRESIDENT 또는 OFFICER만 가능
+- 회장 양도 시: 기존 회장은 OFFICER로 강등
+- 이벤트 등록·수정·취소·조 편성은 PRESIDENT 또는 운영진(OFFICER/SECRETARY/VICE_PRESIDENT)만 가능
+- 운영진 여부 판정은 `isOfficer()`(PRESIDENT 또는 운영진 하위 역할) 유틸로 일원화
 
 ### API Modules (NestJS)
 
 | Module | Responsibility |
 |--------|---------------|
-| `AuthModule` | Kakao OAuth callback, JWT 발급·검증 |
-| `GroupsModule` | 모임 CRUD, 가입 신청·승인, 초대 링크, 운영진·회장 관리 |
-| `EventsModule` | 이벤트 CRUD, 일정 변경·취소, 모임별·통합 목록 |
-| `VotesModule` | 투표 생성·수정, 결과 조회 |
-| `NotificationsModule` | 카카오 채널 메시지 발송, 스케줄러 연동 |
-| `CalendarModule` | 가입 모임 전체 이벤트 통합 조회 (EventsModule 위 레이어) |
+| `AuthModule` | Kakao OAuth callback, 개발 로그인, JWT 발급·검증, 내 프로필 조회·수정 |
+| `GroupsModule` | 모임 CRUD, 가입 신청·취소·승인, 초대 링크, 운영진·회장 관리 (NotificationsModule 연동) |
+| `EventsModule` | 이벤트 CRUD, 일정 변경·취소, 모임별 목록, 조 편성(팀 나누기) |
+| `VotesModule` | 투표 생성·수정, 결과·미투표자 조회 |
+| `NotificationsModule` | 앱 내 알림 생성·조회·읽음 처리, 카카오 채널 발송, 리마인더 스케줄러 |
+| `CalendarModule` | 가입 모임 전체 이벤트 통합 조회 |
+| `RegionsModule` | 활동 지역(시/도·시군구·읍면동) 데이터 제공 |
+| `UploadsModule` | 모임/프로필 이미지 업로드 |
 
 ### Key API Contracts (REST)
 
 ```
-POST   /auth/kakao/callback        → JWT 발급
-GET    /groups                     → 공개 모임 목록·검색
+GET    /auth/kakao/url             → 카카오 로그인 URL
+POST   /auth/kakao/callback        → 카카오 콜백 → JWT 발급
+POST   /auth/dev-login             → 개발 로그인 (DEV_LOGIN_ENABLED=true)
+GET    /auth/me                    → 내 정보
+PATCH  /auth/me                    → 내 프로필 수정 (사진·소개)
+
+GET    /groups                     → 공개 모임 목록·검색 (search, category)
+GET    /groups/mine                → 내 모임 목록
 POST   /groups                     → 모임 생성
 GET    /groups/:id                 → 모임 상세
+PATCH  /groups/:id                 → 모임 프로필 수정
+GET    /groups/join/:inviteCode    → 초대 코드로 가입 신청
 POST   /groups/:id/join            → 가입 신청
-POST   /groups/join/:inviteCode    → 초대 링크 가입 신청
+POST   /groups/:id/join/cancel     → 가입 신청 취소
+POST   /groups/:id/leave           → 모임 탈퇴
 PATCH  /groups/:id/members/:userId → 승인/거절/역할 변경/제거
 POST   /groups/:id/transfer-president → 회장 양도
 
-GET    /groups/:id/events          → 모임별 이벤트 목록
-POST   /groups/:id/events          → 이벤트 생성 (운영진)
+GET    /groups/:groupId/events     → 모임별 이벤트 목록
+POST   /groups/:groupId/events     → 이벤트 생성 (운영진)
+GET    /events/:id                 → 이벤트 상세
 PATCH  /events/:id                 → 이벤트 수정 (운영진)
 POST   /events/:id/cancel          → 이벤트 취소 (운영진)
+GET    /events/:id/teams           → 조 편성 결과 조회
+POST   /events/:id/teams/split     → 조 편성 실행 (운영진, 시작 30분 전부터)
 
-POST   /events/:id/votes           → 투표 (참석/불참/늦참)
-PATCH  /events/:id/votes           → 투표 변경 (시작 전까지만)
-GET    /events/:id/votes           → 투표 결과 (이름 포함, 전체 공개)
+POST   /events/:eventId/votes      → 투표 (참석/불참/늦참, 재호출 시 변경)
+GET    /events/:eventId/votes      → 투표 결과 + 미투표자 (이름 포함, 전체 공개)
 
 GET    /calendar                   → 내 가입 모임 통합 이벤트 목록
+
+GET    /notifications              → 내 알림 목록 (최근 50건)
+GET    /notifications/unread-count → 읽지 않은 알림 수
+PATCH  /notifications/read         → 전체 읽음 처리
+POST   /notifications/dev/trigger-reminders → 리마인더 수동 실행 (개발용)
+
+POST   /uploads/group-image        → 모임 대표 이미지 업로드
+POST   /uploads/profile-image      → 프로필 이미지 업로드
 ```
 
 ### Notification Flow
 
-1. **이벤트 생성:** `EventsModule` → `NotificationsModule.sendToGroupMembers(groupId, CREATED)`
-2. **일정 변경:** `EventsModule` → `NotificationsModule.sendToGroupMembers(groupId, CHANGED)` — 투표 유지
-3. **이벤트 취소:** `EventsModule` → `NotificationsModule.sendToGroupMembers(groupId, CANCELLED)`
-4. **하루 전 미투표자:** Cron (매일 특정 시각) → 대상 이벤트 조회 (내일 시작) → 미투표 APPROVED 멤버만 `REMINDER` 발송
+1. **이벤트 생성:** `EventsModule` → `NotificationsService.notifyGroupMembers(eventId, CREATED)`
+2. **일정 변경:** `EventsModule` → `NotificationsService.notifyGroupMembers(eventId, CHANGED)` — 투표 유지
+3. **이벤트 취소:** `EventsModule` → `NotificationsService.notifyGroupMembers(eventId, CANCELLED)`
+4. **하루 전 미투표자:** Cron (매일 09:00) → 대상 이벤트 조회 (내일 시작) → 미투표 APPROVED 멤버만 `REMINDER` 발송 (중복 발송 방지)
+5. **가입 요청:** `GroupsService.requestJoin` → `notifyJoinRequest(groupId, requesterId)` → 모임 운영진 전원에게 `JOIN_REQUEST`
+6. **가입 승인:** `GroupsService.updateMember(status=APPROVED)` → `notifyJoinApproved(groupId, memberId)` → 신청자에게 `JOIN_APPROVED`
+
+모든 알림은 `NotificationLog`에 기록되며, 앱 내 알림함에서 **읽지 않은 수 배지**와 **읽음 처리**를 지원합니다. 카카오 채널 토큰이 설정된 경우 이벤트 관련 알림은 채널 메시지로도 발송하고, 미설정 시 콘솔 mock으로 로깅합니다.
 
 ### Vote State Machine
 
@@ -206,14 +256,20 @@ any state ──event started──→ locked (no further changes)
 
 ### Frontend Pages
 
-- `/` — 랜딩
-- `/login` — 카카오 로그인
+- `/` — 홈 대시보드(로그인) / 랜딩(비로그인)
+- `/login`, `/auth/callback` — 카카오 / 개발 로그인
 - `/groups` — 모임 목록·검색
+- `/groups/new` — 모임 생성
 - `/groups/:id` — 모임 상세, 회원·운영진, 이벤트 목록
-- `/groups/:id/events/new` — 이벤트 등록 (운영진)
-- `/events/:id` — 이벤트 상세 + 투표 UI + 결과
-- `/calendar` — 통합 캘린더
+- `/groups/:id/edit` — 모임 프로필 수정
+- `/groups/:groupId/events/new` — 이벤트 등록 (운영진)
+- `/events/:id` — 이벤트 상세 + 투표 UI + 결과 + 미투표자 + 조 편성
+- `/calendar` — 통합 캘린더 (목록/달력 전환)
 - `/my-groups` — 내 모임 목록
+- `/invite/:code` — 초대 링크 가입
+- `/profile` — 내 프로필 수정
+
+공통 레이아웃: 상단 헤더(브랜드 · 데스크톱 내비 · 🔔 알림 벨 · 프로필), 모바일 하단 탭 바(🏠 홈 / 👥 내 모임 / 🔍 모임 찾기 / 📅 캘린더).
 
 ---
 
@@ -236,24 +292,27 @@ any state ──event started──→ locked (no further changes)
 | P0 | 투표 변경 (시작 전) / 거부 (시작 후) | 시간 기반 잠금 |
 | P0 | 일정 변경 시 투표 유지 | Vote 레코드 unchanged |
 | P0 | 하루 전 미투표자 알림 | 투표한 사람 제외, 미투표자만 NotificationLog |
+| P0 | 가입 요청 → 운영진 JOIN_REQUEST 알림 | 운영진 NotificationLog 생성 |
+| P0 | 가입 승인 → 신청자 JOIN_APPROVED 알림 | 신청자 NotificationLog 생성 |
 | P1 | 회장 양도 | 역할 교체 정확성 |
 | P1 | 운영진만 이벤트 등록 | 권한 거부 |
 | P1 | 이벤트 취소 → 상태 CANCELLED | status 변경 + 알림 트리거 |
+| P1 | 조 편성 (시작 30분 전부터) | 시간 제약 + 참석자만 배정 |
 
 ### Prior Art
 
-- Greenfield 프로젝트 — 기존 테스트 패턴 없음
-- NestJS 공식 패턴: `e2e/` 디렉터리에 `app.e2e-spec.ts`, 테스트용 PostgreSQL (Docker) 사용
+- NestJS HTTP API를 대상으로 한 Playwright 기반 E2E (`e2e/`) — `clover.spec.ts`
+- 테스트 DB는 SQLite(`e2e.db`)를 사용하고 시드 데이터로 시나리오를 구성
 
 ### 제안 Testing Seam
 
 ```
-[HTTP Client] → [NestJS App (full)] → [Test PostgreSQL]
+[HTTP Client] → [NestJS App (full)] → [Test SQLite (e2e.db)]
                       ↓
-              [NotificationsModule mock]
+       [카카오 채널 발송 = 콘솔 mock, NotificationLog 검증]
 ```
 
-카카오 API·채널 메시지는 테스트 환경에서 **mock adapter**로 대체하고, `NotificationLog` 기록 및 대상 userId 목록만 검증합니다. 이 seam 하나로 Auth → Groups → Events → Votes → Notifications 전체 흐름을 커버합니다.
+카카오 채널 메시지는 테스트 환경에서 **콘솔 mock**으로 대체하고, `NotificationLog` 기록 및 대상 userId 목록만 검증합니다. 이 seam 하나로 Auth → Groups → Events → Votes → Notifications 전체 흐름을 커버합니다.
 
 ---
 
@@ -292,7 +351,7 @@ any state ──event started──→ locked (no further changes)
 
 ### Issue Tracker
 
-현재 프로젝트에 Git 저장소 및 이슈 트래커가 설정되어 있지 않습니다. GitHub 저장소 생성 후 이 PRD를 이슈로 등록하고 `ready-for-agent` 라벨을 적용하세요. (`/setup-matt-pocock-skills` 실행 권장)
+Git 저장소(`main` 브랜치)로 관리 중입니다. 신규 기능은 PR 단위로 분리하고, 알림·조 편성 등 추가 도메인은 E2E 시나리오를 함께 갱신합니다.
 
 ### 구현 순서 제안
 

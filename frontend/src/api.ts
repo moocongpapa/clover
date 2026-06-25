@@ -1,4 +1,13 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+function resolveApiBase(): string {
+  const fromEnv = import.meta.env.VITE_API_URL;
+  if (fromEnv) return fromEnv;
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:3000`;
+  }
+  return 'http://localhost:3000';
+}
+
+const API_BASE = resolveApiBase();
 
 export interface User {
   id: string;
@@ -188,6 +197,10 @@ export const api = {
 
   getCalendar: () => request<CalendarEvent[]>('/calendar'),
   getNotifications: () => request<NotificationItem[]>('/notifications'),
+  getNotificationUnreadCount: () =>
+    request<number>('/notifications/unread-count'),
+  markNotificationsRead: () =>
+    request<{ ok: boolean }>('/notifications/read', { method: 'PATCH' }),
   getRegions: () => request<RegionsData>('/regions'),
 };
 
@@ -379,8 +392,41 @@ export function formatTeamLabel(label: string) {
 export interface NotificationItem {
   id: string;
   type: string;
+  message: string;
   sentAt: string;
-  event: { id: string; title: string; date: string; startTime: string };
+  readAt: string | null;
+  event?: { id: string; title: string; date: string; startTime: string } | null;
+  group?: { id: string; name: string } | null;
+  actor?: {
+    id: string;
+    displayName: string;
+    profileImageUrl: string | null;
+  } | null;
+}
+
+export function notificationLink(item: NotificationItem): string {
+  if (item.event?.id) return `/events/${item.event.id}`;
+  if (item.group?.id) return `/groups/${item.group.id}`;
+  return '/';
+}
+
+export function notificationIcon(type: string): string {
+  switch (type) {
+    case 'JOIN_REQUEST':
+      return '👋';
+    case 'JOIN_APPROVED':
+      return '✅';
+    case 'CREATED':
+      return '📅';
+    case 'CHANGED':
+      return '✏️';
+    case 'CANCELLED':
+      return '🚫';
+    case 'REMINDER':
+      return '⏰';
+    default:
+      return '🔔';
+  }
 }
 
 export const VOTE_LABELS: Record<VoteChoice, string> = {

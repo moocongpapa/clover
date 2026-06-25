@@ -13,8 +13,24 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
+  const frontendUrl = config.get<string>(
+    'FRONTEND_URL',
+    'http://localhost:5173',
+  );
+  const allowedOrigins = frontendUrl.split(',').map((o) => o.trim());
   app.enableCors({
-    origin: config.get<string>('FRONTEND_URL', 'http://localhost:5173'),
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(
+          origin,
+        );
+      callback(null, isAllowed);
+    },
     credentials: true,
   });
 

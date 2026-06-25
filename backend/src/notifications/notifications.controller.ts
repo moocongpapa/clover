@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Post, UseGuards } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -16,6 +16,18 @@ export class NotificationsController {
   @UseGuards(JwtAuthGuard)
   list(@CurrentUser() user: AuthUser) {
     return this.notificationsService.listForUser(user.id);
+  }
+
+  @Get('unread-count')
+  @UseGuards(JwtAuthGuard)
+  unreadCount(@CurrentUser() user: AuthUser) {
+    return this.notificationsService.getUnreadCount(user.id);
+  }
+
+  @Patch('read')
+  @UseGuards(JwtAuthGuard)
+  markRead(@CurrentUser() user: AuthUser) {
+    return this.notificationsService.markAllAsRead(user.id);
   }
 
   /** E2E/개발용: 하루 전 리마인더 크론 수동 실행 */

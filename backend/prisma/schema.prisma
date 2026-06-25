@@ -37,6 +37,8 @@ enum NotificationType {
   REMINDER
   CHANGED
   CANCELLED
+  JOIN_REQUEST
+  JOIN_APPROVED
 }
 
 enum Gender {
@@ -61,6 +63,7 @@ model User {
   createdEvents       Event[]        @relation("EventCreator")
   votes               Vote[]
   notifications       NotificationLog[]
+  triggeredNotifications NotificationLog[] @relation("NotificationActor")
   createdTeamSplits   EventTeamSplit[] @relation("TeamSplitCreator")
   teamAssignments     EventTeamAssignment[]
 }
@@ -85,6 +88,7 @@ model Group {
   updatedAt       DateTime      @updatedAt
   members         GroupMember[]
   events          Event[]
+  notifications   NotificationLog[]
 }
 
 model GroupMember {
@@ -162,14 +166,21 @@ model Vote {
 }
 
 model NotificationLog {
-  id     String           @id @default(cuid())
-  userId String
-  eventId String
-  type   NotificationType
-  sentAt DateTime         @default(now())
-  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event  Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id          String           @id @default(cuid())
+  userId      String
+  type        NotificationType
+  message     String           @default("")
+  readAt      DateTime?
+  sentAt      DateTime         @default(now())
+  eventId     String?
+  groupId     String?
+  actorUserId String?
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       Event?           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  group       Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  actor       User?            @relation("NotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([eventId, type])
   @@index([userId, eventId, type])
+  @@index([userId, readAt])
 }

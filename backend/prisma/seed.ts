@@ -508,6 +508,7 @@ async function main() {
         userId: wanseok.id,
         eventId: tomorrowEvent.id,
         type: NotificationType.CREATED,
+        message: `새 이벤트가 등록되었습니다: ${tomorrowEvent.title}`,
         sentAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       },
     });
@@ -516,6 +517,7 @@ async function main() {
         userId: wanseok.id,
         eventId: tomorrowEvent.id,
         type: NotificationType.REMINDER,
+        message: `내일 이벤트가 있습니다. 참석 여부를 투표해 주세요: ${tomorrowEvent.title}`,
         sentAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
       },
     });
@@ -527,6 +529,7 @@ async function main() {
         userId: wanseok.id,
         eventId: runningEvent.id,
         type: NotificationType.CREATED,
+        message: `새 이벤트가 등록되었습니다: ${runningEvent.title}`,
         sentAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
       },
     });
@@ -538,6 +541,7 @@ async function main() {
         userId: wanseok.id,
         eventId: cancelledEvent.id,
         type: NotificationType.CANCELLED,
+        message: `이벤트가 취소되었습니다: ${cancelledEvent.title}`,
         sentAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
       },
     });
