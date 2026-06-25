@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   api,
+  formatDateTime,
   formatEventTimeRange,
   formatTeamLabel,
   VOTE_CHOICES,
@@ -10,6 +11,7 @@ import {
   type VoteChoice,
 } from '../api';
 import { useAuth } from '../context/AuthContext';
+import GroupAvatar from '../components/GroupAvatar';
 import SegmentedControl from '../components/SegmentedControl';
 import './Home.css';
 
@@ -108,12 +110,21 @@ function HomeEventCard({
       </span>
     ) : null;
 
+  const isEdited = event.updatedAt !== event.createdAt;
+  const stampLabel = isEdited ? '수정' : '등록';
+  const stampValue = formatDateTime(isEdited ? event.updatedAt : event.createdAt);
+
   return (
     <article
       className={`home-event-card${votable && !event.myVote && !event.voteLocked ? ' home-event-card--action' : ''}`}
     >
       <div className="home-event-card__head">
-        <div>
+        <GroupAvatar
+          src={event.group.profileImageUrl}
+          name={event.group.name}
+          className="home-event-card__avatar"
+        />
+        <div className="home-event-card__head-main">
           <span className="home-event-card__group">{event.group.name}</span>
           <h3>
             <Link to={`/events/${event.id}`}>{event.title}</Link>
@@ -128,7 +139,14 @@ function HomeEventCard({
             )}
           </p>
         </div>
-        {badge}
+        <div className="home-event-card__head-side">
+          {badge}
+          {stampValue && (
+            <span className="home-event-card__stamp">
+              {stampValue} {stampLabel}
+            </span>
+          )}
+        </div>
       </div>
 
       {votable && event.status !== 'CANCELLED' && !event.voteLocked ? (

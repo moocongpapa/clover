@@ -51,7 +51,9 @@ model User {
   profileImageUrl     String?
   gender              Gender?
   birthYear           Int?
+  birthDate           DateTime?
   phoneNumber         String?
+  bio                 String?
   kakaoChannelUserKey String?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt

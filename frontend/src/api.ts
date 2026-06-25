@@ -7,7 +7,9 @@ export interface User {
   kakaoId?: string;
   gender?: 'MALE' | 'FEMALE' | null;
   birthYear?: number | null;
+  birthDate?: string | null;
   phoneNumber?: string | null;
+  bio?: string | null;
 }
 
 export interface AuthResponse {
@@ -74,6 +76,11 @@ export const api = {
       body: JSON.stringify({ displayName }),
     }),
   getMe: () => request<User>('/auth/me'),
+  updateProfile: (data: { profileImageUrl?: string | null; bio?: string | null }) =>
+    request<User>('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 
   listGroups: (search?: string, category?: string) => {
     const params = new URLSearchParams();
@@ -98,6 +105,23 @@ export const api = {
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(`${API_BASE}/uploads/group-image`, {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? `업로드 실패 (${res.status})`);
+    }
+    return res.json() as Promise<{ url: string; filename: string }>;
+  },
+  uploadProfileImage: async (file: File) => {
+    const token = getToken();
+    const form = new FormData();
+    form.append('image', file);
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/uploads/profile-image`, {
       method: 'POST',
       headers,
       body: form,
@@ -303,6 +327,7 @@ export interface VoteResults {
     choiceLabel: string;
     user: User;
   }>;
+  nonVoters: User[];
   myVote: { choice: VoteChoice } | null;
 }
 
@@ -314,13 +339,20 @@ export interface CalendarEvent {
   endTime?: string | null;
   location: string;
   status: string;
-  group: { id: string; name: string; category: string };
+  group: {
+    id: string;
+    name: string;
+    category: string;
+    profileImageUrl?: string | null;
+  };
   myVote: VoteChoice | null;
   voteCount: number;
   voteCounts: { ATTEND: number; ABSENT: number; LATE: number };
   myTeam: string | null;
   voteLocked: boolean;
   isPast: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface EventTeamsResult {
@@ -386,6 +418,17 @@ export function formatEventDate(date: string | Date) {
   return `${year}-${month}-${day}`;
 }
 
+export function formatDateTime(date: string | Date) {
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
 export const ROLE_LABELS: Record<string, string> = {
   PRESIDENT: '회장',
   VICE_PRESIDENT: '부회장',
@@ -423,6 +466,19 @@ export function formatPhoneNumber(phone: string) {
   return phone;
 }
 
+export function formatUserBirthDate(
+  birthDate?: string | Date | null,
+  birthYear?: number | null,
+) {
+  if (birthDate) {
+    return formatEventDate(birthDate);
+  }
+  if (birthYear) {
+    return `${birthYear}-01-01`;
+  }
+  return '-';
+}
+
 export const OFFICER_ROLES = [
   'VICE_PRESIDENT',
   'SECRETARY',
@@ -455,15 +511,61 @@ export const ASSIGNABLE_ROLES = [
   { value: 'OFFICER', label: '일반' },
 ] as const;
 
-export const CATEGORIES = [
-  '운동',
-  '독서',
-  '개발',
-  '음악',
-  '여행',
-  '요리',
-  '기타',
-];
+export const CATEGORY_OPTIONS = [
+  { value: '스포츠/피트니스', emoji: '⚽' },
+  { value: '아웃도어/여행', emoji: '🏕️' },
+  { value: '건강/웰빙', emoji: '🧘' },
+  { value: '취미/공예', emoji: '🎨' },
+  { value: '문화/예술', emoji: '🎭' },
+  { value: '음악/공연', emoji: '🎵' },
+  { value: '독서/글쓰기', emoji: '📚' },
+  { value: '음식/맛집', emoji: '🍽️' },
+  { value: 'IT/개발', emoji: '💻' },
+  { value: '비즈니스/커리어', emoji: '💼' },
+  { value: '스터디/교육', emoji: '🎓' },
+  { value: '게임/엔터테인먼트', emoji: '🎮' },
+  { value: '봉사/커뮤니티', emoji: '🤝' },
+  { value: '가족/육아', emoji: '👨‍👩‍👧' },
+  { value: '반려동물', emoji: '🐾' },
+  { value: '기타', emoji: '✨' },
+] as const;
+
+export const CATEGORIES = CATEGORY_OPTIONS.map((c) => c.value);
+
+const LEGACY_CATEGORY_MAP: Record<string, string> = {
+  운동: '스포츠/피트니스',
+  풋살: '스포츠/피트니스',
+  축구: '스포츠/피트니스',
+  야구: '스포츠/피트니스',
+  농구: '스포츠/피트니스',
+  테니스: '스포츠/피트니스',
+  탁구: '스포츠/피트니스',
+  수영: '스포츠/피트니스',
+  배드민턴: '스포츠/피트니스',
+  러닝: '스포츠/피트니스',
+  요가: '건강/웰빙',
+  독서: '독서/글쓰기',
+  개발: 'IT/개발',
+  음악: '음악/공연',
+  여행: '아웃도어/여행',
+  요리: '음식/맛집',
+  사진: '취미/공예',
+  보드게임: '게임/엔터테인먼트',
+};
+
+export function normalizeCategory(category: string): string {
+  if (CATEGORIES.includes(category as (typeof CATEGORIES)[number])) {
+    return category;
+  }
+  return LEGACY_CATEGORY_MAP[category] ?? '기타';
+}
+
+export function formatCategoryEmoji(category: string): string {
+  const normalized = normalizeCategory(category);
+  return (
+    CATEGORY_OPTIONS.find((c) => c.value === normalized)?.emoji ?? '✨'
+  );
+}
 
 export const BANK_OPTIONS = [
   'KB국민은행',

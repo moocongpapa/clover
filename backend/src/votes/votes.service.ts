@@ -4,11 +4,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EventStatus } from '@prisma/client';
+import { EventStatus, MemberStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupsService } from '../groups/groups.service';
 import { CastVoteDto } from './dto/votes.dto';
-import { eventStartAt, isEventVoteLocked } from '../common/utils/group.utils';
+import {
+  eventStartAt,
+  isEventVoteLocked,
+  USER_MEMBER_SELECT,
+} from '../common/utils/group.utils';
 
 const CHOICE_LABELS: Record<string, string> = {
   ATTEND: '참석',
@@ -73,6 +77,27 @@ export class VotesService {
     }));
     const voteLocked = isEventVoteLocked(event, hasTeamSplit);
 
+    const votedUserIds = votes.map((v) => v.userId);
+    const nonVoterMembers = await this.prisma.groupMember.findMany({
+      where: {
+        groupId: event.groupId,
+        status: MemberStatus.APPROVED,
+        ...(votedUserIds.length > 0
+          ? { userId: { notIn: votedUserIds } }
+          : {}),
+      },
+      include: {
+        user: { select: USER_MEMBER_SELECT },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const nonVoters = nonVoterMembers
+      .map((member) => member.user)
+      .sort((a, b) =>
+        a.displayName.localeCompare(b.displayName, 'ko'),
+      );
+
     return {
       event: {
         id: event.id,
@@ -88,6 +113,7 @@ export class VotesService {
         ...v,
         choiceLabel: CHOICE_LABELS[v.choice],
       })),
+      nonVoters,
       myVote,
     };
   }

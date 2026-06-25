@@ -8,6 +8,25 @@
   border-bottom: 1px solid var(--border);
 }
 
+.group-detail-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+
+.group-detail-category__emoji {
+  font-size: 14px;
+  line-height: 1;
+}
+
 .group-hero__main {
   display: flex;
   align-items: flex-start;
@@ -631,6 +650,21 @@
 
 .vote-status-table__names--empty {
   color: var(--ink-muted);
+}
+
+.vote-section__subhead--nonvoters {
+  margin-top: 20px;
+}
+
+.vote-nonvoters__names {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
 }
 
 .team-section {

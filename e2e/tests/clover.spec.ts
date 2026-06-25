@@ -38,7 +38,7 @@ test.describe('Clover 전체 기능 E2E', () => {
   await page.getByRole('link', { name: '모임 만들기' }).click();
   await page.getByLabel('모임 이름 *').fill('E2E 독서모임');
   await page.getByLabel('소개 *').fill('Playwright 테스트용 독서모임');
-  await page.getByLabel('카테고리 *').selectOption('독서');
+  await page.getByLabel('카테고리 *').selectOption('독서/글쓰기');
   await page.getByRole('button', { name: '모임 만들기' }).click();
   await expect(page.getByRole('heading', { name: 'E2E 독서모임' })).toBeVisible();
 
@@ -48,7 +48,7 @@ test.describe('Clover 전체 기능 E2E', () => {
   const devGroup = await createGroup(president.accessToken, {
     name: 'E2E 개발스터디',
     description: 'API로 만든 두 번째 모임',
-    category: '개발',
+    category: 'IT/개발',
     isPublic: true,
   });
 

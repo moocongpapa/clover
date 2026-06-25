@@ -7,7 +7,20 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
-import { DevLoginDto } from './dto/auth.dto';
+import { DevLoginDto, UpdateProfileDto } from './dto/auth.dto';
+
+const USER_PROFILE_SELECT = {
+  id: true,
+  displayName: true,
+  profileImageUrl: true,
+  kakaoId: true,
+  gender: true,
+  birthYear: true,
+  birthDate: true,
+  phoneNumber: true,
+  bio: true,
+  createdAt: true,
+} as const;
 
 interface KakaoTokenResponse {
   access_token: string;
@@ -105,13 +118,20 @@ export class AuthService {
   async getMe(userId: string) {
     return this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: {
-        id: true,
-        displayName: true,
-        profileImageUrl: true,
-        kakaoId: true,
-        createdAt: true,
+      select: USER_PROFILE_SELECT,
+    });
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.profileImageUrl !== undefined
+          ? { profileImageUrl: dto.profileImageUrl }
+          : {}),
+        ...(dto.bio !== undefined ? { bio: dto.bio } : {}),
       },
+      select: USER_PROFILE_SELECT,
     });
   }
 
@@ -132,7 +152,17 @@ export class AuthService {
     return `https://kauth.kakao.com/oauth/authorize?${params.toString()}`;
   }
 
-  private issueToken(user: { id: string; displayName: string; profileImageUrl: string | null; kakaoId: string }) {
+  private issueToken(user: {
+    id: string;
+    displayName: string;
+    profileImageUrl: string | null;
+    kakaoId: string;
+    gender?: string | null;
+    birthYear?: number | null;
+    birthDate?: Date | string | null;
+    phoneNumber?: string | null;
+    bio?: string | null;
+  }) {
     const accessToken = this.jwtService.sign({ sub: user.id });
     return {
       accessToken,
@@ -141,6 +171,11 @@ export class AuthService {
         displayName: user.displayName,
         profileImageUrl: user.profileImageUrl,
         kakaoId: user.kakaoId,
+        gender: user.gender ?? null,
+        birthYear: user.birthYear ?? null,
+        birthDate: user.birthDate ?? null,
+        phoneNumber: user.phoneNumber ?? null,
+        bio: user.bio ?? null,
       },
     };
   }

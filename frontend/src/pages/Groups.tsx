@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type MouseEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, CATEGORIES, type Group } from '../api';
 import { useAuth } from '../context/AuthContext';
+import CategoryBadge from '../components/CategoryBadge';
 import GroupAvatar from '../components/GroupAvatar';
 import './Groups.css';
 
@@ -115,27 +116,27 @@ function GroupCard({
 
   return (
     <article className="group-card group-card--interactive group-card--row">
-      <GroupAvatar
-        src={group.profileImageUrl}
-        name={group.name}
-        className="group-card__avatar"
-      />
-      <div className="group-card__main">
-        <Link to={`/groups/${group.id}`} className="group-card__link">
-          <span className="group-category">{group.category}</span>
-          <h3>{group.name}</h3>
-          <p>{group.description}</p>
-          <span className="group-meta">
-            {group.activityRegion && (
-              <span className="group-meta__region">{group.activityRegion}</span>
-            )}
-            회원 {group._count?.members ?? 0}명
-          </span>
-        </Link>
-        <div className="group-card__footer">
-          {renderAction()}
-          {error && <p className="group-card__error">{error}</p>}
-        </div>
+      <div className="group-card__aside">
+        <CategoryBadge category={group.category} />
+        <GroupAvatar
+          src={group.profileImageUrl}
+          name={group.name}
+          className="group-card__avatar"
+        />
+      </div>
+      <Link to={`/groups/${group.id}`} className="group-card__main">
+        <h3>{group.name}</h3>
+        <p>{group.description}</p>
+        <span className="group-meta">
+          {group.activityRegion && (
+            <span className="group-meta__region">{group.activityRegion}</span>
+          )}
+          회원 {group._count?.members ?? 0}명
+        </span>
+      </Link>
+      <div className="group-card__side">
+        {renderAction()}
+        {error && <p className="group-card__error">{error}</p>}
       </div>
     </article>
   );

@@ -13,6 +13,7 @@ import CreateEvent from './pages/CreateEvent';
 import EventDetail from './pages/EventDetail';
 import Calendar from './pages/Calendar';
 import InviteJoin from './pages/InviteJoin';
+import EditProfile from './pages/EditProfile';
 
 export default function App() {
   return (
@@ -79,6 +80,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Calendar />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="profile"
+              element={
+                <ProtectedRoute>
+                  <EditProfile />
                 </ProtectedRoute>
               }
             />

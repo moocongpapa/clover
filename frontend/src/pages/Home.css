@@ -96,7 +96,34 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
+}
+
+.home-event-card__avatar {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-m, 10px);
+}
+
+.home-event-card__head-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-event-card__head-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.home-event-card__stamp {
+  font-size: 11px;
+  color: var(--ink-tertiary, #9aa3af);
+  white-space: nowrap;
 }
 
 .home-event-card__group {

@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, type Event } from '../api';
+import { getEventTitleSuggestions } from '../utils/eventTitleSuggestions';
 import '../pages/Groups.css';
 
 function tomorrowDate() {
@@ -27,9 +28,14 @@ export default function CreateEvent() {
   const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [groupCategory, setGroupCategory] = useState('기타');
 
   useEffect(() => {
     if (!groupId) return;
+    api
+      .getGroup(groupId)
+      .then((group) => setGroupCategory(group.category))
+      .catch(() => setGroupCategory('기타'));
     api
       .listEvents(groupId)
       .then((events) => {
@@ -84,6 +90,11 @@ export default function CreateEvent() {
     return '제목, 장소, 설명만 가져옵니다. 날짜와 시간은 직접 입력해 주세요.';
   }, [hasPastEvents]);
 
+  const titleSuggestions = useMemo(
+    () => getEventTitleSuggestions(groupCategory, title),
+    [groupCategory, title],
+  );
+
   return (
     <div>
       <form className="form-card" onSubmit={handleSubmit}>
@@ -124,8 +135,26 @@ export default function CreateEvent() {
             name="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            placeholder="예: 풋살, 독서 토론, React 스터디"
             required
           />
+          {titleSuggestions.length > 0 && (
+            <div className="title-suggestions" role="listbox" aria-label="제목 추천">
+              <span className="title-suggestions__label">추천 제목</span>
+              <div className="title-suggestions__list">
+                {titleSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    className="title-suggestions__item"
+                    onClick={() => setTitle(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="form-row form-row--triple">

@@ -4,6 +4,7 @@ import {
   api,
   formatEventDate,
   formatEventTimeRange,
+  formatMemberDisplayName,
   formatTeamLabel,
   groupVotesByChoice,
   TEAM_COUNT_OPTIONS,
@@ -237,6 +238,21 @@ export default function EventDetailPage() {
               ))}
             </tbody>
           </table>
+        )}
+
+        <div className="vote-section__subhead vote-section__subhead--nonvoters">
+          <h3>미투표</h3>
+          <span className="vote-section__total">{votes.nonVoters.length}명</span>
+        </div>
+
+        {votes.nonVoters.length === 0 ? (
+          <p className="vote-empty">모든 회원이 투표했습니다</p>
+        ) : (
+          <p className="vote-nonvoters__names">
+            {votes.nonVoters
+              .map((user) => formatMemberDisplayName(user))
+              .join(', ')}
+          </p>
         )}
       </section>
 

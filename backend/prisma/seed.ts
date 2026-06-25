@@ -97,24 +97,25 @@ async function main() {
   await prisma.user.deleteMany();
 
   const userSeeds = [
-    { displayName: '김완석', gender: Gender.MALE, birthYear: 1991, phoneNumber: '01012345678' },
-    { displayName: '박민수', gender: Gender.MALE, birthYear: 1988, phoneNumber: '01023456789' },
-    { displayName: '이지은', gender: Gender.FEMALE, birthYear: 1993, phoneNumber: '01034567890' },
-    { displayName: '최준호', gender: Gender.MALE, birthYear: 1990, phoneNumber: '01045678901' },
-    { displayName: '정하늘', gender: Gender.FEMALE, birthYear: 1995, phoneNumber: '01056789012' },
-    { displayName: '강서연', gender: Gender.FEMALE, birthYear: 1992, phoneNumber: '01067890123' },
-    { displayName: '조현우', gender: Gender.MALE, birthYear: 1994, phoneNumber: '01078901234' },
-    { displayName: '윤채원', gender: Gender.FEMALE, birthYear: 1996, phoneNumber: '01089012345' },
+    { displayName: '김완석', gender: Gender.MALE, birthYear: 1991, birthDate: new Date(1991, 2, 15), phoneNumber: '01012345678' },
+    { displayName: '박민수', gender: Gender.MALE, birthYear: 1988, birthDate: new Date(1988, 6, 4), phoneNumber: '01023456789' },
+    { displayName: '이지은', gender: Gender.FEMALE, birthYear: 1993, birthDate: new Date(1993, 10, 22), phoneNumber: '01034567890' },
+    { displayName: '최준호', gender: Gender.MALE, birthYear: 1990, birthDate: new Date(1990, 0, 8), phoneNumber: '01045678901' },
+    { displayName: '정하늘', gender: Gender.FEMALE, birthYear: 1995, birthDate: new Date(1995, 4, 30), phoneNumber: '01056789012' },
+    { displayName: '강서연', gender: Gender.FEMALE, birthYear: 1992, birthDate: new Date(1992, 8, 12), phoneNumber: '01067890123' },
+    { displayName: '조현우', gender: Gender.MALE, birthYear: 1994, birthDate: new Date(1994, 1, 27), phoneNumber: '01078901234' },
+    { displayName: '윤채원', gender: Gender.FEMALE, birthYear: 1996, birthDate: new Date(1996, 11, 3), phoneNumber: '01089012345' },
   ];
 
   const users = await Promise.all(
-    userSeeds.map(({ displayName, gender, birthYear, phoneNumber }) =>
+    userSeeds.map(({ displayName, gender, birthYear, birthDate, phoneNumber }) =>
       prisma.user.create({
         data: {
           kakaoId: devKakaoId(displayName),
           displayName,
           gender,
           birthYear,
+          birthDate,
           phoneNumber,
         },
       }),
@@ -133,6 +134,7 @@ async function main() {
           displayName,
           gender: index % 2 === 0 ? Gender.MALE : Gender.FEMALE,
           birthYear: 1988 + (index % 12),
+          birthDate: new Date(1988 + (index % 12), index % 12, (index % 28) + 1),
           phoneNumber: `0109${String(index + 1).padStart(7, '0')}`,
         },
       });
@@ -165,7 +167,7 @@ async function main() {
     data: {
       name: '강남 독서모임',
       description: '매주 한 권씩 읽고 토론하는 모임이에요.',
-      category: '독서',
+      category: '독서/글쓰기',
       isPublic: true,
       inviteCode: 'book-club1',
       bankName: '카카오뱅크',
@@ -191,7 +193,7 @@ async function main() {
     data: {
       name: '주말 러닝크루',
       description: '한강 러닝 + 커피 한 잔!',
-      category: '운동',
+      category: '스포츠/피트니스',
       isPublic: true,
       inviteCode: 'run-weeknd',
       bankName: '토스뱅크',
@@ -214,7 +216,7 @@ async function main() {
     data: {
       name: 'React 스터디',
       description: '주 1회 온라인 스터디 · 사이드 프로젝트 병행',
-      category: '개발',
+      category: 'IT/개발',
       isPublic: true,
       inviteCode: 'react-study',
       bankName: 'NH농협은행',
@@ -237,7 +239,7 @@ async function main() {
     data: {
       name: '보드게임 동호회',
       description: '매달 보드게임 번개를 열어요.',
-      category: '기타',
+      category: '게임/엔터테인먼트',
       isPublic: true,
       inviteCode: 'board-game',
       ...region('부산광역시', '해운대구', undefined, '우동'),
@@ -256,7 +258,7 @@ async function main() {
     data: {
       name: '요가 & 명상',
       description: '아침 요가로 하루를 시작해요.',
-      category: '운동',
+      category: '건강/웰빙',
       isPublic: true,
       inviteCode: 'yoga-morn',
       ...region('경기도', '성남시', '분당구', '정자동'),
@@ -272,7 +274,7 @@ async function main() {
     data: {
       name: '사진 산책 모임',
       description: '출사 겸 산책하는 사진 애호가 모임',
-      category: '여행',
+      category: '아웃도어/여행',
       isPublic: true,
       inviteCode: 'photo-walk',
       ...region('인천광역시', '연수구', undefined, '송도동'),

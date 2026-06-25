@@ -48,7 +48,7 @@ export default function Layout() {
         <div className="header-actions">
           {user ? (
             <>
-              <span className="user-chip">
+              <Link to="/profile" className="user-chip" aria-label="내 프로필 수정">
                 {user.profileImageUrl ? (
                   <img src={user.profileImageUrl} alt="" />
                 ) : (
@@ -57,7 +57,7 @@ export default function Layout() {
                   </span>
                 )}
                 <span className="user-chip__name">{user.displayName}</span>
-              </span>
+              </Link>
               <button
                 type="button"
                 className="btn-ghost btn-logout"

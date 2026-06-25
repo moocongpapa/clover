@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ROLE_LABELS, type MyGroup } from '../api';
+import CategoryBadge from '../components/CategoryBadge';
 import GroupAvatar from '../components/GroupAvatar';
 import './Groups.css';
 
@@ -38,13 +39,15 @@ export default function MyGroups() {
               to={`/groups/${g.id}`}
               className="group-card group-card--row"
             >
-              <GroupAvatar
-                src={g.profileImageUrl}
-                name={g.name}
-                className="group-card__avatar"
-              />
+              <div className="group-card__aside">
+                <CategoryBadge category={g.category} />
+                <GroupAvatar
+                  src={g.profileImageUrl}
+                  name={g.name}
+                  className="group-card__avatar"
+                />
+              </div>
               <div className="group-card__body">
-                <span className="group-category">{g.category}</span>
                 <h3>{g.name}</h3>
                 <p>{g.description}</p>
                 <span className="group-meta">

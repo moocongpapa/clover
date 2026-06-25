@@ -21,7 +21,14 @@ export class CalendarService {
     const events = await this.prisma.event.findMany({
       where: { groupId: { in: groupIds } },
       include: {
-        group: { select: { id: true, name: true, category: true } },
+        group: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            profileImageUrl: true,
+          },
+        },
         votes: {
           where: { userId },
           select: { choice: true },
@@ -100,6 +107,8 @@ export class CalendarService {
       isPast:
         event.status === 'CANCELLED' ||
         eventEndAt(event.date, event.startTime, event.endTime) < new Date(),
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt,
     }));
   }
 }

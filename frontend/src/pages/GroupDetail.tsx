@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   api,
+  formatCategoryEmoji,
   formatEventDate,
   formatEventTimeRange,
   ASSIGNABLE_ROLES,
@@ -9,6 +10,7 @@ import {
   formatPhoneNumber,
   isOfficerRole,
   isStaffRole,
+  normalizeCategory,
   ROLE_LABELS,
   ROLE_SORT_ORDER,
   type Event,
@@ -158,7 +160,12 @@ export default function GroupDetail() {
             />
           )}
           <div>
-            <span className="group-category">{group.category}</span>
+            <span className="group-detail-category">
+              <span className="group-detail-category__emoji" aria-hidden>
+                {formatCategoryEmoji(group.category)}
+              </span>
+              {normalizeCategory(group.category)}
+            </span>
             <h1>{group.name}</h1>
             <p>{group.description}</p>
             <p className="group-stats">
