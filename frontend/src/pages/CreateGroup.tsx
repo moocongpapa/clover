@@ -1,5 +1,11 @@
 import { type FormEvent, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import RegionSelector, {
+  type RegionSelection,
+} from '../components/RegionSelector';
+import BankAccountFields, {
+  readBankAccountFromForm,
+} from '../components/BankAccountFields';
 import { api, CATEGORIES } from '../api';
 import '../pages/Groups.css';
 
@@ -10,6 +16,12 @@ export default function CreateGroup() {
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [region, setRegion] = useState<RegionSelection>({
+    activitySido: '',
+    activitySigungu: '',
+    activityDistrict: '',
+    activityTown: '',
+  });
 
   const handleImageChange = (file: File | null) => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -39,6 +51,11 @@ export default function CreateGroup() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    if (!region.activitySido || !region.activitySigungu) {
+      setError('주요 활동 지역을 선택해 주세요.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -54,6 +71,13 @@ export default function CreateGroup() {
         category: fd.get('category') as string,
         isPublic: fd.get('isPublic') === 'on',
         profileImageUrl,
+        activitySido: region.activitySido,
+        activitySigungu: region.activitySigungu,
+        ...(region.activityDistrict
+          ? { activityDistrict: region.activityDistrict }
+          : {}),
+        ...(region.activityTown ? { activityTown: region.activityTown } : {}),
+        ...readBankAccountFromForm(fd),
       });
       navigate(`/groups/${group.id}`);
     } catch (err) {
@@ -65,10 +89,6 @@ export default function CreateGroup() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1>모임 만들기</h1>
-      </div>
-
       <form className="form-card" onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="name">모임 이름 *</label>
@@ -77,6 +97,10 @@ export default function CreateGroup() {
         <div className="form-group">
           <label htmlFor="description">소개 *</label>
           <textarea id="description" name="description" required />
+        </div>
+        <div className="form-group">
+          <label>주요 활동 지역 *</label>
+          <RegionSelector value={region} onChange={setRegion} />
         </div>
         <div className="form-group">
           <label htmlFor="category">카테고리 *</label>
@@ -125,6 +149,7 @@ export default function CreateGroup() {
           <input id="isPublic" name="isPublic" type="checkbox" defaultChecked />
           <label htmlFor="isPublic">검색·목록에 공개</label>
         </div>
+        <BankAccountFields />
         {error && <p className="form-error">{error}</p>}
         <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? '생성 중…' : '모임 만들기'}

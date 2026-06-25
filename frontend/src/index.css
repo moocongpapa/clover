@@ -228,6 +228,30 @@ h3 {
   background: var(--grey-100);
 }
 
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-min);
+  height: var(--touch-min);
+  padding: 0 14px;
+  background: rgba(240, 68, 82, 0.08);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+  transition: background var(--dur-base) var(--ease);
+}
+
+.btn-danger:hover {
+  background: rgba(240, 68, 82, 0.16);
+}
+
+.btn-danger:active {
+  background: rgba(240, 68, 82, 0.22);
+}
+
 .btn-sm {
   min-height: 36px;
   height: 36px;
@@ -235,8 +259,6 @@ h3 {
   font-size: 13px;
   font-weight: 600;
   border-radius: var(--radius-s);
-  border: 1px solid var(--border);
-  background: var(--surface);
 }
 
 .btn-lg {
@@ -245,6 +267,17 @@ h3 {
   padding: 0 24px;
   font-size: 15px;
   border-radius: var(--radius-xl);
+}
+
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
+}
+
+.page-actions .btn-primary,
+.page-actions .btn-outline {
+  width: auto;
 }
 
 .page-header {

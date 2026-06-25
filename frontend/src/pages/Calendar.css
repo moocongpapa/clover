@@ -1,30 +1,59 @@
-.calendar-page__header {
-  flex-direction: column;
-  align-items: stretch;
+.calendar-page__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
 }
 
-.calendar-page__header .segmented-control {
-  width: 100%;
+.cal-view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-subtle, #f1f3f5);
 }
 
-.calendar-page__header .segmented-control__item {
-  flex: 1;
-  min-height: var(--touch-min);
+.cal-view-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, background 0.15s ease;
 }
 
-@media (min-width: 480px) {
-  .calendar-page__header {
-    flex-direction: row;
-    align-items: center;
-  }
+.cal-view-toggle__btn:hover {
+  opacity: 0.8;
+}
 
-  .calendar-page__header .segmented-control {
-    width: auto;
-  }
+.cal-view-toggle__btn.is-active {
+  opacity: 1;
+  background: var(--surface, #fff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .cal-section {
   margin-bottom: var(--space-6);
+}
+
+.cal-list-tabs {
+  margin-bottom: var(--space-4);
+}
+
+.cal-list-tabs .segmented-control {
+  width: 100%;
+}
+
+.cal-list-tabs .segmented-control__item {
+  flex: 1;
+  min-height: var(--touch-min);
 }
 
 .cal-section__title {
@@ -403,6 +432,25 @@
 .empty-inline {
   color: var(--ink-muted);
   font-size: 15px;
+}
+
+.empty-inline-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.empty-inline-block .link-text {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
 }
 
 @media (max-width: 640px) {

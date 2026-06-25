@@ -11,7 +11,7 @@ import { EventsService } from './events.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
-import { CreateEventDto, UpdateEventDto } from './dto/events.dto';
+import { CreateEventDto, SplitTeamsDto, UpdateEventDto } from './dto/events.dto';
 
 @Controller()
 export class EventsController {
@@ -56,5 +56,21 @@ export class EventsController {
   @UseGuards(JwtAuthGuard)
   cancel(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.eventsService.cancel(id, user.id);
+  }
+
+  @Get('events/:id/teams')
+  @UseGuards(JwtAuthGuard)
+  getTeams(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.eventsService.getTeams(id, user.id);
+  }
+
+  @Post('events/:id/teams/split')
+  @UseGuards(JwtAuthGuard)
+  splitTeams(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: SplitTeamsDto,
+  ) {
+    return this.eventsService.splitTeams(id, user.id, dto.teamCount);
   }
 }

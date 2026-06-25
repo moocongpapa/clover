@@ -17,6 +17,9 @@ import {
   getApprovedMembership,
   isApproved,
   isOfficer,
+  buildActivityRegion,
+  normalizeOptionalText,
+  USER_MEMBER_SELECT,
 } from '../common/utils/group.utils';
 
 @Injectable()
@@ -79,6 +82,8 @@ export class GroupsService {
   }
 
   async create(userId: string, dto: CreateGroupDto) {
+    const activityRegion = buildActivityRegion(dto);
+
     const group = await this.prisma.group.create({
       data: {
         name: dto.name,
@@ -86,6 +91,14 @@ export class GroupsService {
         profileImageUrl: dto.profileImageUrl,
         category: dto.category,
         isPublic: dto.isPublic,
+        activitySido: dto.activitySido,
+        activitySigungu: dto.activitySigungu ?? null,
+        activityDistrict: dto.activityDistrict ?? null,
+        activityTown: dto.activityTown ?? null,
+        activityRegion,
+        bankName: normalizeOptionalText(dto.bankName),
+        bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
+        bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
         inviteCode: nanoid(10),
         members: {
           create: {
@@ -120,6 +133,14 @@ export class GroupsService {
         description: dto.description,
         category: dto.category,
         isPublic: dto.isPublic,
+        activitySido: dto.activitySido,
+        activitySigungu: dto.activitySigungu ?? null,
+        activityDistrict: dto.activityDistrict ?? null,
+        activityTown: dto.activityTown ?? null,
+        activityRegion: buildActivityRegion(dto),
+        bankName: normalizeOptionalText(dto.bankName),
+        bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
+        bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
         ...(dto.profileImageUrl !== undefined
           ? { profileImageUrl: dto.profileImageUrl }
           : {}),
@@ -138,11 +159,7 @@ export class GroupsService {
           where: { status: MemberStatus.APPROVED },
           include: {
             user: {
-              select: {
-                id: true,
-                displayName: true,
-                profileImageUrl: true,
-              },
+              select: USER_MEMBER_SELECT,
             },
           },
           orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
@@ -173,11 +190,7 @@ export class GroupsService {
           where: { groupId, status: MemberStatus.PENDING },
           include: {
             user: {
-              select: {
-                id: true,
-                displayName: true,
-                profileImageUrl: true,
-              },
+              select: USER_MEMBER_SELECT,
             },
           },
           orderBy: { createdAt: 'asc' },
@@ -260,15 +273,15 @@ export class GroupsService {
       throw new ForbiddenException('회장 지정은 양도 API를 사용하세요.');
     }
 
-    if (dto.role === MemberRole.OFFICER && actor.role !== MemberRole.PRESIDENT) {
-      throw new ForbiddenException('회장만 운영진을 지정할 수 있습니다.');
+    if (dto.role !== undefined && actor.role !== MemberRole.PRESIDENT) {
+      throw new ForbiddenException('회장만 역할을 변경할 수 있습니다.');
     }
 
     if (
       target.role === MemberRole.PRESIDENT &&
-      (dto.status === MemberStatus.REJECTED || dto.role === MemberRole.MEMBER)
+      (dto.status === MemberStatus.REJECTED || dto.role !== undefined)
     ) {
-      throw new ForbiddenException('회장은 제거하거나 강등할 수 없습니다.');
+      throw new ForbiddenException('회장 역할은 양도 API를 사용하세요.');
     }
 
     return this.prisma.groupMember.update({
@@ -279,7 +292,7 @@ export class GroupsService {
       },
       include: {
         user: {
-          select: { id: true, displayName: true, profileImageUrl: true },
+          select: USER_MEMBER_SELECT,
         },
       },
     });
@@ -304,7 +317,7 @@ export class GroupsService {
     await this.prisma.$transaction([
       this.prisma.groupMember.update({
         where: { id: actor.id },
-        data: { role: MemberRole.OFFICER },
+        data: { role: MemberRole.MEMBER },
       }),
       this.prisma.groupMember.update({
         where: { id: target.id },

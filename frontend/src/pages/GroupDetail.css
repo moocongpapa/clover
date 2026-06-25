@@ -51,6 +51,59 @@
   margin-top: 0.5rem;
 }
 
+.group-stats__region {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.group-hero__bank {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--grey-100);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--border);
+}
+
+.group-hero__bank-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.group-hero__bank-list {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 4px 8px;
+  margin: 0;
+}
+
+.group-hero__bank-list dt {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.group-hero__bank-list dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.group-hero__bank-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.group-hero__bank-account span {
+  min-width: 0;
+}
+
 .info-banner {
   padding: 12px 16px;
   background: var(--accent-soft);
@@ -90,12 +143,53 @@
   margin-bottom: 1.5rem;
 }
 
+.invite-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .invite-box code {
   display: block;
   margin-top: 0.5rem;
   font-size: 0.8rem;
   word-break: break-all;
   color: var(--ink-muted);
+}
+
+.bank-box {
+  padding: 1rem;
+  background: var(--surface-alt);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.bank-box__title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.bank-box__list {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+}
+
+.bank-box__list dt {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.bank-box__list dd {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ink);
+  word-break: break-all;
 }
 
 .section-block {
@@ -140,6 +234,62 @@
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+.member-list__name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.member-list__aside {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.member-list__phone {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.member-list__phone:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.member-list__transfer {
+  margin-left: 0.25rem;
+}
+
+.transfer-panel {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.role-select {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  min-width: 7rem;
+}
+
+.role-select:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .event-item {
@@ -201,11 +351,23 @@
   box-shadow: var(--shadow-1);
 }
 
+.event-detail-header__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .event-detail-header h1 {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 6px;
+}
+
+.event-detail-header__delete {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .event-detail-header > p {
@@ -242,20 +404,6 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--ink);
-}
-
-.event-detail-header .btn-ghost {
-  width: 100%;
-  margin-top: 4px;
-  font-size: 13px;
-}
-
-@media (min-width: 480px) {
-  .event-detail-header .btn-ghost {
-    width: auto;
-    margin-left: auto;
-    display: block;
-  }
 }
 
 /* ── Vote section (event detail) ── */
@@ -332,11 +480,11 @@
 
 .vote-segment__btn {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-height: 56px;
+  gap: 5px;
+  min-height: 64px;
   padding: 8px 6px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-m);
@@ -354,14 +502,14 @@
 }
 
 .vote-segment__label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
   color: var(--ink);
 }
 
 .vote-segment__count {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--ink-tertiary);
 }
 
@@ -426,59 +574,182 @@
   text-align: center;
 }
 
-.voter-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.vote-status-table {
+  width: 100%;
+  border-collapse: collapse;
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
   overflow: hidden;
+  background: var(--surface);
 }
 
-.voter-list__item {
+.vote-status-table__row + .vote-status-table__row {
+  border-top: 1px solid var(--border);
+}
+
+.vote-status-table__head {
+  width: 84px;
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+  border-right: 1px solid var(--border);
+  background: var(--grey-100);
+  white-space: nowrap;
+}
+
+.vote-status-table__label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.vote-status-table__row--attend .vote-status-table__label {
+  color: var(--vote-attend);
+}
+
+.vote-status-table__row--absent .vote-status-table__label {
+  color: var(--vote-absent);
+}
+
+.vote-status-table__row--late .vote-status-table__label {
+  color: var(--vote-late);
+}
+
+.vote-status-table__count {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-tertiary);
+}
+
+.vote-status-table__names {
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  vertical-align: top;
+}
+
+.vote-status-table__names--empty {
+  color: var(--ink-muted);
+}
+
+.team-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.team-section__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.team-section__head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.team-my-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(3, 178, 108, 0.1);
+  color: var(--green-500);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.team-split-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.team-split-controls__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.team-count-picker {
+  display: flex;
+  gap: 6px;
+}
+
+.team-count-btn {
+  min-width: 52px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.team-count-btn.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.team-split-btn {
+  margin-left: auto;
+}
+
+.team-hint,
+.team-meta {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.team-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
   background: var(--surface);
 }
 
-.voter-list__item + .voter-list__item {
-  border-top: 1px solid var(--border);
+.team-card.is-mine {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(254, 107, 23, 0.2);
+  background: #fffaf5;
 }
 
-.voter-list__name {
-  font-weight: 500;
-  color: var(--ink);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.team-card__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
 }
 
-.voter-list__badge {
-  flex-shrink: 0;
-  font-size: 11px;
+.team-card__count {
+  font-size: 12px;
   font-weight: 600;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
+  color: var(--ink-muted);
 }
 
-.voter-list__badge--attend {
-  color: var(--vote-attend);
-  background: rgba(3, 178, 108, 0.1);
-}
-
-.voter-list__badge--absent {
-  color: var(--vote-absent);
-  background: rgba(240, 68, 82, 0.1);
-}
-
-.voter-list__badge--late {
-  color: var(--vote-late);
-  background: rgba(254, 107, 23, 0.1);
+.team-card__members {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
 }
 
 .calendar-list {

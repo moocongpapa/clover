@@ -40,11 +40,22 @@ export async function createGroup(
     description: string;
     category: string;
     isPublic: boolean;
+    activitySido?: string;
+    activitySigungu?: string;
+    activityDistrict?: string;
+    activityTown?: string;
   },
 ) {
   return request<{ id: string; inviteCode: string }>(
     '/groups',
-    { method: 'POST', body: JSON.stringify(data) },
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        activitySido: '서울특별시',
+        activitySigungu: '강남구',
+        ...data,
+      }),
+    },
     token,
   );
 }

@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import CloverLogo from './CloverLogo';
 import './Layout.css';
 
 export default function Layout() {
@@ -21,7 +22,9 @@ export default function Layout() {
     <div className="app-shell">
       <header className="site-header">
         <Link to="/" className="brand">
-          <span className="brand-mark">C</span>
+          <span className="brand-mark">
+            <CloverLogo size={22} />
+          </span>
           <span className="brand-text">Clover</span>
         </Link>
 
@@ -77,17 +80,17 @@ export default function Layout() {
 
       {user && (
         <nav className="tab-bar" aria-label="하단 메뉴">
-          <NavLink to="/" end className={tabClass}>
-            <span className="tab-bar__label">홈</span>
+          <NavLink to="/" end className={tabClass} aria-label="홈" title="홈">
+            <span className="tab-bar__icon">🏠</span>
           </NavLink>
-          <NavLink to="/my-groups" className={tabClass}>
-            <span className="tab-bar__label">내 모임</span>
+          <NavLink to="/my-groups" className={tabClass} aria-label="내 모임" title="내 모임">
+            <span className="tab-bar__icon">👥</span>
           </NavLink>
-          <NavLink to="/groups" className={tabClass}>
-            <span className="tab-bar__label">모임 찾기</span>
+          <NavLink to="/groups" className={tabClass} aria-label="모임 찾기" title="모임 찾기">
+            <span className="tab-bar__icon">🔍</span>
           </NavLink>
-          <NavLink to="/calendar" className={tabClass}>
-            <span className="tab-bar__label">캘린더</span>
+          <NavLink to="/calendar" className={tabClass} aria-label="캘린더" title="캘린더">
+            <span className="tab-bar__icon">📅</span>
           </NavLink>
         </nav>
       )}

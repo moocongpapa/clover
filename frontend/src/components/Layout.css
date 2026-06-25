@@ -38,12 +38,8 @@
   place-items: center;
   width: 32px;
   height: 32px;
-  background: var(--accent);
-  color: var(--white);
+  background: #e7f8f0;
   border-radius: 10px;
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
 }
 
 .brand-text {
@@ -205,19 +201,20 @@
   border-radius: 0 0 2px 2px;
 }
 
-.tab-bar__item.is-active .tab-bar__label {
-  font-weight: 700;
-}
-
 .tab-bar__item:active {
   background: var(--grey-100);
 }
 
-.tab-bar__label {
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+.tab-bar__icon {
+  font-size: 26px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.tab-bar__item.is-active .tab-bar__icon {
+  opacity: 1;
+  transform: scale(1.08);
 }
 
 /* ── Tablet / desktop enhancements ── */

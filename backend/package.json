@@ -16,6 +16,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
+    "regions:build": "node scripts/build-regions.js",
+    "regions:update": "node scripts/build-regions.js --download",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

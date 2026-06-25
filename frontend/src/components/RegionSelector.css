@@ -1,0 +1,32 @@
+.region-selector__row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .region-selector__row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.region-selector__loading {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin-bottom: var(--space-4);
+}
+
+.region-selector__meta {
+  margin: -8px 0 var(--space-4);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.region-selector .form-group {
+  margin-bottom: 0;
+}
+
+.region-selector .form-group select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

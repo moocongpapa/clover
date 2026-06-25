@@ -26,6 +26,34 @@ export class CreateGroupDto {
 
   @IsBoolean()
   isPublic!: boolean;
+
+  @IsString()
+  @IsNotEmpty()
+  activitySido!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  activitySigungu!: string;
+
+  @IsOptional()
+  @IsString()
+  activityDistrict?: string;
+
+  @IsOptional()
+  @IsString()
+  activityTown?: string;
+
+  @IsOptional()
+  @IsString()
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  bankAccountNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  bankAccountHolder?: string;
 }
 
 export class UpdateGroupDto {
@@ -47,6 +75,34 @@ export class UpdateGroupDto {
 
   @IsBoolean()
   isPublic!: boolean;
+
+  @IsString()
+  @IsNotEmpty()
+  activitySido!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  activitySigungu!: string;
+
+  @IsOptional()
+  @IsString()
+  activityDistrict?: string;
+
+  @IsOptional()
+  @IsString()
+  activityTown?: string;
+
+  @IsOptional()
+  @IsString()
+  bankName?: string | null;
+
+  @IsOptional()
+  @IsString()
+  bankAccountNumber?: string | null;
+
+  @IsOptional()
+  @IsString()
+  bankAccountHolder?: string | null;
 }
 
 export class UpdateMemberDto {

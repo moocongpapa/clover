@@ -11,8 +11,18 @@ export async function getApprovedMembership(
   });
 }
 
+export const OFFICER_SUB_ROLES: MemberRole[] = [
+  MemberRole.VICE_PRESIDENT,
+  MemberRole.SECRETARY,
+  MemberRole.OFFICER,
+];
+
+export function isOfficerSubRole(role: MemberRole) {
+  return OFFICER_SUB_ROLES.includes(role);
+}
+
 export function isOfficer(role: MemberRole) {
-  return role === MemberRole.PRESIDENT || role === MemberRole.OFFICER;
+  return role === MemberRole.PRESIDENT || isOfficerSubRole(role);
 }
 
 export function isApproved(status: MemberStatus) {
@@ -24,6 +34,36 @@ export function eventStartAt(date: Date, startTime: string): Date {
   const start = new Date(date);
   start.setHours(hours, minutes, 0, 0);
   return start;
+}
+
+export function eventEndAt(
+  date: Date,
+  startTime: string,
+  endTime?: string | null,
+): Date {
+  const time = endTime ?? startTime;
+  const [hours, minutes] = time.split(':').map(Number);
+  const end = new Date(date);
+  end.setHours(hours, minutes, 0, 0);
+  return end;
+}
+
+export function teamSplitAvailableAt(date: Date, startTime: string): Date {
+  const start = eventStartAt(date, startTime);
+  return new Date(start.getTime() - 30 * 60 * 1000);
+}
+
+export function canSplitTeams(date: Date, startTime: string): boolean {
+  return new Date() >= teamSplitAvailableAt(date, startTime);
+}
+
+export function isEventVoteLocked(
+  event: { date: Date; startTime: string; status: string },
+  hasTeamSplit: boolean,
+): boolean {
+  if (event.status === 'CANCELLED') return true;
+  if (hasTeamSplit) return true;
+  return eventStartAt(event.date, event.startTime) <= new Date();
 }
 
 /** YYYY-MM-DD → 로컬 자정 (타임존 불일치 방지) */
@@ -41,3 +81,33 @@ export function addDays(date: Date, days: number): Date {
   next.setDate(next.getDate() + days);
   return next;
 }
+
+export function buildActivityRegion(parts: {
+  activitySido: string;
+  activitySigungu?: string | null;
+  activityDistrict?: string | null;
+  activityTown?: string | null;
+}) {
+  return [
+    parts.activitySido,
+    parts.activitySigungu,
+    parts.activityDistrict,
+    parts.activityTown,
+  ]
+    .filter((v) => v && v.trim())
+    .join(' ');
+}
+
+export function normalizeOptionalText(value?: string | null) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export const USER_MEMBER_SELECT = {
+  id: true,
+  displayName: true,
+  profileImageUrl: true,
+  gender: true,
+  birthYear: true,
+  phoneNumber: true,
+} as const;

@@ -38,20 +38,8 @@
 
 /* ── Dashboard ── */
 
-.home-dashboard__header {
-  margin-bottom: 14px;
-}
-
-.home-dashboard__header h1 {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.home-dashboard__sub {
-  margin: 2px 0 0;
-  font-size: 13px;
-  color: var(--ink-muted);
+.home-tabs {
+  margin-bottom: 18px;
 }
 
 .home-section {
@@ -138,6 +126,11 @@
   line-height: 1.4;
 }
 
+.home-event-card__team {
+  font-weight: 600;
+  color: var(--accent);
+}
+
 .home-event-card__error {
   margin: 6px 0 0;
   font-size: 12px;
@@ -188,7 +181,12 @@
 }
 
 .home-vote-btn {
-  min-height: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
   padding: 6px 4px;
   border: 1px solid var(--border);
   border-radius: var(--radius-s);
@@ -197,6 +195,29 @@
   font-weight: 600;
   color: var(--ink-muted);
   transition: all var(--dur-base) var(--ease);
+}
+
+.home-vote-btn__label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.home-vote-btn__count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-tertiary);
+}
+
+.home-vote-btn--attend.is-selected .home-vote-btn__count {
+  color: var(--green-500);
+}
+
+.home-vote-btn--absent.is-selected .home-vote-btn__count {
+  color: var(--red-500);
+}
+
+.home-vote-btn--late.is-selected .home-vote-btn__count {
+  color: var(--orange-500);
 }
 
 .home-vote-btn:active:not(:disabled) {
@@ -223,6 +244,61 @@
 
 .home-vote-btn:disabled {
   opacity: 0.5;
+}
+
+.home-vote-counts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.home-vote-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: var(--radius-s);
+  background: var(--grey-100);
+  font-size: 12px;
+}
+
+.home-vote-count__label {
+  font-weight: 600;
+}
+
+.home-vote-count__num {
+  font-weight: 500;
+  color: var(--ink-tertiary);
+}
+
+.home-vote-count--attend .home-vote-count__label {
+  color: var(--vote-attend);
+}
+
+.home-vote-count--absent .home-vote-count__label {
+  color: var(--vote-absent);
+}
+
+.home-vote-count--late .home-vote-count__label {
+  color: var(--vote-late);
+}
+
+.home-vote-count.is-mine {
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+.home-vote-count--attend.is-mine {
+  background: rgba(3, 178, 108, 0.08);
+}
+
+.home-vote-count--absent.is-mine {
+  background: rgba(240, 68, 82, 0.08);
+}
+
+.home-vote-count--late.is-mine {
+  background: rgba(254, 107, 23, 0.08);
 }
 
 .home-empty {

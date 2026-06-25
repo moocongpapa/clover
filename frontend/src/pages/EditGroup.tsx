@@ -1,6 +1,12 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, CATEGORIES, type GroupDetail } from '../api';
+import RegionSelector, {
+  type RegionSelection,
+} from '../components/RegionSelector';
+import BankAccountFields, {
+  readBankAccountFromForm,
+} from '../components/BankAccountFields';
+import { api, CATEGORIES, isStaffRole, type GroupDetail } from '../api';
 import '../pages/Groups.css';
 
 export default function EditGroup() {
@@ -13,6 +19,12 @@ export default function EditGroup() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
+  const [region, setRegion] = useState<RegionSelection>({
+    activitySido: '',
+    activitySigungu: '',
+    activityDistrict: '',
+    activityTown: '',
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -21,13 +33,18 @@ export default function EditGroup() {
       .then((g) => {
         const role = g.myMembership?.role;
         const approved = g.myMembership?.status === 'APPROVED';
-        const canEdit =
-          approved && (role === 'PRESIDENT' || role === 'OFFICER');
+        const canEdit = approved && role && isStaffRole(role);
         if (!canEdit) {
           setError('모임 프로필을 수정할 권한이 없습니다.');
           return;
         }
         setGroup(g);
+        setRegion({
+          activitySido: g.activitySido ?? '',
+          activitySigungu: g.activitySigungu ?? '',
+          activityDistrict: g.activityDistrict ?? '',
+          activityTown: g.activityTown ?? '',
+        });
         if (g.profileImageUrl) {
           setPreviewUrl(g.profileImageUrl);
         }
@@ -76,6 +93,11 @@ export default function EditGroup() {
     e.preventDefault();
     if (!id || !group) return;
     const fd = new FormData(e.currentTarget);
+    if (!region.activitySido || !region.activitySigungu) {
+      setError('주요 활동 지역을 선택해 주세요.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -93,6 +115,13 @@ export default function EditGroup() {
         description: fd.get('description') as string,
         category: fd.get('category') as string,
         isPublic: fd.get('isPublic') === 'on',
+        activitySido: region.activitySido,
+        activitySigungu: region.activitySigungu,
+        ...(region.activityDistrict
+          ? { activityDistrict: region.activityDistrict }
+          : {}),
+        ...(region.activityTown ? { activityTown: region.activityTown } : {}),
+        ...readBankAccountFromForm(fd),
         ...(profileImageUrl !== undefined ? { profileImageUrl } : {}),
       });
       navigate(`/groups/${id}`);
@@ -123,9 +152,6 @@ export default function EditGroup() {
       <p className="breadcrumb">
         <Link to={`/groups/${group.id}`}>{group.name}</Link>
       </p>
-      <div className="page-header">
-        <h1>모임 프로필 수정</h1>
-      </div>
 
       <form className="form-card" onSubmit={handleSubmit}>
         <div className="form-group">
@@ -145,6 +171,10 @@ export default function EditGroup() {
             defaultValue={group.description}
             required
           />
+        </div>
+        <div className="form-group">
+          <label>주요 활동 지역 *</label>
+          <RegionSelector value={region} onChange={setRegion} />
         </div>
         <div className="form-group">
           <label htmlFor="category">카테고리 *</label>
@@ -210,6 +240,11 @@ export default function EditGroup() {
           />
           <label htmlFor="isPublic">검색·목록에 공개</label>
         </div>
+        <BankAccountFields
+          bankName={group.bankName ?? ''}
+          bankAccountNumber={group.bankAccountNumber ?? ''}
+          bankAccountHolder={group.bankAccountHolder ?? ''}
+        />
         {error && <p className="form-error">{error}</p>}
         <div className="form-actions-row">
           <button type="submit" className="btn-primary" disabled={loading}>

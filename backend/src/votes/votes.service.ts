@@ -8,7 +8,7 @@ import { EventStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupsService } from '../groups/groups.service';
 import { CastVoteDto } from './dto/votes.dto';
-import { eventStartAt } from '../common/utils/group.utils';
+import { eventStartAt, isEventVoteLocked } from '../common/utils/group.utils';
 
 const CHOICE_LABELS: Record<string, string> = {
   ATTEND: '참석',
@@ -25,7 +25,7 @@ export class VotesService {
 
   async castVote(eventId: string, userId: string, dto: CastVoteDto) {
     const event = await this.getActiveEvent(eventId, userId);
-    this.assertBeforeStart(event.date, event.startTime);
+    await this.assertCanVote(eventId, event.date, event.startTime);
 
     return this.prisma.vote.upsert({
       where: { eventId_userId: { eventId, userId } },
@@ -67,7 +67,11 @@ export class VotesService {
     };
 
     const myVote = votes.find((v) => v.userId === userId) ?? null;
-    const started = eventStartAt(event.date, event.startTime) <= new Date();
+    const hasTeamSplit = !!(await this.prisma.eventTeamSplit.findUnique({
+      where: { eventId },
+      select: { id: true },
+    }));
+    const voteLocked = isEventVoteLocked(event, hasTeamSplit);
 
     return {
       event: {
@@ -76,7 +80,8 @@ export class VotesService {
         status: event.status,
         date: event.date,
         startTime: event.startTime,
-        voteLocked: started,
+        voteLocked,
+        hasTeamSplit,
       },
       counts,
       votes: votes.map((v) => ({
@@ -104,9 +109,24 @@ export class VotesService {
     return event;
   }
 
-  private assertBeforeStart(date: Date, startTime: string) {
+  private async assertCanVote(
+    eventId: string,
+    date: Date,
+    startTime: string,
+  ) {
+    const hasTeamSplit = !!(await this.prisma.eventTeamSplit.findUnique({
+      where: { eventId },
+      select: { id: true },
+    }));
+
+    if (hasTeamSplit) {
+      throw new ForbiddenException(
+        '그룹 나누기 후에는 투표를 변경할 수 없습니다.',
+      );
+    }
+
     if (eventStartAt(date, startTime) <= new Date()) {
-      throw new ForbiddenException('이벤트 시작 후에는 투표를 변경할 수 없습니다.');
+      throw new ForbiddenException('모임 시작 후에는 투표를 변경할 수 없습니다.');
     }
   }
 }

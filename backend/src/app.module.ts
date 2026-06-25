@@ -9,6 +9,7 @@ import { VotesModule } from './votes/votes.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { RegionsModule } from './regions/regions.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UploadsModule } from './uploads/uploads.module';
     NotificationsModule,
     CalendarModule,
     UploadsModule,
+    RegionsModule,
   ],
 })
 export class AppModule {}

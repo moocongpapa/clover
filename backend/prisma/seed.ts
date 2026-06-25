@@ -1,5 +1,6 @@
 import {
   EventStatus,
+  Gender,
   MemberRole,
   MemberStatus,
   NotificationType,
@@ -31,31 +32,90 @@ function futureStartTime(hoursAhead = 3): string {
   return `${String(d.getHours()).padStart(2, '0')}:00`;
 }
 
+function region(
+  activitySido: string,
+  activitySigungu: string,
+  activityDistrict?: string,
+  activityTown?: string,
+) {
+  const activityRegion = [
+    activitySido,
+    activitySigungu,
+    activityDistrict,
+    activityTown,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return {
+    activitySido,
+    activitySigungu,
+    activityDistrict: activityDistrict ?? null,
+    activityTown: activityTown ?? null,
+    activityRegion,
+  };
+}
+
+const LARGE_GROUP_TEST_MEMBER_COUNT = 24;
+
+function extraMemberName(index: number) {
+  return `테스트회원${String(index).padStart(2, '0')}`;
+}
+
+function buildVoteBatch(
+  userIds: string[],
+  attendCount: number,
+  lateCount: number,
+  absentCount: number,
+) {
+  const pool = [...userIds];
+  const votes: Array<{ userId: string; choice: VoteChoice }> = [];
+  let cursor = 0;
+
+  for (let i = 0; i < attendCount; i++) {
+    votes.push({ userId: pool[cursor++], choice: VoteChoice.ATTEND });
+  }
+  for (let i = 0; i < lateCount; i++) {
+    votes.push({ userId: pool[cursor++], choice: VoteChoice.LATE });
+  }
+  for (let i = 0; i < absentCount; i++) {
+    votes.push({ userId: pool[cursor++], choice: VoteChoice.ABSENT });
+  }
+
+  return votes;
+}
+
 async function main() {
   console.log('🌱 샘플 데이터 시드 시작…');
 
   await prisma.notificationLog.deleteMany();
+  await prisma.eventTeamAssignment.deleteMany();
+  await prisma.eventTeamSplit.deleteMany();
   await prisma.vote.deleteMany();
   await prisma.event.deleteMany();
   await prisma.groupMember.deleteMany();
   await prisma.group.deleteMany();
   await prisma.user.deleteMany();
 
+  const userSeeds = [
+    { displayName: '김완석', gender: Gender.MALE, birthYear: 1991, phoneNumber: '01012345678' },
+    { displayName: '박민수', gender: Gender.MALE, birthYear: 1988, phoneNumber: '01023456789' },
+    { displayName: '이지은', gender: Gender.FEMALE, birthYear: 1993, phoneNumber: '01034567890' },
+    { displayName: '최준호', gender: Gender.MALE, birthYear: 1990, phoneNumber: '01045678901' },
+    { displayName: '정하늘', gender: Gender.FEMALE, birthYear: 1995, phoneNumber: '01056789012' },
+    { displayName: '강서연', gender: Gender.FEMALE, birthYear: 1992, phoneNumber: '01067890123' },
+    { displayName: '조현우', gender: Gender.MALE, birthYear: 1994, phoneNumber: '01078901234' },
+    { displayName: '윤채원', gender: Gender.FEMALE, birthYear: 1996, phoneNumber: '01089012345' },
+  ];
+
   const users = await Promise.all(
-    [
-      '김완석',
-      '박민수',
-      '이지은',
-      '최준호',
-      '정하늘',
-      '강서연',
-      '조현우',
-      '윤채원',
-    ].map((displayName) =>
+    userSeeds.map(({ displayName, gender, birthYear, phoneNumber }) =>
       prisma.user.create({
         data: {
           kakaoId: devKakaoId(displayName),
           displayName,
+          gender,
+          birthYear,
+          phoneNumber,
         },
       }),
     ),
@@ -63,6 +123,42 @@ async function main() {
 
   const [wanseok, minsu, jieun, junho, haneul, seoyeon, hyunwoo, chaewon] =
     users;
+
+  const extraUsers = await Promise.all(
+    Array.from({ length: LARGE_GROUP_TEST_MEMBER_COUNT }, (_, index) => {
+      const displayName = extraMemberName(index + 1);
+      return prisma.user.create({
+        data: {
+          kakaoId: devKakaoId(displayName),
+          displayName,
+          gender: index % 2 === 0 ? Gender.MALE : Gender.FEMALE,
+          birthYear: 1988 + (index % 12),
+          phoneNumber: `0109${String(index + 1).padStart(7, '0')}`,
+        },
+      });
+    }),
+  );
+
+  const bookClubExtraMembers = extraUsers.map((user) => ({
+    userId: user.id,
+    role: MemberRole.MEMBER,
+    status: MemberStatus.APPROVED,
+  }));
+
+  const largeGroupTestMemberIds = [
+    wanseok.id,
+    jieun.id,
+    junho.id,
+    haneul.id,
+    ...extraUsers.map((user) => user.id),
+  ];
+
+  const largeGroupTestVotes = buildVoteBatch(
+    largeGroupTestMemberIds,
+    22,
+    4,
+    2,
+  );
 
   // ── 모임 1: 김완석 회장 · 독서모임 ──
   const bookClub = await prisma.group.create({
@@ -72,14 +168,19 @@ async function main() {
       category: '독서',
       isPublic: true,
       inviteCode: 'book-club1',
+      bankName: '카카오뱅크',
+      bankAccountNumber: '3333012345678',
+      bankAccountHolder: '김완석',
+      ...region('서울특별시', '강남구', undefined, '역삼동'),
       members: {
         create: [
           { userId: wanseok.id, role: MemberRole.PRESIDENT, status: MemberStatus.APPROVED },
-          { userId: jieun.id, role: MemberRole.OFFICER, status: MemberStatus.APPROVED },
+          { userId: jieun.id, role: MemberRole.VICE_PRESIDENT, status: MemberStatus.APPROVED },
           { userId: junho.id, role: MemberRole.MEMBER, status: MemberStatus.APPROVED },
           { userId: haneul.id, role: MemberRole.MEMBER, status: MemberStatus.APPROVED },
           { userId: hyunwoo.id, role: MemberRole.MEMBER, status: MemberStatus.PENDING },
           { userId: chaewon.id, role: MemberRole.MEMBER, status: MemberStatus.PENDING },
+          ...bookClubExtraMembers,
         ],
       },
     },
@@ -93,6 +194,10 @@ async function main() {
       category: '운동',
       isPublic: true,
       inviteCode: 'run-weeknd',
+      bankName: '토스뱅크',
+      bankAccountNumber: '100012345678',
+      bankAccountHolder: '박민수',
+      ...region('서울특별시', '영등포구', undefined, '여의도동'),
       members: {
         create: [
           { userId: minsu.id, role: MemberRole.PRESIDENT, status: MemberStatus.APPROVED },
@@ -112,10 +217,14 @@ async function main() {
       category: '개발',
       isPublic: true,
       inviteCode: 'react-study',
+      bankName: 'NH농협은행',
+      bankAccountNumber: '30212345678901',
+      bankAccountHolder: '이지은',
+      ...region('경상북도', '포항시', '북구', '흥해읍'),
       members: {
         create: [
           { userId: jieun.id, role: MemberRole.PRESIDENT, status: MemberStatus.APPROVED },
-          { userId: wanseok.id, role: MemberRole.OFFICER, status: MemberStatus.APPROVED },
+          { userId: wanseok.id, role: MemberRole.SECRETARY, status: MemberStatus.APPROVED },
           { userId: haneul.id, role: MemberRole.MEMBER, status: MemberStatus.APPROVED },
           { userId: hyunwoo.id, role: MemberRole.MEMBER, status: MemberStatus.APPROVED },
         ],
@@ -131,6 +240,7 @@ async function main() {
       category: '기타',
       isPublic: true,
       inviteCode: 'board-game',
+      ...region('부산광역시', '해운대구', undefined, '우동'),
       members: {
         create: [
           { userId: minsu.id, role: MemberRole.PRESIDENT, status: MemberStatus.APPROVED },
@@ -149,6 +259,7 @@ async function main() {
       category: '운동',
       isPublic: true,
       inviteCode: 'yoga-morn',
+      ...region('경기도', '성남시', '분당구', '정자동'),
       members: {
         create: [
           { userId: chaewon.id, role: MemberRole.PRESIDENT, status: MemberStatus.APPROVED },
@@ -164,6 +275,7 @@ async function main() {
       category: '여행',
       isPublic: true,
       inviteCode: 'photo-walk',
+      ...region('인천광역시', '연수구', undefined, '송도동'),
       members: {
         create: [
           { userId: junho.id, role: MemberRole.PRESIDENT, status: MemberStatus.APPROVED },
@@ -182,6 +294,7 @@ async function main() {
     title: string;
     daysFromToday: number;
     startTime: string;
+    endTime?: string;
     location: string;
     description: string;
     status?: EventStatus;
@@ -196,9 +309,22 @@ async function main() {
       title: '3월 정기 독서 토론',
       daysFromToday: 1,
       startTime: '19:30',
+      endTime: '21:30',
       location: '강남 스터디카페 3층',
       description: '「아몬드」 3~5장 토론',
       createdById: wanseok.id,
+    },
+    // 독서모임 — 그룹 나누기 대규모 테스트 (참석 22 + 늦참 4 = 26명)
+    {
+      groupId: bookClub.id,
+      title: '대규모 그룹 나누기 테스트',
+      daysFromToday: 2,
+      startTime: '18:00',
+      endTime: '20:30',
+      location: '강남 스터디카페 대회의실',
+      description: '20명 이상 참석자 그룹 나누기 테스트용 일정',
+      createdById: wanseok.id,
+      votes: largeGroupTestVotes,
     },
     // 독서모임 — 모레, 투표 완료(참석)
     {
@@ -206,6 +332,7 @@ async function main() {
       title: '작가와의 만남',
       daysFromToday: 2,
       startTime: '14:00',
+      endTime: '16:00',
       location: '교보문고 강남점',
       description: '초청 작가 북토크',
       createdById: jieun.id,
@@ -350,6 +477,7 @@ async function main() {
         title: seed.title,
         date: localDate(seed.daysFromToday),
         startTime: seed.startTime,
+        endTime: seed.endTime ?? null,
         location: seed.location,
         description: seed.description,
         status: seed.status ?? EventStatus.ACTIVE,
@@ -429,6 +557,11 @@ async function main() {
   console.log('  · 투표 필요: 3월 정기 독서 토론, 주말 장거리 러닝, React 19 신기능 정리');
   console.log('  · 투표 완료: 작가와의 만남, 독서 일지 공유, 한강 5km, 페어 프로그래밍');
   console.log('  · 지난/마감: 2월 정기 모임, Zustand vs Jotai, 점심 독서 모임');
+  console.log('');
+  console.log('그룹 나누기 테스트:');
+  console.log('  · 강남 독서모임 → "대규모 그룹 나누기 테스트"');
+  console.log('  · 참석 22명 + 늦참 4명 = 26명 (테스트회원01~24 포함)');
+  console.log('  · 김완석(회장)으로 로그인 후 이벤트 상세에서 그룹 나누기 실행');
 }
 
 main()

@@ -1,12 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, VOTE_LABELS, type CalendarEvent } from '../api';
+import { api, formatEventTimeRange, VOTE_LABELS, type CalendarEvent } from '../api';
 import SegmentedControl from '../components/SegmentedControl';
 import './Calendar.css';
 
 type ViewMode = 'list' | 'month';
+type ListTab = 'upcoming' | 'past';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+function eventEndAt(ev: CalendarEvent) {
+  const d = new Date(ev.date);
+  const [h, m] = (ev.endTime ?? ev.startTime).split(':').map(Number);
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function isUpcoming(ev: CalendarEvent) {
+  return !ev.isPast;
+}
 
 function toDateKey(date: Date | string): string {
   const d = new Date(date);
@@ -40,6 +52,7 @@ export default function Calendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [listTab, setListTab] = useState<ListTab>('upcoming');
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -64,18 +77,17 @@ export default function Calendar() {
     return map;
   }, [events]);
 
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
+  const upcoming = events
+    .filter(isUpcoming)
+    .sort(
+      (a, b) => eventEndAt(a).getTime() - eventEndAt(b).getTime(),
+    );
 
-  const upcoming = events.filter((e) => {
-    const d = new Date(e.date);
-    return e.status !== 'CANCELLED' && d >= now;
-  });
-
-  const past = events.filter((e) => {
-    const d = new Date(e.date);
-    return e.status === 'CANCELLED' || d < now;
-  });
+  const past = events
+    .filter((e) => !isUpcoming(e))
+    .sort(
+      (a, b) => eventEndAt(b).getTime() - eventEndAt(a).getTime(),
+    );
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -112,7 +124,7 @@ export default function Calendar() {
         <div className="cal-list-body">
           <strong>{ev.title}</strong>
           <span className="cal-list-meta">
-            {ev.group.name} · {ev.startTime} · {ev.location}
+            {ev.group.name} · {formatEventTimeRange(ev.startTime, ev.endTime)} · {ev.location}
           </span>
           <div className="cal-list-tags">
             {ev.status === 'CANCELLED' && (
@@ -145,17 +157,29 @@ export default function Calendar() {
 
   return (
     <div className="calendar-page">
-      <div className="page-header calendar-page__header">
-        <h1>통합 캘린더</h1>
-        <SegmentedControl
-          name="캘린더 보기 방식"
-          options={[
-            { value: 'list', label: '목록' },
-            { value: 'month', label: '달력' },
-          ]}
-          value={viewMode}
-          onChange={setViewMode}
-        />
+      <div className="calendar-page__toolbar">
+        <div className="cal-view-toggle" role="group" aria-label="캘린더 보기 방식">
+          <button
+            type="button"
+            className={`cal-view-toggle__btn${viewMode === 'list' ? ' is-active' : ''}`}
+            onClick={() => setViewMode('list')}
+            aria-pressed={viewMode === 'list'}
+            aria-label="목록 보기"
+            title="목록 보기"
+          >
+            📋
+          </button>
+          <button
+            type="button"
+            className={`cal-view-toggle__btn${viewMode === 'month' ? ' is-active' : ''}`}
+            onClick={() => setViewMode('month')}
+            aria-pressed={viewMode === 'month'}
+            aria-label="달력 보기"
+            title="달력 보기"
+          >
+            📅
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -167,21 +191,51 @@ export default function Calendar() {
         </div>
       ) : viewMode === 'list' ? (
         <>
-          <section className="cal-section">
-            <h2 className="cal-section__title">예정 / 진행</h2>
-            <div className="cal-list">
-              {upcoming.length === 0 ? (
-                <p className="empty-inline">예정된 이벤트가 없어요.</p>
-              ) : (
-                upcoming.map(renderListItem)
-              )}
-            </div>
-          </section>
+          <div className="cal-list-tabs">
+            <SegmentedControl<ListTab>
+              name="일정 구분"
+              options={[
+                { value: 'upcoming', label: '예정 / 진행' },
+                {
+                  value: 'past',
+                  label: `지난 일정${past.length ? ` (${past.length})` : ''}`,
+                },
+              ]}
+              value={listTab}
+              onChange={setListTab}
+            />
+          </div>
 
-          {past.length > 0 && (
+          {listTab === 'upcoming' ? (
             <section className="cal-section">
-              <h2 className="cal-section__title">지난 일정 / 취소</h2>
-              <div className="cal-list">{past.map(renderListItem)}</div>
+              <div className="cal-list">
+                {upcoming.length === 0 ? (
+                  <div className="empty-inline-block">
+                    <p className="empty-inline">예정된 이벤트가 없어요.</p>
+                    {past.length > 0 && (
+                      <button
+                        type="button"
+                        className="link-text"
+                        onClick={() => setListTab('past')}
+                      >
+                        지난 일정 보기
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  upcoming.map(renderListItem)
+                )}
+              </div>
+            </section>
+          ) : (
+            <section className="cal-section">
+              <div className="cal-list">
+                {past.length === 0 ? (
+                  <p className="empty-inline">지난 일정이 없어요.</p>
+                ) : (
+                  past.map(renderListItem)
+                )}
+              </div>
             </section>
           )}
         </>

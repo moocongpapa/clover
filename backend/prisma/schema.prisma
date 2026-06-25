@@ -10,6 +10,8 @@ datasource db {
 enum MemberRole {
   MEMBER
   OFFICER
+  SECRETARY
+  VICE_PRESIDENT
   PRESIDENT
 }
 
@@ -37,11 +39,19 @@ enum NotificationType {
   CANCELLED
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
 model User {
   id                  String         @id @default(cuid())
   kakaoId             String         @unique
   displayName         String
   profileImageUrl     String?
+  gender              Gender?
+  birthYear           Int?
+  phoneNumber         String?
   kakaoChannelUserKey String?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
@@ -49,6 +59,8 @@ model User {
   createdEvents       Event[]        @relation("EventCreator")
   votes               Vote[]
   notifications       NotificationLog[]
+  createdTeamSplits   EventTeamSplit[] @relation("TeamSplitCreator")
+  teamAssignments     EventTeamAssignment[]
 }
 
 model Group {
@@ -57,6 +69,14 @@ model Group {
   description     String
   profileImageUrl String?
   category        String
+  activitySido     String?
+  activitySigungu  String?
+  activityDistrict String?
+  activityTown     String?
+  activityRegion   String?
+  bankName         String?
+  bankAccountNumber String?
+  bankAccountHolder String?
   isPublic        Boolean       @default(true)
   inviteCode      String        @unique
   createdAt       DateTime      @default(now())
@@ -86,6 +106,7 @@ model Event {
   title       String
   date        DateTime
   startTime   String
+  endTime     String?
   location    String
   description String
   status      EventStatus @default(ACTIVE)
@@ -96,9 +117,33 @@ model Event {
   createdBy   User        @relation("EventCreator", fields: [createdById], references: [id])
   votes       Vote[]
   notifications NotificationLog[]
+  teamSplit   EventTeamSplit?
 
   @@index([groupId, date])
   @@index([date])
+}
+
+model EventTeamSplit {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  teamCount   Int
+  createdById String
+  createdAt   DateTime @default(now())
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("TeamSplitCreator", fields: [createdById], references: [id])
+  assignments EventTeamAssignment[]
+}
+
+model EventTeamAssignment {
+  id        String         @id @default(cuid())
+  splitId   String
+  userId    String
+  teamLabel String
+  split     EventTeamSplit @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([splitId, userId])
+  @@index([splitId, teamLabel])
 }
 
 model Vote {

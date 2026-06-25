@@ -1,4 +1,15 @@
-import { IsDateString, IsNotEmpty, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export class CreateEventDto {
   @IsString()
@@ -10,7 +21,13 @@ export class CreateEventDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(TIME_PATTERN, { message: '시작 시간은 HH:MM 형식이어야 합니다.' })
   startTime!: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_PATTERN, { message: '종료 시간은 HH:MM 형식이어야 합니다.' })
+  endTime?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -19,6 +36,13 @@ export class CreateEventDto {
   @IsString()
   @IsNotEmpty()
   description!: string;
+}
+
+export class SplitTeamsDto {
+  @IsInt()
+  @Min(2)
+  @Max(4)
+  teamCount!: number;
 }
 
 export class UpdateEventDto {
@@ -31,7 +55,13 @@ export class UpdateEventDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(TIME_PATTERN, { message: '시작 시간은 HH:MM 형식이어야 합니다.' })
   startTime!: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_PATTERN, { message: '종료 시간은 HH:MM 형식이어야 합니다.' })
+  endTime?: string;
 
   @IsString()
   @IsNotEmpty()
