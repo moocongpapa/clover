@@ -38,6 +38,8 @@ test.describe('Clover 전체 기능 E2E', () => {
   await page.getByRole('link', { name: '모임 만들기' }).click();
   await page.getByLabel('모임 이름 *').fill('E2E 독서모임');
   await page.getByLabel('소개 *').fill('Playwright 테스트용 독서모임');
+  await page.getByLabel('시·도 *').selectOption('서울특별시');
+  await page.getByLabel('시·군·구 *').selectOption('강남구');
   await page.getByLabel('카테고리 *').selectOption('독서/글쓰기');
   await page.getByRole('button', { name: '모임 만들기' }).click();
   await expect(page.getByRole('heading', { name: 'E2E 독서모임' })).toBeVisible();
@@ -90,15 +92,16 @@ test.describe('Clover 전체 기능 E2E', () => {
 
   await member1Page.goto('/');
   await expect(member1Page.getByText('투표가 필요해요')).toBeVisible();
-  await expect(member1Page.getByText('이번 주 독서 토론')).toBeVisible();
+  await expect(member1Page.locator('.home-event-card').getByText('이번 주 독서 토론').first()).toBeVisible();
 
-  const voteCard = member1Page.locator('.home-event-card--action').first();
-  await voteCard.getByRole('button', { name: '참석' }).click();
-  await expect(voteCard.getByRole('button', { name: '참석' })).toHaveClass(/is-selected/);
+  const eventCard = member1Page.locator('.home-event-card', { hasText: '이번 주 독서 토론' }).first();
+  await eventCard.getByRole('button', { name: '참석' }).click();
+  await expect(eventCard.getByRole('button', { name: '참석' })).toHaveClass(/is-selected/);
 
   // ── 6. 투표 변경 (참석 → 불참) ──
   await member1Page.goto(eventUrl);
   await member1Page.getByRole('button', { name: '불참' }).click();
+  await expect(member1Page.getByRole('button', { name: '불참' })).toHaveClass(/is-selected/);
   const votesAfterChange = await getVotes(sessions[0].accessToken, eventId);
   expect(votesAfterChange.myVote?.choice).toBe('ABSENT');
   expect(votesAfterChange.counts.ABSENT).toBeGreaterThanOrEqual(1);
@@ -154,7 +157,7 @@ test.describe('Clover 전체 기능 E2E', () => {
   await loginWithToken(lockedPage, sessions[5].accessToken, sessions[5].user);
   await lockedPage.goto(`/events/${pastEvent.id}`);
 
-  await expect(lockedPage.getByText('투표가 마감되었습니다.')).toBeVisible();
+  await expect(lockedPage.getByText('모임 시작 후에는 투표할 수 없습니다')).toBeVisible();
   await expect(lockedPage.getByRole('button', { name: '참석' })).toHaveCount(0);
 
   let voteBlocked = false;
@@ -179,7 +182,7 @@ test.describe('Clover 전체 기능 E2E', () => {
 
   await page.goto(`/events/${cancelTarget.id}`);
   page.on('dialog', (d) => d.accept());
-  await page.getByRole('button', { name: '이벤트 취소' }).click();
+  await page.getByRole('button', { name: '일정 삭제' }).click();
   await expect(page.getByText('취소됨')).toBeVisible();
 
   const cancelNotes = await getNotifications(sessions[1].accessToken);
@@ -219,6 +222,6 @@ test.describe('Clover 전체 기능 E2E', () => {
     await expect(page.getByRole('main').getByRole('link', { name: '시작하기' })).toBeVisible();
 
     await loginViaUI(page, '게스트테스터');
-    await expect(page.getByRole('heading', { name: '홈' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: '진행 중 일정' })).toBeVisible();
   });
 });

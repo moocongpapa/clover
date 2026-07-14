@@ -7,7 +7,7 @@ function resolveApiBase(): string {
   return 'http://localhost:3000';
 }
 
-const API_BASE = resolveApiBase();
+export const API_BASE = resolveApiBase();
 
 export interface User {
   id: string;
@@ -17,13 +17,43 @@ export interface User {
   gender?: 'MALE' | 'FEMALE' | null;
   birthYear?: number | null;
   birthDate?: string | null;
+  isEarlyYear?: boolean;
   phoneNumber?: string | null;
   bio?: string | null;
+  role?: string;
+}
+
+export interface UserProfileCard {
+  id: string;
+  userId: string;
+  nickname: string;
+  profileImageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  memberships: Array<{
+    id: string;
+    groupId: string;
+    group: {
+      id: string;
+      name: string;
+      profileImageUrl: string | null;
+    };
+  }>;
 }
 
 export interface AuthResponse {
   accessToken: string;
   user: User;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  authorId: string;
+  author: User;
 }
 
 function getToken(): string | null {
@@ -85,7 +115,42 @@ export const api = {
       body: JSON.stringify({ displayName }),
     }),
   getMe: () => request<User>('/auth/me'),
-  updateProfile: (data: { profileImageUrl?: string | null; bio?: string | null }) =>
+  getProfileCards: () => request<UserProfileCard[]>('/auth/me/profile-cards'),
+  createProfileCard: (data: { nickname: string; profileImageUrl?: string | null }) =>
+    request<UserProfileCard>('/auth/me/profile-cards', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateProfileCard: (id: string, data: { nickname?: string; profileImageUrl?: string | null }) =>
+    request<UserProfileCard>(`/auth/me/profile-cards/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteProfileCard: (id: string) =>
+    request<{ ok: boolean }>(`/auth/me/profile-cards/${id}`, {
+      method: 'DELETE',
+    }),
+  linkProfileCard: (groupId: string, profileCardId: string | null) =>
+    request<any>(`/groups/${groupId}/members/link-profile`, {
+      method: 'POST',
+      body: JSON.stringify({ profileCardId }),
+    }),
+  getUser: (id: string) => request<User>(`/auth/users/${id}`),
+  listAnnouncements: (groupId?: string) => request<Announcement[]>(groupId ? `/announcements?groupId=${groupId}` : '/announcements'),
+  getAnnouncement: (id: string) => request<Announcement>(`/announcements/${id}`),
+  createAnnouncement: (data: { title: string; content: string; groupId?: string }) =>
+    request<Announcement>('/announcements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateProfile: (data: {
+    profileImageUrl?: string | null;
+    bio?: string | null;
+    birthYear?: number | null;
+    birthDate?: string | null;
+    phoneNumber?: string | null;
+    gender?: 'MALE' | 'FEMALE' | null;
+  }) =>
     request<User>('/auth/me', {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -141,6 +206,23 @@ export const api = {
     }
     return res.json() as Promise<{ url: string; filename: string }>;
   },
+  uploadGalleryFile: async (file: File) => {
+    const token = getToken();
+    const form = new FormData();
+    form.append('file', file);
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/uploads/gallery`, {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? `업로드 실패 (${res.status})`);
+    }
+    return res.json() as Promise<{ url: string; filename: string; fileType: 'IMAGE' | 'VIDEO' }>;
+  },
   joinGroup: (id: string) =>
     request('/groups/' + id + '/join', { method: 'POST' }),
   cancelJoinGroup: (id: string) =>
@@ -192,6 +274,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ choice }),
     }),
+  cancelVote: (eventId: string) =>
+    request(`/events/${eventId}/votes`, {
+      method: 'DELETE',
+    }),
   getVotes: (eventId: string) =>
     request<VoteResults>(`/events/${eventId}/votes`),
 
@@ -202,6 +288,47 @@ export const api = {
   markNotificationsRead: () =>
     request<{ ok: boolean }>('/notifications/read', { method: 'PATCH' }),
   getRegions: () => request<RegionsData>('/regions'),
+
+  getLatestEventTemplate: (groupId: string) =>
+    request<any>(`/groups/${groupId}/events/latest`),
+
+  updateMyStatus: (groupId: string, userStatus: string) =>
+    request<any>(`/groups/${groupId}/members/my-status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ userStatus }),
+    }),
+
+  getPayments: (groupId: string, year: number, month: number) =>
+    request<any>(`/groups/${groupId}/payments?year=${year}&month=${month}`),
+
+  togglePayment: (groupId: string, userId: string, year: number, month: number) =>
+    request<any>(`/groups/${groupId}/payments/${userId}/toggle?year=${year}&month=${month}`, {
+      method: 'POST',
+    }),
+  getGroupMedia: (groupId: string) =>
+    request<any[]>(`/groups/${groupId}/media`),
+  createGroupMedia: (groupId: string, data: { url: string; fileType: string }) =>
+    request<any>(`/groups/${groupId}/media`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getComments: (eventId: string) =>
+    request<any[]>(`/events/${eventId}/comments`),
+
+  addComment: (eventId: string, content: string) =>
+    request<any>(`/events/${eventId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
+
+  deleteComment: (eventId: string, commentId: string) =>
+    request<any>(`/events/${eventId}/comments/${commentId}`, {
+      method: 'DELETE',
+    }),
+
+  getChatHistory: (groupId: string, limit = 50) =>
+    request<any[]>(`/groups/${groupId}/chats?limit=${limit}`),
 };
 
 export type VoteChoice = 'ATTEND' | 'ABSENT' | 'LATE';
@@ -223,7 +350,12 @@ export interface Group {
   isPublic: boolean;
   inviteCode: string;
   _count?: { members: number };
-  myMembership?: { status: string; role: string } | null;
+  myMembership?: { status: string; role: string; profileCardId?: string | null } | null;
+  customSportName?: string | null;
+  maxMembers?: number | null;
+  dueDay?: number | null;
+  officerFeeExempt?: boolean | null;
+  arenas?: any[] | null;
 }
 
 export interface MyGroup extends Group {
@@ -235,6 +367,7 @@ export interface GroupMember {
   id: string;
   role: string;
   status: string;
+  profileCardId?: string | null;
   user: User;
 }
 
@@ -258,6 +391,11 @@ export interface CreateGroupInput {
   bankName?: string | null;
   bankAccountNumber?: string | null;
   bankAccountHolder?: string | null;
+  customSportName?: string | null;
+  maxMembers?: number;
+  dueDay?: number | null;
+  officerFeeExempt?: boolean;
+  arenas?: any[];
 }
 
 export interface UpdateGroupInput {
@@ -273,6 +411,11 @@ export interface UpdateGroupInput {
   bankName?: string | null;
   bankAccountNumber?: string | null;
   bankAccountHolder?: string | null;
+  customSportName?: string | null;
+  maxMembers?: number;
+  dueDay?: number | null;
+  officerFeeExempt?: boolean;
+  arenas?: any[];
 }
 
 export interface RegionDistrict {
@@ -308,6 +451,7 @@ export interface Event {
   status: 'ACTIVE' | 'CANCELLED';
   createdBy: User;
   _count?: { votes: number };
+  reminderOffsets?: string | null;
 }
 
 export interface EventDetail extends Event {
@@ -321,6 +465,7 @@ export interface CreateEventInput {
   endTime?: string | null;
   location: string;
   description: string;
+  reminderOffsets?: string;
 }
 
 export interface VoteResults {
@@ -497,14 +642,23 @@ export function formatMemberDisplayName(user: {
   displayName: string;
   gender?: 'MALE' | 'FEMALE' | null;
   birthYear?: number | null;
+  isEarlyYear?: boolean | null;
 }) {
   const parts: string[] = [];
 
-  if (user.gender === 'MALE') parts.push('👨');
-  else if (user.gender === 'FEMALE') parts.push('👩');
-
-  if (user.birthYear) {
-    parts.push(String(user.birthYear % 100).padStart(2, '0'));
+  if (user.isEarlyYear) {
+    parts.push('빠른');
+    if (user.birthYear) {
+      parts.push(String(user.birthYear % 100).padStart(2, '0'));
+    }
+    if (user.gender === 'MALE') parts.push('👨');
+    else if (user.gender === 'FEMALE') parts.push('👩');
+  } else {
+    if (user.gender === 'MALE') parts.push('👨');
+    else if (user.gender === 'FEMALE') parts.push('👩');
+    if (user.birthYear) {
+      parts.push(String(user.birthYear % 100).padStart(2, '0'));
+    }
   }
 
   parts.push(user.displayName);
@@ -568,45 +722,33 @@ export const ASSIGNABLE_ROLES = [
 ] as const;
 
 export const CATEGORY_OPTIONS = [
-  { value: '스포츠/피트니스', emoji: '⚽' },
-  { value: '아웃도어/여행', emoji: '🏕️' },
-  { value: '건강/웰빙', emoji: '🧘' },
-  { value: '취미/공예', emoji: '🎨' },
-  { value: '문화/예술', emoji: '🎭' },
-  { value: '음악/공연', emoji: '🎵' },
-  { value: '독서/글쓰기', emoji: '📚' },
-  { value: '음식/맛집', emoji: '🍽️' },
-  { value: 'IT/개발', emoji: '💻' },
-  { value: '비즈니스/커리어', emoji: '💼' },
-  { value: '스터디/교육', emoji: '🎓' },
-  { value: '게임/엔터테인먼트', emoji: '🎮' },
-  { value: '봉사/커뮤니티', emoji: '🤝' },
-  { value: '가족/육아', emoji: '👨‍👩‍👧' },
-  { value: '반려동물', emoji: '🐾' },
+  { value: '풋살/축구', emoji: '⚽' },
+  { value: '농구', emoji: '🏀' },
+  { value: '야구', emoji: '⚾' },
+  { value: '러닝', emoji: '🏃' },
+  { value: '테니스', emoji: '🎾' },
+  { value: '탁구', emoji: '🏓' },
+  { value: '배드민턴', emoji: '🏸' },
+  { value: '볼링', emoji: '🎳' },
+  { value: '골프', emoji: '⛳' },
   { value: '기타', emoji: '✨' },
 ] as const;
 
 export const CATEGORIES = CATEGORY_OPTIONS.map((c) => c.value);
 
 const LEGACY_CATEGORY_MAP: Record<string, string> = {
-  운동: '스포츠/피트니스',
-  풋살: '스포츠/피트니스',
-  축구: '스포츠/피트니스',
-  야구: '스포츠/피트니스',
-  농구: '스포츠/피트니스',
-  테니스: '스포츠/피트니스',
-  탁구: '스포츠/피트니스',
-  수영: '스포츠/피트니스',
-  배드민턴: '스포츠/피트니스',
-  러닝: '스포츠/피트니스',
-  요가: '건강/웰빙',
-  독서: '독서/글쓰기',
-  개발: 'IT/개발',
-  음악: '음악/공연',
-  여행: '아웃도어/여행',
-  요리: '음식/맛집',
-  사진: '취미/공예',
-  보드게임: '게임/엔터테인먼트',
+  운동: '기타',
+  풋살: '풋살/축구',
+  축구: '풋살/축구',
+  야구: '야구',
+  농구: '농구',
+  테니스: '테니스',
+  탁구: '탁구',
+  수영: '기타',
+  배드민턴: '배드민턴',
+  러닝: '러닝',
+  볼링: '볼링',
+  골프: '골프',
 };
 
 export function normalizeCategory(category: string): string {

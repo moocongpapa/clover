@@ -11,11 +11,21 @@ import { EventsService } from './events.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
-import { CreateEventDto, SplitTeamsDto, UpdateEventDto } from './dto/events.dto';
+import { CreateEventDto, SplitTeamsDto, UpdateEventDto, CreateCommentDto } from './dto/events.dto';
+import { Delete } from '@nestjs/common';
 
 @Controller()
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
+
+  @Get('groups/:groupId/events/latest')
+  @UseGuards(JwtAuthGuard)
+  getLatestTemplate(
+    @Param('groupId') groupId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.eventsService.getLatestEventTemplate(groupId, user.id);
+  }
 
   @Get('groups/:groupId/events')
   @UseGuards(JwtAuthGuard)
@@ -72,5 +82,31 @@ export class EventsController {
     @Body() dto: SplitTeamsDto,
   ) {
     return this.eventsService.splitTeams(id, user.id, dto.teamCount);
+  }
+
+  @Get('events/:id/comments')
+  @UseGuards(JwtAuthGuard)
+  getComments(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.eventsService.getComments(id, user.id);
+  }
+
+  @Post('events/:id/comments')
+  @UseGuards(JwtAuthGuard)
+  addComment(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateCommentDto,
+  ) {
+    return this.eventsService.addComment(id, user.id, dto.content);
+  }
+
+  @Delete('events/:id/comments/:commentId')
+  @UseGuards(JwtAuthGuard)
+  deleteComment(
+    @Param('id') id: string,
+    @Param('commentId') commentId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.eventsService.deleteComment(id, commentId, user.id);
   }
 }

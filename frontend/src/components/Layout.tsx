@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CloverLogo from './CloverLogo';
@@ -7,6 +8,7 @@ import './Layout.css';
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'site-nav__link is-active' : 'site-nav__link';
@@ -18,6 +20,20 @@ export default function Layout() {
     logout();
     navigate('/');
   };
+
+  const toggleDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDropdownOpen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handleOutsideClick = () => {
+      setDropdownOpen(false);
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, [dropdownOpen]);
 
   return (
     <div className="app-shell">
@@ -34,14 +50,8 @@ export default function Layout() {
             <NavLink to="/" end className={navClass}>
               홈
             </NavLink>
-            <NavLink to="/my-groups" className={navClass}>
-              내 모임
-            </NavLink>
-            <NavLink to="/groups" className={navClass}>
-              모임 찾기
-            </NavLink>
-            <NavLink to="/calendar" className={navClass}>
-              캘린더
+            <NavLink to="/chat" className={navClass}>
+              채팅
             </NavLink>
           </nav>
         )}
@@ -50,23 +60,51 @@ export default function Layout() {
           {user ? (
             <>
               <NotificationBell />
-              <Link to="/profile" className="user-chip" aria-label="내 프로필 수정">
-                {user.profileImageUrl ? (
-                  <img src={user.profileImageUrl} alt="" />
-                ) : (
-                  <span className="avatar-fallback">
-                    {user.displayName[0]}
-                  </span>
+              <div className="profile-dropdown-container">
+                <button
+                  type="button"
+                  className="user-chip-btn"
+                  onClick={toggleDropdown}
+                  aria-expanded={dropdownOpen}
+                  aria-label="사용자 메뉴"
+                >
+                  {user.profileImageUrl ? (
+                    <img src={user.profileImageUrl} alt="" />
+                  ) : (
+                    <span className="avatar-fallback">
+                      {user.displayName[0]}
+                    </span>
+                  )}
+                  <span className="user-chip__name">{user.displayName}</span>
+                  <span className={`dropdown-arrow ${dropdownOpen ? 'is-open' : ''}`}>▼</span>
+                </button>
+
+                {dropdownOpen && (
+                  <div className="profile-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                    <div className="menu-group">
+                      <Link to="/profile" className="menu-item" onClick={() => setDropdownOpen(false)}>
+                        내 정보
+                      </Link>
+                      <Link to="/settings" className="menu-item" onClick={() => setDropdownOpen(false)}>
+                        설정
+                      </Link>
+                    </div>
+                    <div className="menu-divider" />
+                    <div className="menu-group">
+                      <button
+                        type="button"
+                        className="menu-item menu-item--logout"
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          handleLogout();
+                        }}
+                      >
+                        로그아웃
+                      </button>
+                    </div>
+                  </div>
                 )}
-                <span className="user-chip__name">{user.displayName}</span>
-              </Link>
-              <button
-                type="button"
-                className="btn-ghost btn-logout"
-                onClick={handleLogout}
-              >
-                로그아웃
-              </button>
+              </div>
             </>
           ) : (
             <Link to="/login" className="btn-primary btn-header-cta">
@@ -84,15 +122,19 @@ export default function Layout() {
         <nav className="tab-bar" aria-label="하단 메뉴">
           <NavLink to="/" end className={tabClass} aria-label="홈" title="홈">
             <span className="tab-bar__icon">🏠</span>
+            <span className="tab-bar__label">홈</span>
           </NavLink>
-          <NavLink to="/my-groups" className={tabClass} aria-label="내 모임" title="내 모임">
-            <span className="tab-bar__icon">👥</span>
+          <NavLink to="/notifications" className={tabClass} aria-label="새소식" title="새소식">
+            <span className="tab-bar__icon">🔔</span>
+            <span className="tab-bar__label">새소식</span>
           </NavLink>
-          <NavLink to="/groups" className={tabClass} aria-label="모임 찾기" title="모임 찾기">
-            <span className="tab-bar__icon">🔍</span>
-          </NavLink>
-          <NavLink to="/calendar" className={tabClass} aria-label="캘린더" title="캘린더">
+          <NavLink to="/calendar" className={tabClass} aria-label="일정" title="일정">
             <span className="tab-bar__icon">📅</span>
+            <span className="tab-bar__label">일정</span>
+          </NavLink>
+          <NavLink to="/chat" className={tabClass} aria-label="채팅" title="채팅">
+            <span className="tab-bar__icon">💬</span>
+            <span className="tab-bar__label">채팅</span>
           </NavLink>
         </nav>
       )}

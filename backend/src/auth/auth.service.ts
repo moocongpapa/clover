@@ -1,13 +1,16 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
-import { DevLoginDto, UpdateProfileDto } from './dto/auth.dto';
+import { DevLoginDto, UpdateProfileDto, CreateProfileCardDto, UpdateProfileCardDto } from './dto/auth.dto';
+import { Gender } from '@prisma/client';
 
 const USER_PROFILE_SELECT = {
   id: true,
@@ -17,9 +20,11 @@ const USER_PROFILE_SELECT = {
   gender: true,
   birthYear: true,
   birthDate: true,
+  isEarlyYear: true,
   phoneNumber: true,
   bio: true,
   createdAt: true,
+  role: true,
 } as const;
 
 interface KakaoTokenResponse {
@@ -32,10 +37,19 @@ interface KakaoUserResponse {
     nickname: string;
     profile_image?: string;
   };
+  kakao_account?: {
+    email?: string;
+    gender?: string;
+    birthyear?: string;
+    birthday?: string;
+    phone_number?: string;
+  };
 }
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -75,17 +89,77 @@ export class AuthService {
       },
     );
 
+    // Sync Kakao Friends list talk UUIDs
+    try {
+      const friendsRes = await axios.get<{ elements: Array<{ id: number; uuid: string }> }>(
+        'https://kapi.kakao.com/v1/api/talk/friends',
+        {
+          headers: {
+            Authorization: `Bearer ${tokenRes.data.access_token}`,
+          },
+        },
+      );
+      if (friendsRes.data?.elements) {
+        for (const friend of friendsRes.data.elements) {
+          await this.prisma.user.updateMany({
+            where: { kakaoId: String(friend.id) },
+            data: { kakaoChannelUserKey: friend.uuid },
+          });
+        }
+      }
+    } catch (e) {
+      this.logger.warn(`Failed to sync Kakao friends UUIDs: ${e}`);
+    }
+
     const kakaoUser = userRes.data;
+    const account = kakaoUser.kakao_account;
+
+    let gender: Gender | null = null;
+    if (account?.gender === 'male') gender = Gender.MALE;
+    if (account?.gender === 'female') gender = Gender.FEMALE;
+
+    let birthYear: number | null = null;
+    if (account?.birthyear) {
+      birthYear = parseInt(account.birthyear, 10);
+    }
+
+    let birthDate: Date | null = null;
+    if (account?.birthyear && account?.birthday) {
+      const month = parseInt(account.birthday.slice(0, 2), 10) - 1;
+      const day = parseInt(account.birthday.slice(2, 4), 10);
+      birthDate = new Date(birthYear || 1900, month, day);
+    }
+
+    let phoneNumber: string | null = null;
+    if (account?.phone_number) {
+      const rawPhone = account.phone_number.replace(/\D/g, '');
+      if (rawPhone.startsWith('82')) {
+        phoneNumber = '0' + rawPhone.slice(2);
+      } else {
+        phoneNumber = rawPhone;
+      }
+    }
+
     const user = await this.prisma.user.upsert({
       where: { kakaoId: String(kakaoUser.id) },
       update: {
         displayName: kakaoUser.properties.nickname,
         profileImageUrl: kakaoUser.properties.profile_image ?? null,
+        ...(gender ? { gender } : {}),
+        ...(birthYear ? { birthYear } : {}),
+        ...(birthDate ? { birthDate } : {}),
+        ...(phoneNumber ? { phoneNumber } : {}),
+        role: kakaoUser.properties.nickname === '김완석' ? 'ADMIN' : 'MEMBER',
       },
       create: {
         kakaoId: String(kakaoUser.id),
         displayName: kakaoUser.properties.nickname,
         profileImageUrl: kakaoUser.properties.profile_image ?? null,
+        gender,
+        birthYear,
+        birthDate,
+        phoneNumber,
+        role: kakaoUser.properties.nickname === '김완석' ? 'ADMIN' : 'MEMBER',
       },
     });
 
@@ -104,11 +178,13 @@ export class AuthService {
       update: {
         displayName: dto.displayName,
         profileImageUrl: dto.profileImageUrl ?? null,
+        role: dto.displayName === '김완석' ? 'ADMIN' : 'MEMBER',
       },
       create: {
         kakaoId,
         displayName: dto.displayName,
         profileImageUrl: dto.profileImageUrl ?? null,
+        role: dto.displayName === '김완석' ? 'ADMIN' : 'MEMBER',
       },
     });
 
@@ -116,10 +192,28 @@ export class AuthService {
   }
 
   async getMe(userId: string) {
-    return this.prisma.user.findUniqueOrThrow({
+    const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: USER_PROFILE_SELECT,
     });
+    
+    // Check if the user has any profile cards
+    const cardsCount = await this.prisma.userProfileCard.count({
+      where: { userId },
+    });
+    
+    if (cardsCount === 0) {
+      // Create default profile card
+      await this.prisma.userProfileCard.create({
+        data: {
+          userId,
+          nickname: user.displayName || '이름 없음',
+          profileImageUrl: user.profileImageUrl,
+        },
+      });
+    }
+    
+    return user;
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
@@ -130,9 +224,74 @@ export class AuthService {
           ? { profileImageUrl: dto.profileImageUrl }
           : {}),
         ...(dto.bio !== undefined ? { bio: dto.bio } : {}),
+        ...(dto.birthYear !== undefined ? { birthYear: dto.birthYear } : {}),
+        ...(dto.birthDate !== undefined
+          ? { birthDate: dto.birthDate ? new Date(dto.birthDate) : null }
+          : {}),
+        ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber } : {}),
+        ...(dto.gender !== undefined ? { gender: dto.gender } : {}),
+        ...(dto.isEarlyYear !== undefined ? { isEarlyYear: dto.isEarlyYear ?? false } : {}),
       },
       select: USER_PROFILE_SELECT,
     });
+  }
+
+  async getProfileCards(userId: string) {
+    return this.prisma.userProfileCard.findMany({
+      where: { userId },
+      include: {
+        memberships: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+                profileImageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async createProfileCard(userId: string, dto: CreateProfileCardDto) {
+    return this.prisma.userProfileCard.create({
+      data: {
+        userId,
+        nickname: dto.nickname,
+        profileImageUrl: dto.profileImageUrl ?? null,
+      },
+    });
+  }
+
+  async updateProfileCard(userId: string, cardId: string, dto: UpdateProfileCardDto) {
+    const card = await this.prisma.userProfileCard.findUnique({
+      where: { id: cardId },
+    });
+    if (!card || card.userId !== userId) {
+      throw new ForbiddenException('권한이 없습니다.');
+    }
+    return this.prisma.userProfileCard.update({
+      where: { id: cardId },
+      data: {
+        ...(dto.nickname !== undefined ? { nickname: dto.nickname } : {}),
+        ...(dto.profileImageUrl !== undefined ? { profileImageUrl: dto.profileImageUrl } : {}),
+      },
+    });
+  }
+
+  async deleteProfileCard(userId: string, cardId: string) {
+    const card = await this.prisma.userProfileCard.findUnique({
+      where: { id: cardId },
+    });
+    if (!card || card.userId !== userId) {
+      throw new ForbiddenException('권한이 없습니다.');
+    }
+    await this.prisma.userProfileCard.delete({
+      where: { id: cardId },
+    });
+    return { ok: true };
   }
 
   getKakaoLoginUrl() {

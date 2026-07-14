@@ -1,20 +1,21 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  api,
-  formatPhoneNumber,
-  formatUserBirthDate,
-  type User,
-} from '../api';
+import { api, type User, type UserProfileCard } from '../api';
 import { useAuth } from '../context/AuthContext';
 import './EditProfile.css';
 import './Groups.css';
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 100 }, (_, i) => CURRENT_YEAR - i);
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 export default function EditProfile() {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<User | null>(null);
+  const [profileCards, setProfileCards] = useState<UserProfileCard[]>([]);
   const [bio, setBio] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,7 +23,28 @@ export default function EditProfile() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
 
-  useEffect(() => {
+  // Profile data states
+  const [birthYearVal, setBirthYearVal] = useState<number | ''>('');
+  const [birthMonthVal, setBirthMonthVal] = useState<number | ''>('');
+  const [birthDayVal, setBirthDayVal] = useState<number | ''>('');
+  const [phoneNumberVal, setPhoneNumberVal] = useState('');
+  const [genderVal, setGenderVal] = useState<'MALE' | 'FEMALE' | ''>('');
+  const [isEarlyYearVal, setIsEarlyYearVal] = useState(false);
+
+  // Picker modal states
+  const [isBirthPickerOpen, setIsBirthPickerOpen] = useState(false);
+  const [isGenderPickerOpen, setIsGenderPickerOpen] = useState(false);
+  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+
+  // Temporary modal states
+  const [tempYear, setTempYear] = useState<number | ''>('');
+  const [tempMonth, setTempMonth] = useState<number | ''>('');
+  const [tempDay, setTempDay] = useState<number | ''>('');
+  const [tempLunar, setTempLunar] = useState(false);
+  const [tempEarly, setTempEarly] = useState(false);
+  const [tempPhone, setTempPhone] = useState('');
+
+  const loadData = () => {
     api
       .getMe()
       .then((me) => {
@@ -31,8 +53,28 @@ export default function EditProfile() {
         if (me.profileImageUrl) {
           setPreviewUrl(me.profileImageUrl);
         }
+        setBirthYearVal(me.birthYear ?? '');
+        setPhoneNumberVal(me.phoneNumber ?? '');
+        setGenderVal(me.gender ?? '');
+        setIsEarlyYearVal(me.isEarlyYear ?? false);
+
+        // Parse birthDate
+        if (me.birthDate) {
+          const bDate = new Date(me.birthDate);
+          setBirthMonthVal(bDate.getMonth() + 1);
+          setBirthDayVal(bDate.getDate());
+        }
       })
       .catch((e) => setError(e.message));
+
+    api
+      .getProfileCards()
+      .then(setProfileCards)
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   const handleImageChange = (file: File | null) => {
@@ -62,8 +104,8 @@ export default function EditProfile() {
     setPreviewUrl(URL.createObjectURL(file));
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
     if (!profile) return;
 
     setLoading(true);
@@ -77,9 +119,25 @@ export default function EditProfile() {
         profileImageUrl = null;
       }
 
+      // Construct birthDate
+      let constructedBirthDate: string | null = null;
+      if (birthYearVal && birthMonthVal && birthDayVal) {
+        constructedBirthDate = new Date(
+          Number(birthYearVal),
+          Number(birthMonthVal) - 1,
+          Number(birthDayVal),
+          12, 0, 0 // Safe midday
+        ).toISOString();
+      }
+
       const updated = await api.updateProfile({
         ...(profileImageUrl !== undefined ? { profileImageUrl } : {}),
         bio: bio.trim() || null,
+        birthYear: birthYearVal ? Number(birthYearVal) : null,
+        birthDate: constructedBirthDate,
+        isEarlyYear: isEarlyYearVal,
+        phoneNumber: phoneNumberVal.trim() || null,
+        gender: genderVal || null,
       });
       updateUser(updated);
       navigate(-1);
@@ -88,6 +146,71 @@ export default function EditProfile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Open birthday picker bottom sheet
+  const openBirthPicker = () => {
+    setTempYear(birthYearVal || 1991);
+    setTempMonth(birthMonthVal || 10);
+    setTempDay(birthDayVal || 4);
+    setTempEarly(isEarlyYearVal);
+    setIsBirthPickerOpen(true);
+  };
+
+  // Apply birthday selection
+  const handleApplyBirth = () => {
+    setBirthYearVal(tempYear);
+    setBirthMonthVal(tempMonth);
+    setBirthDayVal(tempDay);
+    setIsEarlyYearVal(tempEarly);
+    setIsBirthPickerOpen(false);
+  };
+
+  // Format date display
+  const formatBirthDisplay = () => {
+    if (birthYearVal && birthMonthVal && birthDayVal) {
+      return `${isEarlyYearVal ? '빠른 ' : ''}${birthYearVal}년 ${birthMonthVal}월 ${birthDayVal}일`;
+    }
+    if (birthYearVal) {
+      return `${isEarlyYearVal ? '빠른 ' : ''}${birthYearVal}년`;
+    }
+    return '선택 안 함';
+  };
+
+  // Open phone verification modal
+  const openPhoneModal = () => {
+    setTempPhone(phoneNumberVal || '+82 ');
+    setIsPhoneModalOpen(true);
+  };
+
+  // Numeric keypad click handler
+  const handleKeypadPress = (val: string) => {
+    if (val === 'back') {
+      setTempPhone((prev) => {
+        // Prevent deleting prefix "+82 "
+        if (prev === '+82 ') return prev;
+        if (prev.endsWith(' ')) return prev.slice(0, -1);
+        return prev.slice(0, -1);
+      });
+    } else {
+      setTempPhone((prev) => {
+        const cleaned = prev.replace(/\D/g, '');
+        if (cleaned.length >= 15) return prev; // Limit length
+        
+        // Add spacing for mobile readability
+        const raw = prev + val;
+        // Strip out non-digits to format
+        const digits = raw.replace(/\D/g, '').slice(2); // remove 82
+        if (digits.length === 3) return prev + val + ' ';
+        if (digits.length === 7) return prev + val + ' ';
+        return prev + val;
+      });
+    }
+  };
+
+  const handleApplyPhone = () => {
+    setPhoneNumberVal(tempPhone);
+    setIsPhoneModalOpen(false);
   };
 
   if (error && !profile) {
@@ -101,117 +224,344 @@ export default function EditProfile() {
   const avatarFallback = profile.displayName[0];
 
   return (
-    <div className="edit-profile">
-      <form className="form-card" onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="profileImage">프로필 사진</label>
-          <div className="profile-image-upload">
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt=""
-                className="profile-image-upload__preview"
-              />
-            ) : (
-              <span className="profile-image-upload__fallback" aria-hidden>
-                {avatarFallback}
-              </span>
-            )}
-            <div className="profile-image-upload__actions">
-              <label className="btn-sm btn-outline" htmlFor="profileImage">
-                사진 변경
-              </label>
-              {(previewUrl || profile.profileImageUrl) && (
-                <button
-                  type="button"
-                  className="btn-sm btn-ghost"
-                  onClick={() => {
-                    handleImageChange(null);
-                    setRemoveImage(true);
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = '';
-                    }
-                  }}
-                >
-                  기본으로
-                </button>
+    <div className="edit-profile-page">
+      {/* Native Band-style Header */}
+      <div className="edit-profile-header">
+        <div className="header-left" onClick={() => navigate(-1)}>
+          <span className="back-arrow">〈</span>
+          <span className="header-title">내 프로필</span>
+        </div>
+        <button type="button" className="confirm-btn" onClick={() => handleSubmit()} disabled={loading}>
+          {loading ? '저장 중…' : '확인'}
+        </button>
+      </div>
+
+      <form className="edit-profile-body" onSubmit={(e) => e.preventDefault()}>
+        {/* Section 1: 사용 중인 프로필 */}
+        <div className="profile-section-title">
+          사용 중인 프로필 {profileCards.length}
+        </div>
+        <div className="profile-cards-horizontal-scroll">
+          {profileCards.map((card) => (
+            <div key={card.id} className="scroll-profile-card">
+              {card.profileImageUrl ? (
+                <img src={card.profileImageUrl} alt="" className="card-avatar" />
+              ) : (
+                <div className="card-avatar-fallback">{card.nickname[0]}</div>
               )}
+              <div className="card-overlay">
+                <span className="card-nickname">{card.nickname}</span>
+                <span className="card-sub">연결된 모임 {card.memberships.length}</span>
+              </div>
             </div>
-            <input
-              ref={fileInputRef}
-              id="profileImage"
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+          ))}
+        </div>
+
+        {/* Manage Profiles Link Button */}
+        <div className="manage-profiles-link-row">
+          <button
+            type="button"
+            className="manage-profiles-link-btn"
+            onClick={() => navigate('/profile/manage')}
+          >
+            프로필 관리
+          </button>
+        </div>
+
+        {/* Section 2: 내 정보 */}
+        <div className="profile-section-title">내 정보</div>
+        <div className="info-list-container">
+          {/* 생일 */}
+          <div className="info-list-item" onClick={openBirthPicker}>
+            <div className="info-item-label">생일</div>
+            <div className="info-item-value-wrap">
+              <span className="info-item-value">{formatBirthDisplay()}</span>
+              <span className="chevron">〉</span>
+            </div>
+          </div>
+
+          {/* 성별 */}
+          <div className="info-list-item" onClick={() => setIsGenderPickerOpen(true)}>
+            <div className="info-item-label">성별</div>
+            <div className="info-item-value-wrap">
+              <span className="info-item-value">
+                {genderVal === 'MALE' ? '남성' : genderVal === 'FEMALE' ? '여성' : '선택 안 함'}
+              </span>
+              <span className="chevron">〉</span>
+            </div>
+          </div>
+
+          {/* 휴대폰 번호 */}
+          <div className="info-list-item" onClick={openPhoneModal}>
+            <div className="info-item-label">휴대폰 번호</div>
+            <div className="info-item-value-wrap">
+              <span className="info-item-value">
+                {phoneNumberVal ? phoneNumberVal : '등록되지 않음'}
+              </span>
+              <span className="chevron">〉</span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Global User Photo and Bio Settings */}
+        <div className="profile-section-title">기본 상세 정보</div>
+        <div className="global-profile-editor-card">
+          <div className="profile-pic-center-wrap">
+            <div className="profile-pic-container">
+              <label htmlFor="profileImage" className="profile-pic-avatar-wrap">
+                {previewUrl ? (
+                  <img src={previewUrl} alt="" className="profile-pic-img" />
+                ) : (
+                  <span className="profile-pic-fallback">{avatarFallback}</span>
+                )}
+                <div className="profile-camera-badge">📷</div>
+              </label>
+              <input
+                ref={fileInputRef}
+                id="profileImage"
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            {(previewUrl || profile.profileImageUrl) && (
+              <button
+                type="button"
+                className="profile-reset-image-btn"
+                onClick={() => {
+                  handleImageChange(null);
+                  setRemoveImage(true);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
+                }}
+              >
+                기본 이미지로 변경
+              </button>
+            )}
+          </div>
+
+          <div className="profile-bio-container form-group">
+            <label htmlFor="bio">자기소개</label>
+            <textarea
+              id="bio"
+              name="bio"
+              rows={3}
+              maxLength={500}
+              placeholder="간단한 자기소개를 입력해 주세요"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
             />
+            <p className="form-hint">{bio.length}/500</p>
           </div>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="bio">자기소개</label>
-          <textarea
-            id="bio"
-            name="bio"
-            rows={4}
-            maxLength={500}
-            placeholder="간단한 자기소개를 입력해 주세요"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-          />
-          <p className="form-hint">{bio.length}/500</p>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="displayName">이름</label>
-          <input
-            id="displayName"
-            value={profile.displayName}
-            disabled
-            readOnly
-          />
-          <p className="form-hint">카카오 계정 정보는 수정할 수 없어요</p>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="birthDate">생년월일</label>
-          <input
-            id="birthDate"
-            value={formatUserBirthDate(profile.birthDate, profile.birthYear)}
-            disabled
-            readOnly
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="phoneNumber">전화번호</label>
-          <input
-            id="phoneNumber"
-            value={
-              profile.phoneNumber
-                ? formatPhoneNumber(profile.phoneNumber)
-                : '-'
-            }
-            disabled
-            readOnly
-          />
-        </div>
-
-        {error && <p className="form-error">{error}</p>}
-
-        <div className="form-actions">
+        {/* Save button row at the bottom right */}
+        <div className="profile-bottom-actions">
           <button
             type="button"
-            className="btn-outline"
-            onClick={() => navigate(-1)}
+            className="profile-bottom-save-btn"
+            onClick={() => handleSubmit()}
+            disabled={loading}
           >
-            취소
-          </button>
-          <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? '저장 중…' : '저장'}
           </button>
         </div>
       </form>
+
+      {/* Picker 1: Birthday Modal Bottom Sheet */}
+      {isBirthPickerOpen && (
+        <div className="profile-modal-overlay" onClick={() => setIsBirthPickerOpen(false)}>
+          <div className="profile-modal-content bottom-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-row">
+              <h3 className="modal-title">생년월일 선택</h3>
+              <button type="button" className="confirm-text-btn" onClick={handleApplyBirth}>
+                확인
+              </button>
+            </div>
+
+            {/* Lunar calendar & Early Year Toggle Row */}
+            <div style={{ display: 'flex', gap: '24px', padding: '12px 0', borderBottom: '1px solid var(--border-soft)', width: '100%' }}>
+              <div className="lunar-toggle-row" style={{ borderBottom: 'none', padding: 0, flex: 1 }}>
+                <span className="lunar-label">음력</span>
+                <label className="toggle-switch-label">
+                  <input
+                    type="checkbox"
+                    checked={tempLunar}
+                    onChange={(e) => setTempLunar(e.target.checked)}
+                  />
+                  <span className="toggle-switch-slider"></span>
+                </label>
+              </div>
+              <div className="lunar-toggle-row" style={{ borderBottom: 'none', padding: 0, flex: 1 }}>
+                <span className="lunar-label">빠른</span>
+                <label className="toggle-switch-label">
+                  <input
+                    type="checkbox"
+                    checked={tempEarly}
+                    onChange={(e) => setTempEarly(e.target.checked)}
+                  />
+                  <span className="toggle-switch-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            {/* Three Columns Select Row */}
+            <div className="picker-wheel-row">
+              <div className="picker-wheel-col">
+                <select
+                  value={tempYear}
+                  onChange={(e) => setTempYear(e.target.value ? Number(e.target.value) : '')}
+                >
+                  {YEARS.map((y) => (
+                    <option key={y} value={y}>
+                      {y}년
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="picker-wheel-col">
+                <select
+                  value={tempMonth}
+                  onChange={(e) => setTempMonth(e.target.value ? Number(e.target.value) : '')}
+                >
+                  {MONTHS.map((m) => (
+                    <option key={m} value={m}>
+                      {m}월
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="picker-wheel-col">
+                <select
+                  value={tempDay}
+                  onChange={(e) => setTempDay(e.target.value ? Number(e.target.value) : '')}
+                >
+                  {DAYS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}일
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <button className="bottom-sheet-close-btn" onClick={() => setIsBirthPickerOpen(false)}>
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Picker 2: Gender Modal Bottom Sheet */}
+      {isGenderPickerOpen && (
+        <div className="profile-modal-overlay" onClick={() => setIsGenderPickerOpen(false)}>
+          <div className="profile-modal-content bottom-sheet" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">성별 선택</h3>
+            <div className="gender-sheet-buttons">
+              <button
+                type="button"
+                className={`gender-sheet-btn ${genderVal === 'MALE' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setGenderVal('MALE');
+                  setIsGenderPickerOpen(false);
+                }}
+              >
+                남성
+              </button>
+              <button
+                type="button"
+                className={`gender-sheet-btn ${genderVal === 'FEMALE' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setGenderVal('FEMALE');
+                  setIsGenderPickerOpen(false);
+                }}
+              >
+                여성
+              </button>
+            </div>
+            <button className="bottom-sheet-close-btn" onClick={() => setIsGenderPickerOpen(false)}>
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3: Phone Change Fullscreen/Modal */}
+      {isPhoneModalOpen && (
+        <div className="phone-change-modal-overlay">
+          <div className="phone-change-modal-content">
+            {/* Header */}
+            <div className="phone-change-header">
+              <span className="back-arrow" onClick={() => setIsPhoneModalOpen(false)}>
+                〈
+              </span>
+              <span className="header-title">휴대폰 번호 변경</span>
+            </div>
+
+            {/* Input Field */}
+            <div className="phone-input-wrap">
+              <label className="phone-input-label">휴대폰 번호</label>
+              <div className="phone-input-value-row">
+                <input
+                  type="text"
+                  readOnly
+                  className="phone-active-input"
+                  value={tempPhone}
+                />
+              </div>
+            </div>
+
+            {/* Confirmation Button */}
+            <div className="phone-confirm-btn-wrap">
+              <button
+                type="button"
+                className="phone-confirm-btn"
+                disabled={tempPhone.length < 10}
+                onClick={handleApplyPhone}
+              >
+                확인
+              </button>
+            </div>
+
+            {/* Hint Text */}
+            <p className="phone-disclaimer-text">
+              휴대폰번호는 로그인을 위해 저장되며, 밴드를 이용하는 기간 동안 보관되는 것에 동의합니다.
+            </p>
+
+            {/* Interactive Numeric Keypad */}
+            <div className="phone-numeric-keypad">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className="keypad-key"
+                  onClick={() => handleKeypadPress(n)}
+                >
+                  {n}
+                </button>
+              ))}
+              <button type="button" className="keypad-key empty-key" disabled></button>
+              <button
+                type="button"
+                className="keypad-key"
+                onClick={() => handleKeypadPress('0')}
+              >
+                0
+              </button>
+              <button
+                type="button"
+                className="keypad-key backspace-key"
+                onClick={() => handleKeypadPress('back')}
+              >
+                ⌫
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

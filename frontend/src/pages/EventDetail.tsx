@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   api,
@@ -13,13 +13,18 @@ import {
   type VoteChoice,
   type VoteResults,
 } from '../api';
+import { useAuth } from '../context/AuthContext';
 import './GroupDetail.css';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [votes, setVotes] = useState<VoteResults | null>(null);
   const [teams, setTeams] = useState<EventTeamsResult | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [addingComment, setAddingComment] = useState(false);
   const [error, setError] = useState('');
   const [voting, setVoting] = useState(false);
   const [splitting, setSplitting] = useState(false);
@@ -27,11 +32,17 @@ export default function EventDetailPage() {
 
   const load = () => {
     if (!id) return;
-    Promise.all([api.getEvent(id), api.getVotes(id), api.getEventTeams(id)])
-      .then(([e, v, t]) => {
+    Promise.all([
+      api.getEvent(id),
+      api.getVotes(id),
+      api.getEventTeams(id),
+      api.getComments(id),
+    ])
+      .then(([e, v, t, c]) => {
         setEvent(e);
         setVotes(v);
         setTeams(t);
+        setComments(c);
         if (t.split) setTeamCount(t.split.teamCount);
       })
       .catch((e) => setError(e.message));
@@ -43,7 +54,11 @@ export default function EventDetailPage() {
     if (!id) return;
     setVoting(true);
     try {
-      await api.castVote(id, choice);
+      if (votes?.myVote?.choice === choice) {
+        await api.cancelVote(id);
+      } else {
+        await api.castVote(id, choice);
+      }
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : '투표 실패');
@@ -86,6 +101,33 @@ export default function EventDetailPage() {
       setError(e instanceof Error ? e.message : '그룹 나누기 실패');
     } finally {
       setSplitting(false);
+    }
+  };
+
+  const handleAddComment = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!id || !commentText.trim()) return;
+    setAddingComment(true);
+    try {
+      await api.addComment(id, commentText.trim());
+      setCommentText('');
+      const list = await api.getComments(id);
+      setComments(list);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '댓글 등록 실패');
+    } finally {
+      setAddingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!id || !confirm('댓글을 삭제하시겠습니까?')) return;
+    try {
+      await api.deleteComment(id, commentId);
+      const list = await api.getComments(id);
+      setComments(list);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '댓글 삭제 실패');
     }
   };
 
@@ -197,34 +239,33 @@ export default function EventDetailPage() {
         {votes.votes.length === 0 ? (
           <p className="vote-empty">아직 투표한 회원이 없습니다</p>
         ) : (
-          <table className="vote-status-table">
-            <tbody>
-              {votesByChoice.map(({ choice, label, voters }) => (
-                <tr
-                  key={choice}
-                  className={`vote-status-table__row vote-status-table__row--${choice.toLowerCase()}`}
-                >
-                  <th scope="row" className="vote-status-table__head">
-                    <span className="vote-status-table__label">{label}</span>
-                    <span className="vote-status-table__count">
-                      {voters.length}
-                    </span>
-                  </th>
-                  <td
-                    className={`vote-status-table__names${
-                      voters.length === 0
-                        ? ' vote-status-table__names--empty'
-                        : ''
-                    }`}
-                  >
-                    {voters.length > 0
-                      ? voters.map((v) => v.user.displayName).join(', ')
-                      : '없음'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="vote-status-container">
+            {votesByChoice.map(({ choice, label, voters }) => (
+              <div key={choice} className={`vote-status-block vote-status-block--${choice.toLowerCase()}`}>
+                <div className="vote-status-block__header">
+                  <span className="vote-status-block__badge">{label} {voters.length}</span>
+                </div>
+                <div className="vote-status-block__content">
+                  {voters.length > 0 ? (
+                    <div className="vote-voter-list">
+                      {voters.map((v) => (
+                        <Link to={`/profile/${v.user.id}`} key={v.user.id} className="vote-voter-chip">
+                          {v.user.profileImageUrl ? (
+                            <img src={v.user.profileImageUrl} alt="" className="vote-voter-chip__avatar" />
+                          ) : (
+                            <span className="vote-voter-chip__avatar-fallback">{v.user.displayName[0]}</span>
+                          )}
+                          <span className="vote-voter-chip__name">{formatMemberDisplayName(v.user)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="vote-voter-empty-text">투표한 회원이 없습니다</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         <div className="vote-section__subhead vote-section__subhead--nonvoters">
@@ -235,11 +276,18 @@ export default function EventDetailPage() {
         {votes.nonVoters.length === 0 ? (
           <p className="vote-empty">모든 회원이 투표했습니다</p>
         ) : (
-          <p className="vote-nonvoters__names">
-            {votes.nonVoters
-              .map((user) => formatMemberDisplayName(user))
-              .join(', ')}
-          </p>
+          <div className="vote-nonvoters-list">
+            {votes.nonVoters.map((user) => (
+              <Link to={`/profile/${user.id}`} key={user.id} className="vote-voter-chip vote-voter-chip--nonvoter">
+                {user.profileImageUrl ? (
+                  <img src={user.profileImageUrl} alt="" className="vote-voter-chip__avatar" />
+                ) : (
+                  <span className="vote-voter-chip__avatar-fallback">{user.displayName[0]}</span>
+                )}
+                <span className="vote-voter-chip__name">{formatMemberDisplayName(user)}</span>
+              </Link>
+            ))}
+          </div>
         )}
       </section>
 
@@ -305,11 +353,18 @@ export default function EventDetailPage() {
                       {formatTeamLabel(team.label)}
                       <span className="team-card__count">{team.members.length}명</span>
                     </h3>
-                    <p className="team-card__members">
+                    <div className="team-card__members">
                       {team.members.length > 0
-                        ? team.members.map((m) => m.displayName).join(', ')
+                        ? team.members.map((m, idx) => (
+                            <span key={m.id}>
+                              <Link to={`/profile/${m.id}`} className="team-member-link">
+                                {formatMemberDisplayName(m)}
+                              </Link>
+                              {idx < team.members.length - 1 ? ', ' : ''}
+                            </span>
+                          ))
                         : '없음'}
-                    </p>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -317,6 +372,94 @@ export default function EventDetailPage() {
           )}
         </section>
       )}
+
+      {/* Comments section */}
+      <section className="vote-section comments-section" style={{ marginTop: '24px' }}>
+        <h2>댓글 ({comments.length})</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+          {comments.map((comment) => {
+            const isCommentAuthor = comment.userId === user?.id;
+            const canDelete = isCommentAuthor || teams.canManage;
+
+            return (
+              <div key={comment.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', background: 'var(--grey-50)', borderRadius: '12px' }}>
+                {/* Left side: Avatar only */}
+                <div style={{ flexShrink: 0 }}>
+                  {comment.user.profileImageUrl ? (
+                    <img src={comment.user.profileImageUrl} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ display: 'grid', placeItems: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: '12px', fontWeight: 700 }}>
+                      {comment.user.displayName[0]}
+                    </span>
+                  )}
+                </div>
+
+                {/* Right side: Header (Name & Meta) and Body (Content) stacked vertically */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+                  {/* Top Header Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--ink)' }}>
+                      {formatMemberDisplayName(comment.user)}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                      <span style={{ fontSize: '11px', color: 'var(--ink-tertiary)', whiteSpace: 'nowrap' }}>
+                        {new Date(comment.createdAt).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteComment(comment.id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--danger, #f44336)',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            padding: '2px 6px',
+                            borderRadius: '6px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            transition: 'background 0.2s',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--danger-soft, #ffebee)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                        >
+                          삭제
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Comment Body Row */}
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--ink)', whiteSpace: 'pre-wrap', lineHeight: 1.4, wordBreak: 'break-all' }}>
+                    {comment.content}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <form onSubmit={handleAddComment} style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+          <input
+            type="text"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="댓글을 작성해 보세요…"
+            style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: '12px', fontSize: '13px', background: 'var(--grey-50)' }}
+            disabled={addingComment}
+          />
+          <button
+            type="submit"
+            disabled={addingComment || !commentText.trim()}
+            className="btn-primary"
+            style={{ padding: '0 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}
+          >
+            등록
+          </button>
+        </form>
+      </section>
 
       {error && <p className="form-error">{error}</p>}
     </div>

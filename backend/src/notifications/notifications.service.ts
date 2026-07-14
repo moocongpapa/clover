@@ -9,7 +9,7 @@ import { addDays, isOfficer, localDayStart } from '../common/utils/group.utils';
 type EventNotifyType = 'CREATED' | 'CHANGED' | 'CANCELLED' | 'REMINDER';
 
 const MESSAGE_TEMPLATES: Record<EventNotifyType, (title: string) => string> = {
-  CREATED: (title) => `새 이벤트가 등록되었습니다: ${title}`,
+  CREATED: (title) => `새 이벤트가 등록되었습니다: ${title}. 참석 여부를 투표해 주세요!`,
   CHANGED: (title) => `이벤트 일정이 변경되었습니다: ${title}`,
   CANCELLED: (title) => `이벤트가 취소되었습니다: ${title}`,
   REMINDER: (title) => `내일 이벤트가 있습니다. 참석 여부를 투표해 주세요: ${title}`,
@@ -91,18 +91,17 @@ export class NotificationsService {
     });
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  @Cron('*/5 * * * *') // Run every 5 minutes
   async sendReminderNotifications() {
-    const tomorrowStart = localDayStart(addDays(new Date(), 1));
-    const dayAfterTomorrow = addDays(tomorrowStart, 1);
-
+    const now = new Date();
+    
+    // Find active events that are scheduled in the future (today or later)
     const events = await this.prisma.event.findMany({
       where: {
-        date: {
-          gte: tomorrowStart,
-          lt: dayAfterTomorrow,
-        },
         status: 'ACTIVE',
+        date: {
+          gte: localDayStart(now),
+        },
       },
       include: {
         group: {
@@ -118,28 +117,152 @@ export class NotificationsService {
     });
 
     for (const event of events) {
-      const votedUserIds = new Set(event.votes.map((v) => v.userId));
-      const message = MESSAGE_TEMPLATES.REMINDER(event.title);
+      const startDateTime = new Date(event.date);
+      const [hours, minutes] = event.startTime.split(':').map(Number);
+      startDateTime.setHours(hours, minutes, 0, 0);
 
-      for (const member of event.group.members) {
-        if (votedUserIds.has(member.userId)) continue;
+      const diffMs = startDateTime.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
 
-        const alreadySent = await this.prisma.notificationLog.findFirst({
-          where: {
-            userId: member.userId,
-            eventId: event.id,
-            type: NotificationType.REMINDER,
+      // Parse the custom offsets, e.g. "24,1"
+      const offsets = event.reminderOffsets
+        ? event.reminderOffsets.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n))
+        : [24, 1];
+
+      for (const X of offsets) {
+        // Window check: if diffHours falls in [X - 0.25, X + 0.25] (a 30 min window around X)
+        if (diffHours > (X - 0.25) && diffHours <= (X + 0.25)) {
+          const votedUserIds = new Set(event.votes.map((v) => v.userId));
+          const uniqueLogMessage = `${X}시간 전입니다`;
+          const message = `[투표 독려] 「${event.title}」 투표 마감 ${X}시간 전입니다! 아직 투표하지 않으신 분들은 참석 여부를 투표해 주세요.`;
+
+          for (const member of event.group.members) {
+            if (votedUserIds.has(member.userId)) continue;
+
+            const alreadySent = await this.prisma.notificationLog.findFirst({
+              where: {
+                userId: member.userId,
+                eventId: event.id,
+                type: NotificationType.REMINDER,
+                message: { contains: uniqueLogMessage },
+              },
+            });
+
+            if (alreadySent) continue;
+
+            await this.sendEventNotification(
+              member.userId,
+              event.id,
+              'REMINDER',
+              message,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  @Cron('0 12 * * *') // Run every day at 12:00 PM
+  async notifyNoUpcomingEvents() {
+    const now = new Date();
+    const groups = await this.prisma.group.findMany({
+      include: {
+        members: {
+          where: { status: MemberStatus.APPROVED },
+          include: { user: true },
+        },
+      },
+    });
+
+    for (const group of groups) {
+      // Find if there is any active upcoming event
+      const upcomingEvent = await this.prisma.event.findFirst({
+        where: {
+          groupId: group.id,
+          status: 'ACTIVE',
+          date: {
+            gte: localDayStart(now),
           },
-        });
+        },
+      });
 
-        if (alreadySent) continue;
+      if (!upcomingEvent) {
+        // Find officers
+        const officers = group.members.filter(m => isOfficer(m.role));
+        const message = `[이벤트 등록 알림] 「${group.name}」 모임에 등록된 예정 이벤트가 없습니다. 다음 이벤트를 등록하여 회원들의 참여율을 높여보세요!`;
 
-        await this.sendEventNotification(
-          member.userId,
-          event.id,
-          'REMINDER',
-          message,
-        );
+        for (const officer of officers) {
+          // Send log and push
+          await this.sendExternalIfConfigured(officer.user, message);
+          await this.createInAppNotification({
+            userId: officer.userId,
+            type: NotificationType.REMINDER,
+            message,
+            groupId: group.id,
+          });
+        }
+      }
+    }
+  }
+
+  @Cron('0 9 * * *') // Run every day at 9:00 AM
+  async notifyFeeDue() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    // Find all groups with a fee due day set
+    const groups = await this.prisma.group.findMany({
+      where: {
+        dueDay: { not: null },
+      },
+      include: {
+        members: {
+          where: { status: MemberStatus.APPROVED },
+          include: { user: true },
+        },
+      },
+    });
+
+    for (const group of groups) {
+      if (!group.dueDay) continue;
+
+      // Calculate check date (1 day before the due day of this month)
+      const targetDate = new Date(year, month - 1, group.dueDay);
+      const checkDate = new Date(targetDate.getTime() - 24 * 60 * 60 * 1000);
+
+      const isTodayOneDayBefore = localDayStart(now).getTime() === localDayStart(checkDate).getTime();
+
+      if (isTodayOneDayBefore) {
+        const message = `[회비 납부 안내] 「${group.name}」 모임의 회비 마감일(매월 ${group.dueDay}일) 하루 전입니다. 계좌번호: ${group.bankName || ''} ${group.bankAccountNumber || ''}로 납부를 부탁드립니다.`;
+
+        for (const member of group.members) {
+          // Check if exempt
+          const isExempt = group.officerFeeExempt && isOfficer(member.role);
+          if (isExempt) continue;
+
+          // Check if already paid
+          const payment = await this.prisma.feePayment.findUnique({
+            where: {
+              groupId_userId_year_month: {
+                groupId: group.id,
+                userId: member.userId,
+                year,
+                month,
+              },
+            },
+          });
+
+          if (!payment) {
+            await this.sendExternalIfConfigured(member.user, message);
+            await this.createInAppNotification({
+              userId: member.userId,
+              type: NotificationType.REMINDER,
+              message,
+              groupId: group.id,
+            });
+          }
+        }
       }
     }
   }
@@ -212,21 +335,38 @@ export class NotificationsService {
   ) {
     const channelToken = this.config.get<string>('KAKAO_CHANNEL_ACCESS_TOKEN');
 
-    if (channelToken && user.kakaoChannelUserKey) {
+    if (!channelToken) {
+      this.logger.log(`[Mock 알림] ${user.displayName} ← ${message}`);
+      return;
+    }
+
+    const isSelf = user.displayName === '김완석';
+
+    if (isSelf || user.kakaoChannelUserKey) {
       try {
-        await axios.post(
-          'https://kapi.kakao.com/v1/api/talk/friends/message/default/send',
-          {
-            receiver_uuids: [user.kakaoChannelUserKey],
-            template_object: {
-              object_type: 'text',
-              text: message,
-              link: {
-                web_url: this.config.get<string>('FRONTEND_URL'),
-                mobile_web_url: this.config.get<string>('FRONTEND_URL'),
-              },
+        const url = isSelf
+          ? 'https://kapi.kakao.com/v2/api/talk/memo/default/send'
+          : 'https://kapi.kakao.com/v1/api/talk/friends/message/default/send';
+
+        const params = new URLSearchParams();
+        if (!isSelf) {
+          params.append('receiver_uuids', JSON.stringify([user.kakaoChannelUserKey]));
+        }
+        params.append(
+          'template_object',
+          JSON.stringify({
+            object_type: 'text',
+            text: message,
+            link: {
+              web_url: this.config.get<string>('FRONTEND_URL'),
+              mobile_web_url: this.config.get<string>('FRONTEND_URL'),
             },
-          },
+          }),
+        );
+
+        const response = await axios.post(
+          url,
+          params.toString(),
           {
             headers: {
               Authorization: `Bearer ${channelToken}`,
@@ -234,8 +374,13 @@ export class NotificationsService {
             },
           },
         );
-      } catch (error) {
-        this.logger.warn(`카카오 알림 발송 실패 (${user.id}): ${error}`);
+        this.logger.log(`카카오 알림 발송 성공 (${user.displayName}, self=${isSelf}): ${JSON.stringify(response.data)}`);
+      } catch (error: any) {
+        this.logger.warn(
+          `카카오 알림 발송 실패 (${user.displayName}): ${
+            error.response?.data ? JSON.stringify(error.response.data) : error.message
+          }`,
+        );
       }
     } else {
       this.logger.log(`[Mock 알림] ${user.displayName} ← ${message}`);

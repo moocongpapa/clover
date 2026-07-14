@@ -31,16 +31,34 @@ export class VotesService {
     const event = await this.getActiveEvent(eventId, userId);
     await this.assertCanVote(eventId, event.date, event.startTime);
 
-    return this.prisma.vote.upsert({
+    const vote = await this.prisma.vote.upsert({
       where: { eventId_userId: { eventId, userId } },
       update: { choice: dto.choice },
       create: { eventId, userId, choice: dto.choice },
       include: {
         user: {
-          select: { id: true, displayName: true, profileImageUrl: true },
+          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
         },
       },
     });
+
+    await this.groupsService.resolveGroupProfileForUser(event.groupId, vote.user);
+    return vote;
+  }
+
+  async cancelVote(eventId: string, userId: string) {
+    const event = await this.getActiveEvent(eventId, userId);
+    await this.assertCanVote(eventId, event.date, event.startTime);
+
+    try {
+      await this.prisma.vote.delete({
+        where: { eventId_userId: { eventId, userId } },
+      });
+    } catch (e) {
+      // Ignore if record already deleted
+    }
+
+    return { ok: true };
   }
 
   async getResults(eventId: string, userId: string) {
@@ -58,7 +76,7 @@ export class VotesService {
       where: { eventId },
       include: {
         user: {
-          select: { id: true, displayName: true, profileImageUrl: true },
+          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
         },
       },
       orderBy: { updatedAt: 'asc' },
@@ -92,11 +110,17 @@ export class VotesService {
       orderBy: { createdAt: 'asc' },
     });
 
-    const nonVoters = nonVoterMembers
-      .map((member) => member.user)
-      .sort((a, b) =>
-        a.displayName.localeCompare(b.displayName, 'ko'),
-      );
+    const votesUsers = votes.map((v) => v.user);
+    const nonVotersUsers = nonVoterMembers.map((member) => member.user);
+
+    await this.groupsService.resolveGroupProfilesForUsers(event.groupId, [...votesUsers, ...nonVotersUsers]);
+    if (myVote) {
+      await this.groupsService.resolveGroupProfileForUser(event.groupId, myVote.user);
+    }
+
+    const nonVoters = nonVotersUsers.sort((a, b) =>
+      a.displayName.localeCompare(b.displayName, 'ko'),
+    );
 
     return {
       event: {

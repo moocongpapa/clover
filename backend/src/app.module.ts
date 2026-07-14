@@ -10,6 +10,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { RegionsModule } from './regions/regions.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { RegionsModule } from './regions/regions.module';
     CalendarModule,
     UploadsModule,
     RegionsModule,
+    AnnouncementsModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

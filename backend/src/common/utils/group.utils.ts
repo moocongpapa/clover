@@ -98,6 +98,36 @@ export function buildActivityRegion(parts: {
     .join(' ');
 }
 
+export function parseKoreanAddress(address: string) {
+  const tokens = address.trim().split(/\s+/);
+  if (tokens.length === 0) return null;
+
+  const activitySido = tokens[0];
+  let activitySigungu = '';
+  let activityDistrict = '';
+  let activityTown = '';
+
+  if (tokens.length > 1) {
+    const second = tokens[1];
+    if (tokens.length > 2 && second.endsWith('시') && (tokens[2].endsWith('구') || tokens[2].endsWith('군'))) {
+      activitySigungu = `${second} ${tokens[2]}`;
+      if (tokens.length > 3) activityDistrict = tokens[3];
+      if (tokens.length > 4) activityTown = tokens[4];
+    } else {
+      activitySigungu = second;
+      if (tokens.length > 2) activityDistrict = tokens[2];
+      if (tokens.length > 3) activityTown = tokens[3];
+    }
+  }
+
+  return {
+    activitySido,
+    activitySigungu: activitySigungu || null,
+    activityDistrict: activityDistrict || null,
+    activityTown: activityTown || null,
+  };
+}
+
 export function normalizeOptionalText(value?: string | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -109,5 +139,6 @@ export const USER_MEMBER_SELECT = {
   profileImageUrl: true,
   gender: true,
   birthYear: true,
+  isEarlyYear: true,
   phoneNumber: true,
 } as const;

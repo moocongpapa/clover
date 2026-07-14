@@ -52,16 +52,17 @@ function isUpcoming(ev: CalendarEvent) {
 
 function HomeVoteCounts({ event }: { event: CalendarEvent }) {
   return (
-    <div className="home-vote-counts" aria-label="투표 현황">
+    <div className="home-vote-row" aria-label="투표 현황">
       {VOTE_CHOICES.map((c) => (
         <span
           key={c}
-          className={`home-vote-count home-vote-count--${c.toLowerCase()}${
-            event.myVote === c ? ' is-mine' : ''
+          className={`home-vote-btn home-vote-btn--${c.toLowerCase()}${
+            event.myVote === c ? ' is-selected' : ''
           }`}
+          style={{ cursor: 'default' }}
         >
-          <span className="home-vote-count__label">{VOTE_LABELS[c]}</span>
-          <span className="home-vote-count__num">{event.voteCounts[c]}</span>
+          <span className="home-vote-btn__label">{VOTE_LABELS[c]}</span>
+          <span className="home-vote-btn__count">({event.voteCounts[c]})</span>
         </span>
       ))}
     </div>
@@ -89,8 +90,13 @@ function HomeEventCard({
     setVoting(true);
     setError('');
     try {
-      await api.castVote(event.id, choice);
-      setSelected(choice);
+      if (selected === choice) {
+        await api.cancelVote(event.id);
+        setSelected(null);
+      } else {
+        await api.castVote(event.id, choice);
+        setSelected(choice);
+      }
       onVoted?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : '투표 실패');
@@ -111,41 +117,49 @@ function HomeEventCard({
     ) : null;
 
   const isEdited = event.updatedAt !== event.createdAt;
-  const stampLabel = isEdited ? '수정' : '등록';
   const stampValue = formatDateTime(isEdited ? event.updatedAt : event.createdAt);
 
   return (
     <article
       className={`home-event-card${votable && !event.myVote && !event.voteLocked ? ' home-event-card--action' : ''}`}
     >
-      <div className="home-event-card__head">
+      <div className="home-event-card__header-top">
+        <span className="home-event-card__group">{event.group.name}</span>
+        <div className="home-event-card__stamp-badge">
+          {stampValue && (
+            <span className="home-event-card__stamp">
+              {stampValue}
+            </span>
+          )}
+          {badge}
+        </div>
+      </div>
+
+      <div className="home-event-card__body-main">
         <GroupAvatar
           src={event.group.profileImageUrl}
           name={event.group.name}
           className="home-event-card__avatar"
+          size={52}
         />
-        <div className="home-event-card__head-main">
-          <span className="home-event-card__group">{event.group.name}</span>
+        <div className="home-event-card__content-right">
           <h3>
             <Link to={`/events/${event.id}`}>{event.title}</Link>
           </h3>
-          <p className="home-event-card__meta">
-            {formatEventDate(event.date, event.startTime, event.endTime)} · {event.location}
-            {event.myTeam && (
-              <span className="home-event-card__team">
-                {' '}
-                · {formatTeamLabel(event.myTeam)}
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="home-event-card__head-side">
-          {badge}
-          {stampValue && (
-            <span className="home-event-card__stamp">
-              {stampValue} {stampLabel}
-            </span>
-          )}
+          <div className="home-event-card__meta">
+            <div className="home-event-card__meta-date">
+              {formatEventDate(event.date, event.startTime, event.endTime)}
+            </div>
+            <div className="home-event-card__meta-location">
+              {event.location}
+              {event.myTeam && (
+                <span className="home-event-card__team">
+                  {' '}
+                  · {formatTeamLabel(event.myTeam)}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -161,7 +175,7 @@ function HomeEventCard({
                 onClick={() => handleVote(c)}
               >
                 <span className="home-vote-btn__label">{VOTE_LABELS[c]}</span>
-                <span className="home-vote-btn__count">{event.voteCounts[c]}</span>
+                <span className="home-vote-btn__count">({event.voteCounts[c]})</span>
               </button>
             ))}
           </div>
@@ -203,104 +217,425 @@ function GuestLanding() {
 
 type HomeTab = 'upcoming' | 'past';
 
+function MiniCalendar({
+  events,
+  selectedDate,
+  onSelectDate,
+}: {
+  events: CalendarEvent[];
+  selectedDate: string | null;
+  onSelectDate: (dateStr: string | null) => void;
+}) {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const startDayOfWeek = firstDay.getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+
+  const days: (number | null)[] = [];
+  for (let i = 0; i < startDayOfWeek; i++) {
+    days.push(null);
+  }
+  for (let d = 1; d <= totalDays; d++) {
+    days.push(d);
+  }
+
+  const dateEventMap = new Map<string, { hasUpcoming: boolean; hasPast: boolean }>();
+  events.forEach((e) => {
+    const d = new Date(e.date);
+    const yStr = d.getFullYear();
+    const mStr = String(d.getMonth() + 1).padStart(2, '0');
+    const dStr = String(d.getDate()).padStart(2, '0');
+    const dateKey = `${yStr}-${mStr}-${dStr}`;
+    
+    const isEventUpcoming = !e.isPast;
+    
+    const existing = dateEventMap.get(dateKey) || { hasUpcoming: false, hasPast: false };
+    if (isEventUpcoming) {
+      existing.hasUpcoming = true;
+    } else {
+      existing.hasPast = true;
+    }
+    dateEventMap.set(dateKey, existing);
+  });
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(year, month + 1, 1));
+  };
+
+  return (
+    <div className="mini-calendar">
+      <div className="mini-calendar__header">
+        <button type="button" onClick={handlePrevMonth} className="calendar-nav-btn">◀</button>
+        <span className="mini-calendar__title">
+          {year}년 {month + 1}월
+        </span>
+        <button type="button" onClick={handleNextMonth} className="calendar-nav-btn">▶</button>
+      </div>
+
+      <div className="mini-calendar__weekdays">
+        {['일', '월', '화', '수', '목', '금', '토'].map((w) => (
+          <span key={w} className="weekday-label">{w}</span>
+        ))}
+      </div>
+
+      <div className="mini-calendar__days">
+        {days.map((day, idx) => {
+          if (day === null) {
+            return <div key={`empty-${idx}`} className="calendar-day-empty" />;
+          }
+
+          const yStr = year;
+          const mStr = String(month + 1).padStart(2, '0');
+          const dStr = String(day).padStart(2, '0');
+          const targetDateStr = `${yStr}-${mStr}-${dStr}`;
+          const eventStatus = dateEventMap.get(targetDateStr);
+          const hasEvent = !!eventStatus;
+          const isSelected = selectedDate === targetDateStr;
+          
+          return (
+            <button
+              key={`day-${day}`}
+              type="button"
+              className={`calendar-day-btn${hasEvent ? ' has-event' : ''}${isSelected ? ' is-selected' : ''}`}
+              onClick={() => onSelectDate(isSelected ? null : targetDateStr)}
+            >
+              <span className="day-number">{day}</span>
+              {hasEvent && (
+                <div className="calendar-day-dots">
+                  {eventStatus.hasUpcoming && <span className="event-dot event-dot--upcoming" />}
+                  {eventStatus.hasPast && <span className="event-dot event-dot--past" />}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedDate && (
+        <div className="mini-calendar__filter-bar">
+          <span>선택된 날짜: {selectedDate}</span>
+          <button type="button" className="clear-filter-btn" onClick={() => onSelectDate(null)}>
+            전체 보기
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HomeDashboard() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<HomeTab>('upcoming');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [pastFilter, setPastFilter] = useState<'all' | '1w' | '1m'>('all');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   const load = () => {
-    api
-      .getCalendar()
-      .then(setEvents)
+    setLoading(true);
+    Promise.all([
+      api.getCalendar(),
+      api.myGroups(),
+    ])
+      .then(([calendarEvents, myGroups]) => {
+        setEvents(calendarEvents);
+        setGroups(myGroups);
+      })
       .finally(() => setLoading(false));
   };
 
   useEffect(load, []);
 
-  const upcoming = events.filter(isUpcoming);
+  // Filter events by calendar date selection only in calendar view mode
+  const filteredEvents = (viewMode === 'calendar' && selectedDate)
+    ? events.filter((e) => {
+        const d = new Date(e.date);
+        const yStr = d.getFullYear();
+        const mStr = String(d.getMonth() + 1).padStart(2, '0');
+        const dStr = String(d.getDate()).padStart(2, '0');
+        return `${yStr}-${mStr}-${dStr}` === selectedDate;
+      })
+    : events;
+
+  const upcoming = filteredEvents.filter(isUpcoming);
   const needsVote = upcoming.filter((e) => !e.myVote && !e.voteLocked);
   const voted = upcoming.filter((e) => e.myVote || e.voteLocked);
-  const past = events
+
+  // Past events filtering
+  let past = filteredEvents
     .filter((e) => !isUpcoming(e))
     .sort((a, b) => eventEndAt(b).getTime() - eventEndAt(a).getTime());
 
+  if (pastFilter === '1w') {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    past = past.filter((e) => new Date(e.date) >= oneWeekAgo);
+  } else if (pastFilter === '1m') {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    past = past.filter((e) => new Date(e.date) >= oneMonthAgo);
+  }
+
+
   return (
     <div className="home-dashboard">
-      <div className="home-tabs">
-        <SegmentedControl<HomeTab>
-          name="홈 일정 보기"
-          options={[
-            { value: 'upcoming', label: '진행 중 일정' },
-            { value: 'past', label: `지난 일정${past.length ? ` (${past.length})` : ''}` },
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
-      </div>
-
-      {loading ? (
-        <p className="loading-text">불러오는 중…</p>
-      ) : events.length === 0 ? (
-        <div className="home-empty">
-          <p>예정된 일정이 없어요.</p>
-          <Link to="/groups" className="link-text">
-            모임 찾아보기
+      {/* Naver Band Style My Groups Grid */}
+      <section className="home-groups-section">
+        <div className="home-groups-header">
+          <h2 className="home-section__title">내 모임</h2>
+          <div className="home-groups-header-actions">
+            <Link to="/groups/new" className="home-groups-action-link">모임 만들기</Link>
+            <span className="home-groups-action-space" />
+            <Link to="/groups" className="home-groups-action-link">전체보기</Link>
+          </div>
+        </div>
+        <div className="home-groups-grid">
+          {groups.map((group) => (
+            <Link key={group.id} to={`/groups/${group.id}`} className="grid-group-card">
+              <GroupAvatar
+                src={group.profileImageUrl}
+                name={group.name}
+                size={76}
+                radius={22}
+                className="grid-group-avatar"
+              />
+              <span className="grid-group-name">{group.name}</span>
+            </Link>
+          ))}
+          <Link to="/groups/new" className="grid-group-card">
+            <div className="grid-group-squircle-plus">
+              <span className="grid-group-plus-icon">+</span>
+            </div>
+            <span className="grid-group-name">모임 만들기</span>
           </Link>
         </div>
-      ) : tab === 'upcoming' ? (
-        needsVote.length === 0 && voted.length === 0 ? (
-          <div className="home-empty">
-            <p>진행 중인 일정이 없어요.</p>
-            {past.length > 0 && (
-              <button
-                type="button"
-                className="link-text"
-                onClick={() => setTab('past')}
-              >
-                지난 일정 보기
-              </button>
-            )}
-          </div>
-        ) : (
-          <>
-            {needsVote.length > 0 && (
-              <section className="home-section">
-                <h2 className="home-section__title">
-                  투표가 필요해요
-                  <span className="home-section__count">{needsVote.length}</span>
-                </h2>
-                <div className="home-event-list">
-                  {needsVote.map((ev) => (
-                    <HomeEventCard key={ev.id} event={ev} votable onVoted={load} />
-                  ))}
-                </div>
-              </section>
-            )}
+      </section>
 
-            {voted.length > 0 && (
-              <section className="home-section">
-                <h2 className="home-section__title">투표 완료 · 진행 예정</h2>
-                <div className="home-event-list">
-                  {voted.map((ev) => (
-                    <HomeEventCard key={ev.id} event={ev} votable onVoted={load} />
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
-        )
-      ) : past.length === 0 ? (
-        <div className="home-empty">
-          <p>지난 일정이 없어요.</p>
+      {/* View Toggle Bar */}
+      <div className="home-view-toggle-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 4px 16px 4px' }}>
+        <h2 className="home-section__title" style={{ margin: 0 }}>일정</h2>
+        <div className="view-toggle-buttons" style={{ display: 'flex', gap: '4px', background: 'var(--grey-100)', padding: '4px', borderRadius: '10px' }}>
+          <button
+            type="button"
+            className={`view-toggle-btn${viewMode === 'list' ? ' is-active' : ''}`}
+            onClick={() => setViewMode('list')}
+            style={{
+              border: 'none',
+              background: viewMode === 'list' ? 'var(--surface)' : 'transparent',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 700,
+              color: viewMode === 'list' ? 'var(--accent)' : 'var(--ink-muted)',
+              boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            📋 리스트
+          </button>
+          <button
+            type="button"
+            className={`view-toggle-btn${viewMode === 'calendar' ? ' is-active' : ''}`}
+            onClick={() => setViewMode('calendar')}
+            style={{
+              border: 'none',
+              background: viewMode === 'calendar' ? 'var(--surface)' : 'transparent',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 700,
+              color: viewMode === 'calendar' ? 'var(--accent)' : 'var(--ink-muted)',
+              boxShadow: viewMode === 'calendar' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            📅 캘린더
+          </button>
         </div>
-      ) : (
-        <section className="home-section">
-          <div className="home-event-list">
-            {past.map((ev) => (
-              <HomeEventCard key={ev.id} event={ev} />
-            ))}
+      </div>
+
+      {viewMode === 'calendar' ? (
+        /* Calendar View Mode */
+        <section className="home-calendar-section">
+          <MiniCalendar
+            events={events}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+          />
+          
+          <div style={{ marginTop: '20px' }}>
+            <h3 className="home-section__title" style={{ marginBottom: '12px' }}>
+              {selectedDate ? `${selectedDate} 일정` : '전체 일정'}
+            </h3>
+            {loading ? (
+              <p className="loading-text">불러오는 중…</p>
+            ) : upcoming.length === 0 && past.length === 0 ? (
+              <div className="home-empty">
+                <p>선택한 날짜에는 일정이 없어요.</p>
+              </div>
+            ) : (
+              <div>
+                {upcoming.length > 0 && (
+                  <section className="home-section" style={{ marginBottom: '24px' }}>
+                    <h4 className="home-section__title" style={{ fontSize: '14px', color: 'var(--accent)', marginBottom: '8px' }}>
+                      진행 중 일정
+                      <span className="home-section__count" style={{ background: 'var(--accent-soft)', color: 'var(--accent)', marginLeft: '6px' }}>
+                        {upcoming.length}
+                      </span>
+                    </h4>
+                    <div className="home-event-list">
+                      {upcoming.map((ev) => (
+                        <HomeEventCard key={ev.id} event={ev} votable={!ev.isPast} onVoted={load} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {past.length > 0 && (
+                  <section className="home-section">
+                    <h4 className="home-section__title" style={{ fontSize: '14px', color: 'var(--ink-muted)', marginBottom: '8px' }}>
+                      지난 일정
+                      <span className="home-section__count" style={{ background: 'var(--grey-100)', color: 'var(--ink-muted)', marginLeft: '6px' }}>
+                        {past.length}
+                      </span>
+                    </h4>
+                    <div className="home-event-list">
+                      {past.map((ev) => (
+                        <HomeEventCard key={ev.id} event={ev} votable={!ev.isPast} onVoted={load} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            )}
           </div>
         </section>
+      ) : (
+        /* Card List View Mode */
+        <>
+          <div className="home-tabs">
+            <SegmentedControl<HomeTab>
+              name="홈 일정 보기"
+              options={[
+                { value: 'upcoming', label: '진행 중 일정' },
+                { value: 'past', label: `지난 일정${past.length ? ` (${past.length})` : ''}` },
+              ]}
+              value={tab}
+              onChange={setTab}
+            />
+          </div>
+
+          {loading ? (
+            <p className="loading-text">불러오는 중…</p>
+          ) : filteredEvents.length === 0 ? (
+            <div className="home-empty">
+              <p>일정이 없어요.</p>
+              <Link to="/groups" className="link-text">
+                모임 찾아보기
+              </Link>
+            </div>
+          ) : tab === 'upcoming' ? (
+            needsVote.length === 0 && voted.length === 0 ? (
+              <div className="home-empty">
+                <p>진행 중인 일정이 없어요.</p>
+                {past.length > 0 && (
+                  <button
+                    type="button"
+                    className="link-text"
+                    onClick={() => setTab('past')}
+                  >
+                    지난 일정 보기
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                {needsVote.length > 0 && (
+                  <section className="home-section">
+                    <h2 className="home-section__title">
+                      투표가 필요해요
+                      <span className="home-section__count">{needsVote.length}</span>
+                    </h2>
+                    <div className="home-event-list">
+                      {needsVote.map((ev) => (
+                        <HomeEventCard key={ev.id} event={ev} votable onVoted={load} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {voted.length > 0 && (
+                  <section className="home-section">
+                    <h2 className="home-section__title">투표 완료 · 진행 예정</h2>
+                    <div className="home-event-list">
+                      {voted.map((ev) => (
+                        <HomeEventCard key={ev.id} event={ev} votable onVoted={load} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </>
+            )
+          ) : (
+            <>
+              {/* Past Filters */}
+              <div className="past-filter-controls">
+                <button
+                  type="button"
+                  className={`filter-btn${pastFilter === 'all' ? ' is-active' : ''}`}
+                  onClick={() => setPastFilter('all')}
+                >
+                  전체
+                </button>
+                <button
+                  type="button"
+                  className={`filter-btn${pastFilter === '1w' ? ' is-active' : ''}`}
+                  onClick={() => setPastFilter('1w')}
+                >
+                  최근 1주일
+                </button>
+                <button
+                  type="button"
+                  className={`filter-btn${pastFilter === '1m' ? ' is-active' : ''}`}
+                  onClick={() => setPastFilter('1m')}
+                >
+                  최근 1개월
+                </button>
+              </div>
+
+              {past.length === 0 ? (
+                <div className="home-empty">
+                  <p>조건에 맞는 지난 일정이 없어요.</p>
+                </div>
+              ) : (
+                <section className="home-section">
+                  <div className="home-event-list">
+                    {past.map((ev) => (
+                      <HomeEventCard key={ev.id} event={ev} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          )}
+        </>
       )}
     </div>
   );

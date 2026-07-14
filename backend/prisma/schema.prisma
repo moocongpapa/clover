@@ -54,6 +54,7 @@ model User {
   gender              Gender?
   birthYear           Int?
   birthDate           DateTime?
+  isEarlyYear         Boolean        @default(false)
   phoneNumber         String?
   bio                 String?
   kakaoChannelUserKey String?
@@ -66,6 +67,15 @@ model User {
   triggeredNotifications NotificationLog[] @relation("NotificationActor")
   createdTeamSplits   EventTeamSplit[] @relation("TeamSplitCreator")
   teamAssignments     EventTeamAssignment[]
+  role                String           @default("MEMBER")
+  announcements       Announcement[]
+  officerHistories    OfficerHistory[]
+  payments            FeePayment[]
+  recordedPayments    FeePayment[]     @relation("RecordedPayments")
+  chatMessages        ChatMessage[]
+  comments            Comment[]
+  uploadedMedia       GroupMedia[]
+  profileCards        UserProfileCard[]
 }
 
 model Group {
@@ -82,25 +92,38 @@ model Group {
   bankName         String?
   bankAccountNumber String?
   bankAccountHolder String?
-  isPublic        Boolean       @default(true)
-  inviteCode      String        @unique
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  members         GroupMember[]
-  events          Event[]
-  notifications   NotificationLog[]
+  isPublic          Boolean          @default(true)
+  inviteCode        String           @unique
+  maxMembers        Int              @default(50)
+  customSportName   String?          // 기타 스포츠 입력 필드
+  dueDay            Int?             // 회비 납부 마감일 (1~28)
+  officerFeeExempt  Boolean          @default(false) // 운영진 회비 면제 여부
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  members           GroupMember[]
+  events            Event[]
+  notifications     NotificationLog[]
+  arenas            GroupArena[]
+  officerHistories  OfficerHistory[]
+  payments          FeePayment[]
+  chatMessages      ChatMessage[]
+  announcements     Announcement[]
+  media             GroupMedia[]
 }
 
 model GroupMember {
-  id        String       @id @default(cuid())
-  userId    String
-  groupId   String
-  role      MemberRole   @default(MEMBER)
-  status    MemberStatus @default(PENDING)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group     Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  id            String           @id @default(cuid())
+  userId        String
+  groupId       String
+  role          MemberRole       @default(MEMBER)
+  status        MemberStatus     @default(PENDING)
+  userStatus    String           @default("HEALTHY") // HEALTHY (튼튼), INJURED (회복중), UNAVAILABLE (활동불가)
+  profileCardId String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group         Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  profileCard   UserProfileCard? @relation(fields: [profileCardId], references: [id], onDelete: SetNull)
 
   @@unique([userId, groupId])
   @@index([groupId, status])
@@ -115,15 +138,17 @@ model Event {
   endTime     String?
   location    String
   description String
-  status      EventStatus @default(ACTIVE)
-  createdById String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  group       Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  createdBy   User        @relation("EventCreator", fields: [createdById], references: [id])
-  votes       Vote[]
-  notifications NotificationLog[]
-  teamSplit   EventTeamSplit?
+  status          EventStatus @default(ACTIVE)
+  createdById     String
+  reminderOffsets String      @default("24,1") // 이벤트 시작 몇 시간 전에 알림을 보낼지 쉼표로 구분
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  group           Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy       User        @relation("EventCreator", fields: [createdById], references: [id])
+  votes           Vote[]
+  notifications   NotificationLog[]
+  teamSplit       EventTeamSplit?
+  comments        Comment[]
 
   @@index([groupId, date])
   @@index([date])
@@ -183,4 +208,96 @@ model NotificationLog {
   @@index([eventId, type])
   @@index([userId, eventId, type])
   @@index([userId, readAt])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  groupId   String?
+  group     Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+model GroupArena {
+  id        String @id @default(cuid())
+  groupId   String
+  group     Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  placeName String // 구장명 (예: 펜타시티풋살장)
+  address   String // 구장 전체 주소
+}
+
+model OfficerHistory {
+  id        String     @id @default(cuid())
+  groupId   String
+  group     Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  role      MemberRole
+  startDate DateTime   @default(now())
+  endDate   DateTime?
+}
+
+model FeePayment {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  year     Int
+  month    Int
+  paidAt   DateTime @default(now())
+  paidById String
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paidBy   User     @relation("RecordedPayments", fields: [paidById], references: [id])
+
+  @@unique([groupId, userId, year, month])
+}
+
+model ChatMessage {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  message  String
+  imageUrl String?
+  videoUrl String?
+  sentAt   DateTime @default(now())
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GroupMedia {
+  id           String   @id @default(cuid())
+  groupId      String
+  url          String
+  fileType     String   // IMAGE or VIDEO
+  uploadedById String
+  createdAt    DateTime @default(now())
+  
+  group        Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+}
+
+model UserProfileCard {
+  id              String   @id @default(cuid())
+  userId          String
+  nickname        String
+  profileImageUrl String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memberships     GroupMember[]
 }

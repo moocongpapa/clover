@@ -54,6 +54,23 @@ export class CreateGroupDto {
   @IsOptional()
   @IsString()
   bankAccountHolder?: string;
+
+  @IsOptional()
+  maxMembers?: number;
+
+  @IsOptional()
+  @IsString()
+  customSportName?: string;
+
+  @IsOptional()
+  dueDay?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  officerFeeExempt?: boolean;
+
+  @IsOptional()
+  arenas?: { placeName: string; address: string }[];
 }
 
 export class UpdateGroupDto {
@@ -103,6 +120,23 @@ export class UpdateGroupDto {
   @IsOptional()
   @IsString()
   bankAccountHolder?: string | null;
+
+  @IsOptional()
+  maxMembers?: number;
+
+  @IsOptional()
+  @IsString()
+  customSportName?: string | null;
+
+  @IsOptional()
+  dueDay?: number | null;
+
+  @IsOptional()
+  @IsBoolean()
+  officerFeeExempt?: boolean;
+
+  @IsOptional()
+  arenas?: { placeName: string; address: string }[];
 }
 
 export class UpdateMemberDto {
@@ -115,8 +149,30 @@ export class UpdateMemberDto {
   role?: MemberRole;
 }
 
+export class UpdateMyStatusDto {
+  @IsString()
+  @IsNotEmpty()
+  userStatus!: string; // HEALTHY, INJURED, UNAVAILABLE
+}
+
 export class TransferPresidentDto {
   @IsString()
   @IsNotEmpty()
   newPresidentUserId!: string;
+}
+
+export class CreateGroupMediaDto {
+  @IsString()
+  @IsNotEmpty()
+  url!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  fileType!: string; // IMAGE or VIDEO
+}
+
+export class LinkProfileCardDto {
+  @IsOptional()
+  @IsString()
+  profileCardId?: string | null;
 }

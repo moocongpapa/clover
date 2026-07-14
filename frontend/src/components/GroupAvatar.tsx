@@ -4,22 +4,31 @@ type GroupAvatarProps = {
   src?: string | null;
   name?: string;
   className?: string;
+  size?: number;
+  radius?: number;
 };
 
 export default function GroupAvatar({
   src,
   name = '모임',
   className,
+  size = 44,
+  radius,
 }: GroupAvatarProps) {
   const classes = ['group-avatar', className].filter(Boolean).join(' ');
+  const style = {
+    width: `${size}px`,
+    height: `${size}px`,
+    ...(radius !== undefined ? { borderRadius: `${radius}px` } : {}),
+  };
 
   if (src) {
-    return <img src={src} alt={`${name} 대표 이미지`} className={classes} />;
+    return <img src={src} alt={`${name} 대표 이미지`} className={classes} style={style} />;
   }
 
   return (
-    <span className={`${classes} group-avatar--fallback`} aria-label={`${name} 기본 이미지`}>
-      <CloverLogo size={28} />
+    <span className={`${classes} group-avatar--fallback`} aria-label={`${name} 기본 이미지`} style={style}>
+      <CloverLogo size={Math.round(size * 0.6)} />
     </span>
   );
 }

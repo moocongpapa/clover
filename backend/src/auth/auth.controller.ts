@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Delete, UseGuards, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { DevLoginDto, KakaoCallbackDto, UpdateProfileDto } from './dto/auth.dto';
+import { DevLoginDto, KakaoCallbackDto, UpdateProfileDto, CreateProfileCardDto, UpdateProfileCardDto } from './dto/auth.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
@@ -34,5 +34,39 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateProfileDto) {
     return this.authService.updateProfile(user.id, dto);
+  }
+
+  @Get('me/profile-cards')
+  @UseGuards(JwtAuthGuard)
+  getProfileCards(@CurrentUser() user: AuthUser) {
+    return this.authService.getProfileCards(user.id);
+  }
+
+  @Post('me/profile-cards')
+  @UseGuards(JwtAuthGuard)
+  createProfileCard(@CurrentUser() user: AuthUser, @Body() dto: CreateProfileCardDto) {
+    return this.authService.createProfileCard(user.id, dto);
+  }
+
+  @Patch('me/profile-cards/:id')
+  @UseGuards(JwtAuthGuard)
+  updateProfileCard(
+    @Param('id') cardId: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateProfileCardDto,
+  ) {
+    return this.authService.updateProfileCard(user.id, cardId, dto);
+  }
+
+  @Delete('me/profile-cards/:id')
+  @UseGuards(JwtAuthGuard)
+  deleteProfileCard(@Param('id') cardId: string, @CurrentUser() user: AuthUser) {
+    return this.authService.deleteProfileCard(user.id, cardId);
+  }
+
+  @Get('users/:id')
+  @UseGuards(JwtAuthGuard)
+  getUser(@Param('id') id: string) {
+    return this.authService.getMe(id);
   }
 }

@@ -21,6 +21,9 @@ import {
   TransferPresidentDto,
   UpdateGroupDto,
   UpdateMemberDto,
+  UpdateMyStatusDto,
+  CreateGroupMediaDto,
+  LinkProfileCardDto,
 } from './dto/groups.dto';
 
 @Controller('groups')
@@ -92,6 +95,26 @@ export class GroupsController {
     return this.groupsService.leave(id, user.id);
   }
 
+  @Patch(':id/members/my-status')
+  @UseGuards(JwtAuthGuard)
+  updateMyStatus(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateMyStatusDto,
+  ) {
+    return this.groupsService.updateMyStatus(id, user.id, dto);
+  }
+
+  @Post(':id/members/link-profile')
+  @UseGuards(JwtAuthGuard)
+  linkProfile(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: LinkProfileCardDto,
+  ) {
+    return this.groupsService.linkProfileCard(id, user.id, dto.profileCardId ?? null);
+  }
+
   @Patch(':id/members/:userId')
   @UseGuards(JwtAuthGuard)
   updateMember(
@@ -108,6 +131,33 @@ export class GroupsController {
     );
   }
 
+  @Get(':id/payments')
+  @UseGuards(JwtAuthGuard)
+  getPayments(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Query('year') yearStr: string,
+    @Query('month') monthStr: string,
+  ) {
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    return this.groupsService.getPayments(id, user.id, year, month);
+  }
+
+  @Post(':id/payments/:userId/toggle')
+  @UseGuards(JwtAuthGuard)
+  togglePayment(
+    @Param('id') id: string,
+    @Param('userId') targetUserId: string,
+    @CurrentUser() user: AuthUser,
+    @Query('year') yearStr: string,
+    @Query('month') monthStr: string,
+  ) {
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    return this.groupsService.togglePayment(id, user.id, targetUserId, year, month);
+  }
+
   @Post(':id/transfer-president')
   @UseGuards(JwtAuthGuard)
   transferPresident(
@@ -116,5 +166,24 @@ export class GroupsController {
     @Body() dto: TransferPresidentDto,
   ) {
     return this.groupsService.transferPresident(groupId, user.id, dto);
+  }
+
+  @Get(':id/media')
+  @UseGuards(JwtAuthGuard)
+  getGroupMedia(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.groupsService.getGroupMedia(id, user.id);
+  }
+
+  @Post(':id/media')
+  @UseGuards(JwtAuthGuard)
+  createGroupMedia(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateGroupMediaDto,
+  ) {
+    return this.groupsService.createGroupMedia(id, user.id, dto);
   }
 }

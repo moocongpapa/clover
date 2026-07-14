@@ -36,6 +36,10 @@ export class CreateEventDto {
   @IsString()
   @IsNotEmpty()
   description!: string;
+
+  @IsOptional()
+  @IsString()
+  reminderOffsets?: string; // 쉼표로 구분된 시간 오프셋 목록
 }
 
 export class SplitTeamsDto {
@@ -70,4 +74,14 @@ export class UpdateEventDto {
   @IsString()
   @IsNotEmpty()
   description!: string;
+
+  @IsOptional()
+  @IsString()
+  reminderOffsets?: string;
+}
+
+export class CreateCommentDto {
+  @IsString()
+  @IsNotEmpty()
+  content!: string;
 }

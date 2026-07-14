@@ -30,7 +30,7 @@ export default defineConfig({
       command: 'npm run start:e2e',
       cwd: '../backend',
       url: `${API_URL}/auth/kakao/url`,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 180_000,
       env: {
         ...process.env,
@@ -44,7 +44,7 @@ export default defineConfig({
       command: 'npm run dev',
       cwd: '../frontend',
       url: BASE_URL,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 60_000,
     },
   ],

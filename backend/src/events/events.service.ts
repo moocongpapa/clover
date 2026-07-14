@@ -30,7 +30,7 @@ export class EventsService {
       where: { groupId },
       include: {
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true },
+          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
         },
         _count: { select: { votes: true } },
       },
@@ -44,7 +44,7 @@ export class EventsService {
       include: {
         group: { select: { id: true, name: true } },
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true },
+          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
         },
       },
     });
@@ -54,6 +54,11 @@ export class EventsService {
     }
 
     await this.groupsService.requireApprovedMember(event.groupId, userId);
+    
+    if (event.createdBy) {
+      await this.groupsService.resolveGroupProfileForUser(event.groupId, event.createdBy);
+    }
+    
     return event;
   }
 
@@ -78,11 +83,12 @@ export class EventsService {
         endTime: dto.endTime ?? null,
         location: dto.location,
         description: dto.description,
+        reminderOffsets: dto.reminderOffsets ?? '24,1',
         createdById: userId,
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true },
+          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
         },
       },
     });
@@ -105,10 +111,11 @@ export class EventsService {
         endTime: dto.endTime ?? null,
         location: dto.location,
         description: dto.description,
+        reminderOffsets: dto.reminderOffsets ?? '24,1',
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true },
+          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
         },
       },
     });
@@ -148,12 +155,12 @@ export class EventsService {
       where: { eventId },
       include: {
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true },
+          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
         },
         assignments: {
           include: {
             user: {
-              select: { id: true, displayName: true, profileImageUrl: true },
+              select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
             },
           },
         },
@@ -192,7 +199,7 @@ export class EventsService {
       },
       include: {
         user: {
-          select: { id: true, displayName: true, profileImageUrl: true },
+          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
         },
       },
       orderBy: { votedAt: 'asc' },
@@ -210,7 +217,38 @@ export class EventsService {
       );
     }
 
-    const shuffledTeams = shuffleAndSplit(attendeeVotes, teamCount);
+    const attends = attendeeVotes.filter((v) => v.choice === VoteChoice.ATTEND);
+    const lates = attendeeVotes.filter((v) => v.choice === VoteChoice.LATE);
+
+    let shuffledTeams: (typeof attendeeVotes[number])[][];
+    if (attends.length > 0) {
+      // 1. 참석자들을 먼저 셔플하고 분할
+      shuffledTeams = shuffleAndSplit(attends, teamCount);
+      
+      // 2. 늦참자들을 셔플
+      const shuffledLates = [...lates];
+      for (let i = shuffledLates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledLates[i], shuffledLates[j]] = [shuffledLates[j], shuffledLates[i]];
+      }
+
+      // 3. 늦참자들을 기존 그룹들에 균등하게 분배
+      // 늦참자를 추가할 때, 가장 인원수가 적은 그룹부터 우선 배치하여 균등함을 유지하도록 함
+      shuffledLates.forEach((lateVote) => {
+        let minIndex = 0;
+        let minSize = shuffledTeams[0].length;
+        for (let idx = 1; idx < teamCount; idx++) {
+          if (shuffledTeams[idx].length < minSize) {
+            minSize = shuffledTeams[idx].length;
+            minIndex = idx;
+          }
+        }
+        shuffledTeams[minIndex].push(lateVote);
+      });
+    } else {
+      // 참석자가 한 명도 없고 늦참자만 있는 경우 예외적으로 늦참자들만 분할
+      shuffledTeams = shuffleAndSplit(lates, teamCount);
+    }
 
     const split = await this.prisma.$transaction(async (tx) => {
       await tx.eventTeamSplit.deleteMany({ where: { eventId } });
@@ -231,12 +269,12 @@ export class EventsService {
         },
         include: {
           createdBy: {
-            select: { id: true, displayName: true, profileImageUrl: true },
+            select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
           },
           assignments: {
             include: {
               user: {
-                select: { id: true, displayName: true, profileImageUrl: true },
+                select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
               },
             },
           },
@@ -332,5 +370,97 @@ export class EventsService {
     if (endTime <= startTime) {
       throw new BadRequestException('종료 시간은 시작 시간보다 뒤여야 합니다.');
     }
+  }
+
+  async getLatestEventTemplate(groupId: string, userId: string) {
+    const membership = await this.groupsService.requireApprovedMember(groupId, userId);
+    if (!isOfficer(membership.role)) {
+      throw new ForbiddenException('운영진만 이전 일정을 조회할 수 있습니다.');
+    }
+    return this.prisma.event.findFirst({
+      where: { groupId, status: EventStatus.ACTIVE },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getComments(eventId: string, userId: string) {
+    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new NotFoundException('이벤트를 찾을 수 없습니다.');
+    await this.groupsService.requireApprovedMember(event.groupId, userId);
+
+    const comments = await this.prisma.comment.findMany({
+      where: { eventId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
+        },
+      },
+    });
+
+    await this.groupsService.resolveGroupProfilesForUsers(event.groupId, comments.map(c => c.user));
+    return comments;
+  }
+
+  async addComment(eventId: string, userId: string, content: string) {
+    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new NotFoundException('이벤트를 찾을 수 없습니다.');
+    await this.groupsService.requireApprovedMember(event.groupId, userId);
+
+    const comment = await this.prisma.comment.create({
+      data: {
+        eventId,
+        userId,
+        content,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
+        },
+      },
+    });
+
+    await this.groupsService.resolveGroupProfileForUser(event.groupId, comment.user);
+    return comment;
+  }
+
+  async deleteComment(eventId: string, commentId: string, userId: string) {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { event: true },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    }
+
+    const membership = await this.groupsService.requireApprovedMember(
+      comment.event.groupId,
+      userId,
+    );
+
+    const isAuthor = comment.userId === userId;
+    const isOfficerUser = isOfficer(membership.role);
+
+    if (!isAuthor && !isOfficerUser) {
+      throw new ForbiddenException('댓글을 삭제할 권한이 없습니다.');
+    }
+
+    await this.prisma.comment.delete({ where: { id: commentId } });
+    return { success: true };
   }
 }

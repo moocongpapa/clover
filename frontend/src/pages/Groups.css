@@ -38,7 +38,7 @@
   }
 
   .filters__category {
-    flex: 1;
+    flex: 1.2;
     min-width: 0;
   }
 
@@ -46,6 +46,52 @@
     flex: 2;
     min-width: 0;
   }
+
+  .filters__geo {
+    flex-shrink: 0;
+  }
+}
+
+.filters__geo {
+  min-height: var(--btn-height);
+  height: var(--btn-height);
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  background: var(--grey-100);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.filters__geo:hover {
+  background: var(--grey-200);
+  color: var(--ink);
+}
+
+.filters__geo:active {
+  transform: scale(0.97);
+}
+
+.filters__geo.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.geo-error {
+  margin: -8px 0 12px;
+  font-size: 12px;
+  color: var(--danger);
+  font-weight: 500;
 }
 
 /* ── Group list (Toss list-row style cards) ── */
@@ -167,6 +213,11 @@
 
 .group-meta__region {
   color: var(--ink-muted);
+}
+
+.group-meta__distance {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 /* ── Group avatar (대표 이미지 / 기본 Clover 로고) ── */
@@ -301,23 +352,23 @@
 }
 
 .form-row--triple {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .form-row--triple .form-group {
-  margin-bottom: var(--space-4);
+  margin-bottom: 0;
   min-width: 0;
 }
 
 .form-row--triple .form-group--date {
-  flex: 1.2;
+  grid-column: span 2;
 }
 
 .form-row--triple .form-group--time {
-  flex: 1;
+  grid-column: span 1;
 }
 
 .form-row--triple .form-group label {
@@ -326,8 +377,9 @@
 
 .form-row--triple .form-group input {
   width: 100%;
-  min-width: 0;
+  box-sizing: border-box;
 }
+
 
 .form-copy-box {
   margin-bottom: var(--space-4);
@@ -374,14 +426,34 @@
 
 .checkbox-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
+  margin-bottom: var(--space-4);
+  cursor: pointer;
 }
 
-.checkbox-row input {
-  width: auto;
-  height: auto;
-  min-height: auto;
+.checkbox-row input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  background: var(--surface) !important;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.checkbox-row label {
+  display: inline-block !important;
+  margin-bottom: 0 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--ink) !important;
+  cursor: pointer;
 }
 
 .form-error {
@@ -497,8 +569,10 @@
 .form-actions-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 12px;
   flex-wrap: wrap;
+  margin-top: 24px;
 }
 
 .title-suggestions {
@@ -547,8 +621,8 @@
 
 @media (min-width: 640px) {
   .group-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 12px;
   }
 }
@@ -631,7 +705,271 @@
 
 @media (min-width: 640px) {
   .groups-browse .group-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 8px;
   }
+}
+
+/* ── New Group Card Layout Overrides (Retriever Town / Band Style) ── */
+
+.group-card--row {
+  display: flex !important;
+  align-items: flex-start !important;
+  padding: 12px 14px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-1) !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  transition: all var(--dur-base) var(--ease) !important;
+}
+
+.group-card--row:hover {
+  background: var(--surface) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-2) !important;
+}
+
+.group-card__main-link {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.group-card--row .group-card__avatar {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 16px !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+}
+
+.group-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.group-card__title,
+.group-card--row .group-name {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--ink) !important;
+  margin: 0 0 2px !important;
+  line-height: 1.35 !important;
+}
+
+.group-card__desc,
+.group-card--row .group-description {
+  font-size: 13px !important;
+  color: var(--ink-muted) !important;
+  line-height: 1.35 !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+}
+
+.group-card__footer {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 6px 10px !important;
+  margin-top: 4px !important;
+}
+
+/* Category Pill (White background, light border, rounded) */
+.category-more-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.category-more-pill strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.category-more-pill .more-arrow {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.group-meta-info {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-tertiary);
+  font-weight: 500;
+}
+
+.group-meta-info span:not(:last-child)::after {
+  content: '·';
+  margin-left: 6px;
+}
+
+.group-meta-info__distance {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.group-card__side {
+  align-self: center !important;
+}
+
+/* ── Horizontal Category Filter Pills ── */
+
+.groups-filters-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: var(--space-4);
+  width: 100%;
+}
+
+.category-filter-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding-right: 42px; /* Space for absolute floating scroll button */
+}
+
+/* Gradient fade out effect before scroll button */
+.category-filter-container::after {
+  content: '';
+  position: absolute;
+  right: 42px;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  background: linear-gradient(to right, transparent, var(--bg, #f8f9fa));
+  pointer-events: none;
+  z-index: 5;
+}
+
+.category-filter-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  width: 100%;
+  padding: 4px 0;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.category-filter-scroll::-webkit-scrollbar {
+  display: none; /* Hide scrollbars for Chrome/Safari */
+}
+
+.category-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  min-height: 38px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: all var(--dur-base) var(--ease);
+}
+
+.category-filter-chip:hover {
+  background: var(--grey-100);
+  border-color: var(--border-hover);
+  color: var(--ink);
+}
+
+.category-filter-chip.is-active {
+  background: #3a414e; /* Dark slate color matching Toss/Band design */
+  border-color: #3a414e;
+  color: var(--white) !important;
+}
+
+.category-filter-chip__emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.category-filter-chip__text {
+  line-height: 1.2;
+}
+
+/* Circular scroll button on the right edge */
+.category-filter-scroll-right {
+  position: absolute;
+  right: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all var(--dur-base) var(--ease);
+  z-index: 10;
+  font-size: 11px;
+  font-weight: 700;
+  padding-left: 2px;
+}
+
+.category-filter-scroll-right:hover {
+  background: var(--grey-100);
+  color: var(--ink);
+  border-color: var(--border-hover);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Geo filter and search alignment layout */
+.geo-filters-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.geo-filters-row .filters__geo {
+  flex: 1;
+}
+
+.form-actions-centered {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  width: 100%;
+}
+
+.btn-submit-centered {
+  min-width: 160px;
+  justify-content: center;
+  height: 44px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: var(--radius-m);
 }

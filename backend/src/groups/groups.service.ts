@@ -13,12 +13,15 @@ import {
   TransferPresidentDto,
   UpdateGroupDto,
   UpdateMemberDto,
+  UpdateMyStatusDto,
+  CreateGroupMediaDto,
 } from './dto/groups.dto';
 import {
   getApprovedMembership,
   isApproved,
   isOfficer,
   buildActivityRegion,
+  parseKoreanAddress,
   normalizeOptionalText,
   USER_MEMBER_SELECT,
 } from '../common/utils/group.utils';
@@ -86,35 +89,81 @@ export class GroupsService {
   }
 
   async create(userId: string, dto: CreateGroupDto) {
-    const activityRegion = buildActivityRegion(dto);
+    let activitySido: string = dto.activitySido;
+    let activitySigungu: string | null = dto.activitySigungu ?? null;
+    let activityDistrict: string | null = dto.activityDistrict ?? null;
+    let activityTown: string | null = dto.activityTown ?? null;
 
-    const group = await this.prisma.group.create({
-      data: {
-        name: dto.name,
-        description: dto.description,
-        profileImageUrl: dto.profileImageUrl,
-        category: dto.category,
-        isPublic: dto.isPublic,
-        activitySido: dto.activitySido,
-        activitySigungu: dto.activitySigungu ?? null,
-        activityDistrict: dto.activityDistrict ?? null,
-        activityTown: dto.activityTown ?? null,
-        activityRegion,
-        bankName: normalizeOptionalText(dto.bankName),
-        bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
-        bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
-        inviteCode: nanoid(10),
-        members: {
-          create: {
-            userId,
-            role: MemberRole.PRESIDENT,
-            status: MemberStatus.APPROVED,
+    if (dto.arenas && dto.arenas.length > 0) {
+      const parsed = parseKoreanAddress(dto.arenas[0].address);
+      if (parsed) {
+        activitySido = parsed.activitySido;
+        activitySigungu = parsed.activitySigungu;
+        activityDistrict = parsed.activityDistrict;
+        activityTown = parsed.activityTown;
+      }
+    }
+
+    const activityRegion = buildActivityRegion({
+      activitySido,
+      activitySigungu,
+      activityDistrict,
+      activityTown,
+    });
+
+    const group = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.group.create({
+        data: {
+          name: dto.name,
+          description: dto.description,
+          profileImageUrl: dto.profileImageUrl,
+          category: dto.category,
+          customSportName: dto.category === '기타' ? dto.customSportName : null,
+          maxMembers: dto.maxMembers ?? 50,
+          dueDay: dto.dueDay ?? null,
+          officerFeeExempt: dto.officerFeeExempt ?? false,
+          isPublic: dto.isPublic,
+          activitySido,
+          activitySigungu,
+          activityDistrict,
+          activityTown,
+          activityRegion,
+          bankName: normalizeOptionalText(dto.bankName),
+          bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
+          bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
+          inviteCode: nanoid(10),
+          members: {
+            create: {
+              userId,
+              role: MemberRole.PRESIDENT,
+              status: MemberStatus.APPROVED,
+            },
           },
         },
-      },
-      include: {
-        _count: { select: { members: true } },
-      },
+      });
+
+      if (dto.arenas && dto.arenas.length > 0) {
+        for (const arena of dto.arenas) {
+          await tx.groupArena.create({
+            data: {
+              groupId: created.id,
+              placeName: arena.placeName,
+              address: arena.address,
+            },
+          });
+        }
+      }
+
+      await tx.officerHistory.create({
+        data: {
+          groupId: created.id,
+          userId,
+          role: MemberRole.PRESIDENT,
+          startDate: new Date(),
+        },
+      });
+
+      return created;
     });
 
     return group;
@@ -130,28 +179,73 @@ export class GroupsService {
       throw new NotFoundException('모임을 찾을 수 없습니다.');
     }
 
-    return this.prisma.group.update({
-      where: { id: groupId },
-      data: {
-        name: dto.name,
-        description: dto.description,
-        category: dto.category,
-        isPublic: dto.isPublic,
-        activitySido: dto.activitySido,
-        activitySigungu: dto.activitySigungu ?? null,
-        activityDistrict: dto.activityDistrict ?? null,
-        activityTown: dto.activityTown ?? null,
-        activityRegion: buildActivityRegion(dto),
-        bankName: normalizeOptionalText(dto.bankName),
-        bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
-        bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
-        ...(dto.profileImageUrl !== undefined
-          ? { profileImageUrl: dto.profileImageUrl }
-          : {}),
-      },
-      include: {
-        _count: { select: { members: true } },
-      },
+    let activitySido: string = dto.activitySido;
+    let activitySigungu: string | null = dto.activitySigungu ?? null;
+    let activityDistrict: string | null = dto.activityDistrict ?? null;
+    let activityTown: string | null = dto.activityTown ?? null;
+
+    if (dto.arenas && dto.arenas.length > 0) {
+      const parsed = parseKoreanAddress(dto.arenas[0].address);
+      if (parsed) {
+        activitySido = parsed.activitySido;
+        activitySigungu = parsed.activitySigungu;
+        activityDistrict = parsed.activityDistrict;
+        activityTown = parsed.activityTown;
+      }
+    }
+
+    const activityRegion = buildActivityRegion({
+      activitySido,
+      activitySigungu,
+      activityDistrict,
+      activityTown,
+    });
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.group.update({
+        where: { id: groupId },
+        data: {
+          name: dto.name,
+          description: dto.description,
+          category: dto.category,
+          customSportName: dto.category === '기타' ? dto.customSportName : null,
+          maxMembers: dto.maxMembers ?? 50,
+          dueDay: dto.dueDay ?? null,
+          officerFeeExempt: dto.officerFeeExempt ?? false,
+          isPublic: dto.isPublic,
+          activitySido,
+          activitySigungu,
+          activityDistrict,
+          activityTown,
+          activityRegion,
+          bankName: normalizeOptionalText(dto.bankName),
+          bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
+          bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
+          ...(dto.profileImageUrl !== undefined
+            ? { profileImageUrl: dto.profileImageUrl }
+            : {}),
+        },
+        include: {
+          _count: { select: { members: true } },
+        },
+      });
+
+      if (dto.arenas !== undefined) {
+        await tx.groupArena.deleteMany({ where: { groupId } });
+        if (dto.arenas && dto.arenas.length > 0) {
+          for (const arena of dto.arenas) {
+            await tx.groupArena.create({
+              data: {
+                groupId,
+                placeName: arena.placeName,
+                address: arena.address,
+              },
+            });
+          }
+        }
+      }
+
+      return updated;
     });
   }
 
@@ -159,12 +253,26 @@ export class GroupsService {
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
       include: {
+        arenas: true,
+        officerHistories: {
+          orderBy: { startDate: 'desc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                displayName: true,
+                birthYear: true,
+              },
+            },
+          },
+        },
         members: {
           where: { status: MemberStatus.APPROVED },
           include: {
             user: {
               select: USER_MEMBER_SELECT,
             },
+            profileCard: true,
           },
           orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
         },
@@ -181,24 +289,45 @@ export class GroupsService {
       throw new NotFoundException('모임을 찾을 수 없습니다.');
     }
 
+    const resolveMemberProfile = (m: any) => {
+      if (!m) return m;
+      if (m.profileCard) {
+        return {
+          ...m,
+          user: {
+            ...m.user,
+            displayName: m.profileCard.nickname,
+            profileImageUrl: m.profileCard.profileImageUrl,
+          },
+        };
+      }
+      return m;
+    };
+
     let myMembership = null;
-    let pendingRequests: typeof group.members = [];
+    let pendingRequests: any[] = [];
 
     if (userId) {
       myMembership = await this.prisma.groupMember.findUnique({
         where: { userId_groupId: { userId, groupId } },
+        include: { profileCard: true },
       });
+      if (myMembership) {
+        myMembership = resolveMemberProfile(myMembership);
+      }
 
       if (myMembership?.role === MemberRole.PRESIDENT) {
-        pendingRequests = await this.prisma.groupMember.findMany({
+        const pRequests = await this.prisma.groupMember.findMany({
           where: { groupId, status: MemberStatus.PENDING },
           include: {
             user: {
               select: USER_MEMBER_SELECT,
             },
+            profileCard: true,
           },
           orderBy: { createdAt: 'asc' },
         });
+        pendingRequests = pRequests.map(resolveMemberProfile);
       }
     }
 
@@ -206,8 +335,11 @@ export class GroupsService {
       throw new ForbiddenException('비공개 모임입니다.');
     }
 
+    const resolvedMembers = group.members.map(resolveMemberProfile);
+
     return {
       ...group,
+      members: resolvedMembers,
       myMembership,
       pendingRequests,
     };
@@ -293,24 +425,30 @@ export class GroupsService {
       throw new ForbiddenException('회장 역할은 양도 API를 사용하세요.');
     }
 
-    const updated = await this.prisma.groupMember.update({
-      where: { id: target.id },
-      data: {
-        ...(dto.status !== undefined ? { status: dto.status } : {}),
-        ...(dto.role !== undefined ? { role: dto.role } : {}),
-      },
-      include: {
-        user: {
-          select: USER_MEMBER_SELECT,
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.groupMember.update({
+        where: { id: target.id },
+        data: {
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
+          ...(dto.role !== undefined ? { role: dto.role } : {}),
         },
-      },
+        include: {
+          user: {
+            select: USER_MEMBER_SELECT,
+          },
+        },
+      });
+
+      if (dto.role !== undefined && dto.role !== target.role) {
+        await this.updateOfficerHistory(tx, groupId, targetUserId, target.role, dto.role);
+      }
+
+      if (dto.status === MemberStatus.APPROVED) {
+        await this.notifications.notifyJoinApproved(groupId, targetUserId);
+      }
+
+      return updated;
     });
-
-    if (dto.status === MemberStatus.APPROVED) {
-      await this.notifications.notifyJoinApproved(groupId, targetUserId);
-    }
-
-    return updated;
   }
 
   async transferPresident(
@@ -329,18 +467,199 @@ export class GroupsService {
       throw new NotFoundException('대상 회원을 찾을 수 없습니다.');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.groupMember.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.groupMember.update({
         where: { id: actor.id },
         data: { role: MemberRole.MEMBER },
-      }),
-      this.prisma.groupMember.update({
+      });
+      await tx.groupMember.update({
         where: { id: target.id },
         data: { role: MemberRole.PRESIDENT },
-      }),
-    ]);
+      });
+
+      await this.updateOfficerHistory(tx, groupId, actorUserId, MemberRole.PRESIDENT, MemberRole.MEMBER);
+      await this.updateOfficerHistory(tx, groupId, dto.newPresidentUserId, target.role, MemberRole.PRESIDENT);
+    });
 
     return { success: true };
+  }
+
+  async updateMyStatus(
+    groupId: string,
+    userId: string,
+    dto: UpdateMyStatusDto,
+  ) {
+    const membership = await this.prisma.groupMember.findUnique({
+      where: { userId_groupId: { userId, groupId } },
+    });
+
+    if (!membership || !isApproved(membership.status)) {
+      throw new ForbiddenException('모임 회원만 상태를 변경할 수 있습니다.');
+    }
+
+    return this.prisma.groupMember.update({
+      where: { id: membership.id },
+      data: {
+        userStatus: dto.userStatus,
+      },
+    });
+  }
+
+  async getPayments(
+    groupId: string,
+    userId: string,
+    year: number,
+    month: number,
+  ) {
+    await this.requireApprovedMember(groupId, userId);
+
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        members: {
+          where: { status: MemberStatus.APPROVED },
+          include: {
+            user: {
+              select: USER_MEMBER_SELECT,
+            },
+            profileCard: true,
+          },
+        },
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('모임을 찾을 수 없습니다.');
+    }
+
+    const payments = await this.prisma.feePayment.findMany({
+      where: {
+        groupId,
+        year,
+        month,
+      },
+    });
+
+    const paidUserIds = new Set(payments.map(p => p.userId));
+
+    const list = group.members.map(member => {
+      const isExempt = group.officerFeeExempt && isOfficer(member.role);
+      const isPaid = isExempt || paidUserIds.has(member.userId);
+      const displayName = member.profileCard?.nickname || member.user.displayName;
+      const profileImageUrl = member.profileCard?.profileImageUrl || member.user.profileImageUrl;
+      return {
+        userId: member.userId,
+        displayName,
+        profileImageUrl,
+        gender: member.user.gender,
+        birthYear: member.user.birthYear,
+        role: member.role,
+        isExempt,
+        isPaid,
+      };
+    });
+
+    return {
+      bankName: group.bankName,
+      bankAccountNumber: group.bankAccountNumber,
+      bankAccountHolder: group.bankAccountHolder,
+      dueDay: group.dueDay,
+      officerFeeExempt: group.officerFeeExempt,
+      payments: list,
+    };
+  }
+
+  async togglePayment(
+    groupId: string,
+    actorUserId: string,
+    targetUserId: string,
+    year: number,
+    month: number,
+  ) {
+    await this.requireOfficer(groupId, actorUserId);
+
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+    });
+
+    if (!group) {
+      throw new NotFoundException('모임을 찾을 수 없습니다.');
+    }
+
+    const targetMember = await this.prisma.groupMember.findUnique({
+      where: {
+        userId_groupId: { userId: targetUserId, groupId },
+      },
+    });
+
+    if (!targetMember || !isApproved(targetMember.status)) {
+      throw new NotFoundException('대상 회원을 찾을 수 없습니다.');
+    }
+
+    const existingPayment = await this.prisma.feePayment.findUnique({
+      where: {
+        groupId_userId_year_month: {
+          groupId,
+          userId: targetUserId,
+          year,
+          month,
+        },
+      },
+    });
+
+    if (existingPayment) {
+      await this.prisma.feePayment.delete({
+        where: { id: existingPayment.id },
+      });
+      return { isPaid: false };
+    } else {
+      await this.prisma.feePayment.create({
+        data: {
+          groupId,
+          userId: targetUserId,
+          year,
+          month,
+          paidById: actorUserId,
+        },
+      });
+      return { isPaid: true };
+    }
+  }
+
+  private async updateOfficerHistory(
+    tx: any,
+    groupId: string,
+    userId: string,
+    oldRole: MemberRole,
+    newRole: MemberRole,
+  ) {
+    const isOldOfficer = isOfficer(oldRole);
+    const isNewOfficer = isOfficer(newRole);
+
+    if (isOldOfficer && oldRole !== newRole) {
+      await tx.officerHistory.updateMany({
+        where: {
+          groupId,
+          userId,
+          role: oldRole,
+          endDate: null,
+        },
+        data: {
+          endDate: new Date(),
+        },
+      });
+    }
+
+    if (isNewOfficer && oldRole !== newRole) {
+      await tx.officerHistory.create({
+        data: {
+          groupId,
+          userId,
+          role: newRole,
+          startDate: new Date(),
+        },
+      });
+    }
   }
 
   async cancelJoinRequest(groupId: string, userId: string) {
@@ -407,5 +726,102 @@ export class GroupsService {
     }
 
     return membership;
+  }
+
+  async getGroupMedia(groupId: string, userId: string) {
+    await this.requireApprovedMember(groupId, userId);
+    return this.prisma.groupMedia.findMany({
+      where: { groupId },
+      include: {
+        uploadedBy: {
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createGroupMedia(groupId: string, userId: string, dto: CreateGroupMediaDto) {
+    await this.requireApprovedMember(groupId, userId);
+    return this.prisma.groupMedia.create({
+      data: {
+        groupId,
+        url: dto.url,
+        fileType: dto.fileType,
+        uploadedById: userId,
+      },
+      include: {
+        uploadedBy: {
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+          },
+        },
+      },
+    });
+  }
+
+  async linkProfileCard(groupId: string, userId: string, profileCardId: string | null) {
+    const membership = await this.prisma.groupMember.findUnique({
+      where: { userId_groupId: { userId, groupId } },
+    });
+    if (!membership) throw new NotFoundException('가입되지 않은 모임입니다.');
+
+    if (profileCardId) {
+      const card = await this.prisma.userProfileCard.findUnique({
+        where: { id: profileCardId },
+      });
+      if (!card || card.userId !== userId) {
+        throw new ForbiddenException('유효하지 않은 프로필입니다.');
+      }
+    }
+
+    return this.prisma.groupMember.update({
+      where: { userId_groupId: { userId, groupId } },
+      data: { profileCardId },
+    });
+  }
+
+  async resolveGroupProfilesForUsers<T extends { id: string; displayName: string; profileImageUrl: string | null }>(
+    groupId: string,
+    users: T[]
+  ): Promise<T[]> {
+    if (users.length === 0) return users;
+    const members = await this.prisma.groupMember.findMany({
+      where: { groupId, userId: { in: users.map(u => u.id) } },
+      include: { profileCard: true },
+    });
+    const map = new Map<string, { nickname: string; profileImageUrl: string | null }>();
+    for (const m of members) {
+      if (m.profileCard) {
+        map.set(m.userId, {
+          nickname: m.profileCard.nickname,
+          profileImageUrl: m.profileCard.profileImageUrl,
+        });
+      }
+    }
+    for (const user of users) {
+      if (!user) continue;
+      const card = map.get(user.id);
+      if (card) {
+        user.displayName = card.nickname;
+        user.profileImageUrl = card.profileImageUrl;
+      }
+    }
+    return users;
+  }
+
+  async resolveGroupProfileForUser<T extends { id: string; displayName: string; profileImageUrl: string | null }>(
+    groupId: string,
+    user: T
+  ): Promise<T> {
+    if (!user) return user;
+    const [resolved] = await this.resolveGroupProfilesForUsers(groupId, [user]);
+    return resolved;
   }
 }

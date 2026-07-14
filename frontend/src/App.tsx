@@ -14,6 +14,28 @@ import EventDetail from './pages/EventDetail';
 import Calendar from './pages/Calendar';
 import InviteJoin from './pages/InviteJoin';
 import EditProfile from './pages/EditProfile';
+import ManageProfiles from './pages/ManageProfiles';
+import ProfileDetail from './pages/ProfileDetail';
+import Announcements from './pages/Announcements';
+import CreateAnnouncement from './pages/CreateAnnouncement';
+import Settings from './pages/Settings';
+import Chat from './pages/Chat';
+import Notifications from './pages/Notifications';
+
+// Load saved settings immediately on boot
+const savedFont = localStorage.getItem('clover_font_family');
+if (savedFont) {
+  document.documentElement.style.setProperty('--font-body', savedFont);
+}
+const savedSize = localStorage.getItem('clover_font_size');
+if (savedSize) {
+  document.documentElement.style.setProperty('--app-font-size', savedSize);
+  const sizeNum = parseInt(savedSize, 10);
+  if (!isNaN(sizeNum)) {
+    const zoomVal = (sizeNum / 14).toFixed(3);
+    document.documentElement.style.setProperty('--app-zoom', zoomVal);
+  }
+}
 
 export default function App() {
   return (
@@ -84,10 +106,66 @@ export default function App() {
               }
             />
             <Route
+              path="notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="chat"
+              element={
+                <ProtectedRoute>
+                  <Chat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="profile"
               element={
                 <ProtectedRoute>
                   <EditProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="profile/manage"
+              element={
+                <ProtectedRoute>
+                  <ManageProfiles />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="profile/:id"
+              element={
+                <ProtectedRoute>
+                  <ProfileDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="announcements"
+              element={
+                <ProtectedRoute>
+                  <Announcements />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="announcements/new"
+              element={
+                <ProtectedRoute>
+                  <CreateAnnouncement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

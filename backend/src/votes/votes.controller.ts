@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { VotesService } from './votes.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -17,6 +17,15 @@ export class VotesController {
     @Body() dto: CastVoteDto,
   ) {
     return this.votesService.castVote(eventId, user.id, dto);
+  }
+
+  @Delete()
+  @UseGuards(JwtAuthGuard)
+  cancelVote(
+    @Param('eventId') eventId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.votesService.cancelVote(eventId, user.id);
   }
 
   @Get()
