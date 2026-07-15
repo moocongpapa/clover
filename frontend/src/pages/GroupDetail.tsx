@@ -191,6 +191,37 @@ export default function GroupDetail() {
     }
   };
 
+  const handleKick = async (userId: string, displayName: string) => {
+    if (!confirm(`${displayName} 회원을 강제로 탈퇴(추방)시키겠습니까?`)) {
+      return;
+    }
+    try {
+      await api.kickMember(group.id, userId);
+      setMessage('회원이 강제 탈퇴 처리되었습니다.');
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '강제 탈퇴 처리 실패');
+    }
+  };
+
+  const handleDissolveGroup = async () => {
+    if (!confirm('정말로 이 모임을 해체하시겠습니까?\n해체 시 모임 내 모든 멤버 정보, 일정, 투표 및 공지사항 등이 영구적으로 삭제됩니다.')) {
+      return;
+    }
+    const checkName = prompt(`확인을 위해 모임 이름("${group.name}")을 정확히 입력해 주세요:`);
+    if (checkName !== group.name) {
+      alert('모임 이름이 올바르지 않습니다. 모임 해체가 취소되었습니다.');
+      return;
+    }
+    try {
+      await api.deleteGroup(group.id);
+      alert('모임이 해체되었습니다.');
+      navigate('/groups');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '모임 해체 실패');
+    }
+  };
+
   const handleCopyInvite = async () => {
     const inviteUrl = `${window.location.origin}/invite/${group.inviteCode}`;
     try {
@@ -1106,7 +1137,7 @@ export default function GroupDetail() {
                           </div>
                         </Link>
 
-                        <div className="member-item-card__right">
+                        <div className="member-item-card__right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {isPresident && m.role === 'PRESIDENT' && (
                             <span className="member-list__transfer">
                               {!showTransfer ? (
@@ -1166,6 +1197,23 @@ export default function GroupDetail() {
                                 </option>
                               ))}
                             </select>
+                          )}
+                          {isOfficer && m.user.id !== user?.id && m.role !== 'PRESIDENT' && (isPresident || m.role === 'MEMBER') && (
+                            <button
+                              type="button"
+                              className="btn-sm btn-outline"
+                              style={{ 
+                                color: '#dc3545', 
+                                borderColor: '#dc3545',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => handleKick(m.user.id, m.user.displayName)}
+                            >
+                              강퇴
+                            </button>
                           )}
                         </div>
                       </li>
@@ -1332,6 +1380,16 @@ export default function GroupDetail() {
                       <span>✏️ 모임 설정 수정 (정보/계좌 등)</span>
                       <span className="arrow-indicator">〉</span>
                     </Link>
+                    {isPresident && (
+                      <div 
+                        className="info-menu-action-row" 
+                        onClick={handleDissolveGroup}
+                        style={{ cursor: 'pointer', color: '#dc3545', marginTop: '8px', borderTop: '1px solid var(--grey-200)', paddingTop: '8px' }}
+                      >
+                        <span>💥 모임 해체 (삭제)</span>
+                        <span className="arrow-indicator" style={{ color: '#dc3545' }}>〉</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

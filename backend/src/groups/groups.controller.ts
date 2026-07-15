@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -185,5 +186,21 @@ export class GroupsController {
     @Body() dto: CreateGroupMediaDto,
   ) {
     return this.groupsService.createGroupMedia(id, user.id, dto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  deleteGroup(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.groupsService.deleteGroup(id, user.id);
+  }
+
+  @Delete(':id/members/:userId')
+  @UseGuards(JwtAuthGuard)
+  kickMember(
+    @Param('id') id: string,
+    @Param('userId') targetUserId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.groupsService.kickMember(id, targetUserId, user.id);
   }
 }

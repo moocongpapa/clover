@@ -230,6 +230,8 @@ export const api = {
   joinByInvite: (code: string) => request(`/groups/join/${code}`),
   leaveGroup: (id: string) =>
     request(`/groups/${id}/leave`, { method: 'POST' }),
+  deleteGroup: (id: string) =>
+    request(`/groups/${id}`, { method: 'DELETE' }),
   updateMember: (
     groupId: string,
     userId: string,
@@ -239,6 +241,8 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+  kickMember: (groupId: string, userId: string) =>
+    request(`/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
   transferPresident: (groupId: string, newPresidentUserId: string) =>
     request(`/groups/${groupId}/transfer-president`, {
       method: 'POST',

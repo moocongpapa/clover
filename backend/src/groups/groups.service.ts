@@ -824,4 +824,42 @@ export class GroupsService {
     const [resolved] = await this.resolveGroupProfilesForUsers(groupId, [user]);
     return resolved;
   }
+
+  async deleteGroup(groupId: string, userId: string) {
+    await this.requirePresident(groupId, userId);
+    await this.prisma.group.delete({
+      where: { id: groupId },
+    });
+    return { success: true };
+  }
+
+  async kickMember(groupId: string, targetUserId: string, actorUserId: string) {
+    const actor = await this.requireOfficer(groupId, actorUserId);
+
+    if (targetUserId === actorUserId) {
+      throw new BadRequestException('자기 자신은 강제 탈퇴시킬 수 없습니다. 모임 탈퇴 기능을 이용해 주세요.');
+    }
+
+    const target = await this.prisma.groupMember.findUnique({
+      where: { userId_groupId: { userId: targetUserId, groupId } },
+    });
+
+    if (!target) {
+      throw new NotFoundException('회원을 찾을 수 없습니다.');
+    }
+
+    if (target.role === MemberRole.PRESIDENT) {
+      throw new ForbiddenException('모임의 회장은 강제 탈퇴시킬 수 없습니다. 회장직 위임 또는 해체 기능을 사용하세요.');
+    }
+
+    if (isOfficer(target.role) && actor.role !== MemberRole.PRESIDENT) {
+      throw new ForbiddenException('일반 운영진은 다른 운영진을 강제 탈퇴시킬 수 없습니다. 회장만 운영진을 강퇴할 수 있습니다.');
+    }
+
+    await this.prisma.groupMember.delete({
+      where: { id: target.id },
+    });
+
+    return { success: true };
+  }
 }
