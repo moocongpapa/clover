@@ -337,8 +337,9 @@ function HomeDashboard() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<HomeTab>('upcoming');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [pastFilter, setPastFilter] = useState<'all' | '1w' | '1m'>('all');
+  const [pastFilter, setPastFilter] = useState<'1w' | '1m'>('1m');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [showPastEventsPopup, setShowPastEventsPopup] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -371,9 +372,11 @@ function HomeDashboard() {
   const voted = upcoming.filter((e) => e.myVote || e.voteLocked);
 
   // Past events filtering
-  let past = filteredEvents
+  const allPastEvents = filteredEvents
     .filter((e) => !isUpcoming(e))
     .sort((a, b) => eventEndAt(b).getTime() - eventEndAt(a).getTime());
+
+  let past = allPastEvents;
 
   if (pastFilter === '1w') {
     const oneWeekAgo = new Date();
@@ -535,7 +538,7 @@ function HomeDashboard() {
               name="홈 일정 보기"
               options={[
                 { value: 'upcoming', label: '진행 중 일정' },
-                { value: 'past', label: `지난 일정${past.length ? ` (${past.length})` : ''}` },
+                { value: 'past', label: `지난 일정${allPastEvents.length ? ` (${allPastEvents.length})` : ''}` },
               ]}
               value={tab}
               onChange={setTab}
@@ -596,27 +599,40 @@ function HomeDashboard() {
           ) : (
             <>
               {/* Past Filters */}
-              <div className="past-filter-controls">
+              <div className="past-filter-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    className={`filter-btn${pastFilter === '1w' ? ' is-active' : ''}`}
+                    onClick={() => setPastFilter('1w')}
+                  >
+                    최근 1주일
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-btn${pastFilter === '1m' ? ' is-active' : ''}`}
+                    onClick={() => setPastFilter('1m')}
+                  >
+                    최근 1개월
+                  </button>
+                </div>
                 <button
                   type="button"
-                  className={`filter-btn${pastFilter === 'all' ? ' is-active' : ''}`}
-                  onClick={() => setPastFilter('all')}
+                  className="past-view-all-btn"
+                  onClick={() => setShowPastEventsPopup(true)}
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: 'var(--ink-muted)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
                 >
-                  전체
-                </button>
-                <button
-                  type="button"
-                  className={`filter-btn${pastFilter === '1w' ? ' is-active' : ''}`}
-                  onClick={() => setPastFilter('1w')}
-                >
-                  최근 1주일
-                </button>
-                <button
-                  type="button"
-                  className={`filter-btn${pastFilter === '1m' ? ' is-active' : ''}`}
-                  onClick={() => setPastFilter('1m')}
-                >
-                  최근 1개월
+                  전체보기 ↗
                 </button>
               </div>
 
@@ -636,6 +652,45 @@ function HomeDashboard() {
             </>
           )}
         </>
+      )}
+
+      {showPastEventsPopup && (
+        <div className="past-events-modal-overlay" onClick={() => setShowPastEventsPopup(false)}>
+          <div className="past-events-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="past-events-modal__header">
+              <h3>지난 일정 전체보기</h3>
+              <button
+                type="button"
+                className="past-events-modal__close-btn"
+                onClick={() => setShowPastEventsPopup(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="past-events-modal__body">
+              {allPastEvents.length === 0 ? (
+                <p className="past-events-modal__empty">지난 일정이 없습니다.</p>
+              ) : (
+                <div className="past-events-modal__list">
+                  {allPastEvents.map((ev) => (
+                    <Link
+                      key={ev.id}
+                      to={`/events/${ev.id}`}
+                      className="past-events-modal__item"
+                      onClick={() => setShowPastEventsPopup(false)}
+                    >
+                      <div className="past-events-modal__item-group">{ev.group.name}</div>
+                      <div className="past-events-modal__item-title">{ev.title}</div>
+                      <div className="past-events-modal__item-time">
+                        {formatEventDate(ev.date, ev.startTime, ev.endTime)}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

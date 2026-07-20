@@ -50,7 +50,7 @@ export function eventEndAt(
 
 export function teamSplitAvailableAt(date: Date, startTime: string): Date {
   const start = eventStartAt(date, startTime);
-  return new Date(start.getTime() - 30 * 60 * 1000);
+  return new Date(start.getTime() - 60 * 60 * 1000);
 }
 
 export function canSplitTeams(date: Date, startTime: string): boolean {

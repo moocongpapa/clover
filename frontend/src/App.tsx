@@ -14,7 +14,6 @@ import EventDetail from './pages/EventDetail';
 import Calendar from './pages/Calendar';
 import InviteJoin from './pages/InviteJoin';
 import EditProfile from './pages/EditProfile';
-import ManageProfiles from './pages/ManageProfiles';
 import ProfileDetail from './pages/ProfileDetail';
 import Announcements from './pages/Announcements';
 import CreateAnnouncement from './pages/CreateAnnouncement';
@@ -133,7 +132,7 @@ export default function App() {
               path="profile/manage"
               element={
                 <ProtectedRoute>
-                  <ManageProfiles />
+                  <EditProfile />
                 </ProtectedRoute>
               }
             />

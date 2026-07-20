@@ -81,7 +81,7 @@ export class EventsController {
     @CurrentUser() user: AuthUser,
     @Body() dto: SplitTeamsDto,
   ) {
-    return this.eventsService.splitTeams(id, user.id, dto.teamCount);
+    return this.eventsService.splitTeams(id, user.id, dto);
   }
 
   @Get('events/:id/comments')

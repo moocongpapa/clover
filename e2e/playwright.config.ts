@@ -34,7 +34,7 @@ export default defineConfig({
       timeout: 180_000,
       env: {
         ...process.env,
-        DATABASE_URL: 'file:./e2e.db',
+        DATABASE_URL: 'file:./e2e.db?connection_limit=1',
         PORT: '3000',
         DEV_LOGIN_ENABLED: 'true',
         FRONTEND_URL: BASE_URL,

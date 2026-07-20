@@ -3,12 +3,13 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
-import { EventStatus, VoteChoice } from '@prisma/client';
+import { EventStatus, VoteChoice, Gender } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupsService } from '../groups/groups.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateEventDto, UpdateEventDto } from './dto/events.dto';
+import { CreateEventDto, UpdateEventDto, SplitTeamsDto } from './dto/events.dto';
 import { isOfficer, parseEventDate, canSplitTeams } from '../common/utils/group.utils';
 import {
   shuffleAndSplit,
@@ -17,6 +18,8 @@ import {
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly groupsService: GroupsService,
@@ -151,8 +154,9 @@ export class EventsService {
       userId,
     );
 
-    const split = await this.prisma.eventTeamSplit.findUnique({
+    const splits = await this.prisma.eventTeamSplit.findMany({
       where: { eventId },
+      orderBy: { round: 'desc' },
       include: {
         createdBy: {
           select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
@@ -167,19 +171,23 @@ export class EventsService {
       },
     });
 
+    const isUserOfficer = isOfficer(membership.role);
+    const formattedSplits = splits.map(s => this.formatTeamsResponse(s, userId, isUserOfficer));
+    const latestSplit = formattedSplits[0] || null;
+
     return {
-      ...this.formatTeamsResponse(
-        split,
-        userId,
-        isOfficer(membership.role),
-      ),
+      splits: formattedSplits,
+      split: latestSplit?.split ?? null,
+      teams: latestSplit?.teams ?? [],
+      myTeam: latestSplit?.myTeam ?? null,
       canSplit:
         event.status !== EventStatus.CANCELLED &&
         canSplitTeams(event.date, event.startTime),
     };
   }
 
-  async splitTeams(eventId: string, userId: string, teamCount: number) {
+  async splitTeams(eventId: string, userId: string, dto: SplitTeamsDto) {
+    const { teamCount, members } = dto;
     const event = await this.requireOfficerForEvent(eventId, userId);
 
     if (event.status === EventStatus.CANCELLED) {
@@ -188,22 +196,52 @@ export class EventsService {
 
     if (!canSplitTeams(event.date, event.startTime)) {
       throw new BadRequestException(
-        '모임 시작 30분 전부터만 사용할 수 있습니다.',
+        '모임 시작 1시간 전부터만 사용할 수 있습니다.',
       );
     }
 
-    const attendeeVotes = await this.prisma.vote.findMany({
-      where: {
-        eventId,
-        choice: { in: [VoteChoice.ATTEND, VoteChoice.LATE] },
-      },
-      include: {
-        user: {
-          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+    let attendeeVotes: Array<{
+      choice: VoteChoice;
+      user: {
+        id: string;
+        displayName: string;
+        profileImageUrl: string | null;
+        gender: Gender | null;
+        birthYear: number | null;
+        isEarlyYear: boolean | null;
+      };
+    }>;
+
+    if (members && members.length > 0) {
+      const userIds = members.map((m) => m.userId);
+      const dbUsers = await this.prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+      });
+
+      attendeeVotes = dbUsers.map((user) => {
+        const matchingMember = members.find((m) => m.userId === user.id);
+        return {
+          choice: matchingMember ? matchingMember.choice : VoteChoice.ATTEND,
+          user,
+        };
+      });
+    } else {
+      const votes = await this.prisma.vote.findMany({
+        where: {
+          eventId,
+          choice: { in: [VoteChoice.ATTEND, VoteChoice.LATE] },
         },
-      },
-      orderBy: { votedAt: 'asc' },
-    });
+        include: {
+          user: {
+            select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+          },
+        },
+        orderBy: { votedAt: 'asc' },
+      });
+
+      attendeeVotes = votes;
+    }
 
     if (attendeeVotes.length === 0) {
       throw new BadRequestException(
@@ -251,11 +289,16 @@ export class EventsService {
     }
 
     const split = await this.prisma.$transaction(async (tx) => {
-      await tx.eventTeamSplit.deleteMany({ where: { eventId } });
+      const latestSplit = await tx.eventTeamSplit.findFirst({
+        where: { eventId },
+        orderBy: { round: 'desc' },
+      });
+      const nextRound = latestSplit ? latestSplit.round + 1 : 1;
 
       const created = await tx.eventTeamSplit.create({
         data: {
           eventId,
+          round: nextRound,
           teamCount,
           createdById: userId,
           assignments: {
@@ -282,16 +325,78 @@ export class EventsService {
       });
 
       return created;
+    }, { timeout: 30000 });
+
+    // Send KakaoTalk notifications to team split participants
+    try {
+      const usersToNotify = split.assignments.map((a) => a.user);
+      await this.groupsService.resolveGroupProfilesForUsers(event.groupId, usersToNotify);
+
+      const teamMap: Record<string, typeof usersToNotify> = {};
+      for (const a of split.assignments) {
+        if (!teamMap[a.teamLabel]) {
+          teamMap[a.teamLabel] = [];
+        }
+        teamMap[a.teamLabel].push(a.user);
+      }
+
+      for (const a of split.assignments) {
+        const user = a.user;
+        const teamLabel = a.teamLabel;
+        const teamMembers = teamMap[teamLabel] || [];
+        const otherMembers = teamMembers.filter((u) => u.id !== user.id);
+        const otherMembersStr =
+          otherMembers.length > 0
+            ? otherMembers.map((u) => u.displayName).join(', ')
+            : '없음';
+
+        const message = `[그룹 나누기 결과]
+「${event.title}」 ${split.round}회차 그룹 배정이 완료되었습니다!
+
+■ 내 그룹: ${teamLabel}조
+■ 나머지 팀원: ${otherMembersStr}
+
+* 전체 배정 결과는 앱에서 확인해주세요!`;
+
+        await this.notifications.sendEventNotification(user.id, event.id, 'CHANGED', message);
+      }
+    } catch (err: any) {
+      this.logger.error(`Failed to send team split notifications for event ${eventId}: ${err.message}`);
+    }
+
+    const splits = await this.prisma.eventTeamSplit.findMany({
+      where: { eventId },
+      orderBy: { round: 'desc' },
+      include: {
+        createdBy: {
+          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+        },
+        assignments: {
+          include: {
+            user: {
+              select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+            },
+          },
+        },
+      },
     });
 
+    const formattedSplits = splits.map(s => this.formatTeamsResponse(s, userId, true));
+    const latestSplit = formattedSplits[0] || null;
+
     return {
-      ...this.formatTeamsResponse(split, userId, true),
+      splits: formattedSplits,
+      split: latestSplit?.split ?? null,
+      teams: latestSplit?.teams ?? [],
+      myTeam: latestSplit?.myTeam ?? null,
       canSplit: canSplitTeams(event.date, event.startTime),
     };
   }
 
   private formatTeamsResponse(
     split: {
+      id: string;
+      round: number;
       teamCount: number;
       createdAt: Date;
       createdBy: {
@@ -334,6 +439,8 @@ export class EventsService {
 
     return {
       split: {
+        id: split.id,
+        round: split.round,
         teamCount: split.teamCount,
         createdAt: split.createdAt,
         createdBy: split.createdBy,

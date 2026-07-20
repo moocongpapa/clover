@@ -144,10 +144,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
   updateProfile: (data: {
+    displayName?: string;
     profileImageUrl?: string | null;
     bio?: string | null;
     birthYear?: number | null;
     birthDate?: string | null;
+    isEarlyYear?: boolean | null;
     phoneNumber?: string | null;
     gender?: 'MALE' | 'FEMALE' | null;
   }) =>
@@ -267,10 +269,14 @@ export const api = {
 
   getEventTeams: (eventId: string) =>
     request<EventTeamsResult>(`/events/${eventId}/teams`),
-  splitEventTeams: (eventId: string, teamCount: number) =>
+  splitEventTeams: (
+    eventId: string,
+    teamCount: number,
+    members?: Array<{ userId: string; choice: VoteChoice }>,
+  ) =>
     request<EventTeamsResult>(`/events/${eventId}/teams/split`, {
       method: 'POST',
-      body: JSON.stringify({ teamCount }),
+      body: JSON.stringify({ teamCount, members }),
     }),
 
   castVote: (eventId: string, choice: VoteChoice) =>
@@ -517,12 +523,25 @@ export interface CalendarEvent {
   updatedAt: string;
 }
 
+export interface TeamSplitInfo {
+  id: string;
+  round: number;
+  teamCount: number;
+  createdAt: string;
+  createdBy: User;
+}
+
 export interface EventTeamsResult {
-  split: {
-    teamCount: number;
-    createdAt: string;
-    createdBy: User;
-  } | null;
+  splits?: Array<{
+    split: TeamSplitInfo;
+    teams: Array<{
+      label: string;
+      members: User[];
+    }>;
+    myTeam: string | null;
+    canManage: boolean;
+  }>;
+  split: TeamSplitInfo | null;
   teams: Array<{
     label: string;
     members: User[];

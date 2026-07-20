@@ -94,7 +94,7 @@ export class GroupsService {
     let activityDistrict: string | null = dto.activityDistrict ?? null;
     let activityTown: string | null = dto.activityTown ?? null;
 
-    if (dto.arenas && dto.arenas.length > 0) {
+    if ((!activitySido || activitySido.trim() === '') && dto.arenas && dto.arenas.length > 0) {
       const parsed = parseKoreanAddress(dto.arenas[0].address);
       if (parsed) {
         activitySido = parsed.activitySido;
@@ -164,7 +164,7 @@ export class GroupsService {
       });
 
       return created;
-    });
+    }, { timeout: 30000 });
 
     return group;
   }
@@ -184,7 +184,7 @@ export class GroupsService {
     let activityDistrict: string | null = dto.activityDistrict ?? null;
     let activityTown: string | null = dto.activityTown ?? null;
 
-    if (dto.arenas && dto.arenas.length > 0) {
+    if ((!activitySido || activitySido.trim() === '') && dto.arenas && dto.arenas.length > 0) {
       const parsed = parseKoreanAddress(dto.arenas[0].address);
       if (parsed) {
         activitySido = parsed.activitySido;
@@ -246,7 +246,7 @@ export class GroupsService {
       }
 
       return updated;
-    });
+    }, { timeout: 30000 });
   }
 
   async getById(groupId: string, userId?: string) {
@@ -425,7 +425,7 @@ export class GroupsService {
       throw new ForbiddenException('회장 역할은 양도 API를 사용하세요.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.groupMember.update({
         where: { id: target.id },
         data: {
@@ -443,12 +443,14 @@ export class GroupsService {
         await this.updateOfficerHistory(tx, groupId, targetUserId, target.role, dto.role);
       }
 
-      if (dto.status === MemberStatus.APPROVED) {
-        await this.notifications.notifyJoinApproved(groupId, targetUserId);
-      }
-
       return updated;
-    });
+    }, { timeout: 30000 });
+
+    if (dto.status === MemberStatus.APPROVED) {
+      await this.notifications.notifyJoinApproved(groupId, targetUserId);
+    }
+
+    return updated;
   }
 
   async transferPresident(
@@ -479,7 +481,7 @@ export class GroupsService {
 
       await this.updateOfficerHistory(tx, groupId, actorUserId, MemberRole.PRESIDENT, MemberRole.MEMBER);
       await this.updateOfficerHistory(tx, groupId, dto.newPresidentUserId, target.role, MemberRole.PRESIDENT);
-    });
+    }, { timeout: 30000 });
 
     return { success: true };
   }

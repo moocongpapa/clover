@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, type User, type UserProfileCard } from '../api';
+import { api, type User } from '../api';
 import { useAuth } from '../context/AuthContext';
 import './EditProfile.css';
 import './Groups.css';
@@ -15,13 +15,14 @@ export default function EditProfile() {
   const { updateUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<User | null>(null);
-  const [profileCards, setProfileCards] = useState<UserProfileCard[]>([]);
   const [bio, setBio] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
+
+  const [displayNameVal, setDisplayNameVal] = useState('');
 
   // Profile data states
   const [birthYearVal, setBirthYearVal] = useState<number | ''>('');
@@ -49,6 +50,7 @@ export default function EditProfile() {
       .getMe()
       .then((me) => {
         setProfile(me);
+        setDisplayNameVal(me.displayName || '');
         setBio(me.bio ?? '');
         if (me.profileImageUrl) {
           setPreviewUrl(me.profileImageUrl);
@@ -66,11 +68,6 @@ export default function EditProfile() {
         }
       })
       .catch((e) => setError(e.message));
-
-    api
-      .getProfileCards()
-      .then(setProfileCards)
-      .catch(console.error);
   };
 
   useEffect(() => {
@@ -131,6 +128,7 @@ export default function EditProfile() {
       }
 
       const updated = await api.updateProfile({
+        displayName: displayNameVal.trim(),
         ...(profileImageUrl !== undefined ? { profileImageUrl } : {}),
         bio: bio.trim() || null,
         birthYear: birthYearVal ? Number(birthYearVal) : null,
@@ -237,39 +235,31 @@ export default function EditProfile() {
       </div>
 
       <form className="edit-profile-body" onSubmit={(e) => e.preventDefault()}>
-        {/* Section 1: 사용 중인 프로필 */}
-        <div className="profile-section-title">
-          사용 중인 프로필 {profileCards.length}
-        </div>
-        <div className="profile-cards-horizontal-scroll">
-          {profileCards.map((card) => (
-            <div key={card.id} className="scroll-profile-card">
-              {card.profileImageUrl ? (
-                <img src={card.profileImageUrl} alt="" className="card-avatar" />
-              ) : (
-                <div className="card-avatar-fallback">{card.nickname[0]}</div>
-              )}
-              <div className="card-overlay">
-                <span className="card-nickname">{card.nickname}</span>
-                <span className="card-sub">연결된 모임 {card.memberships.length}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Manage Profiles Link Button */}
-        <div className="manage-profiles-link-row">
-          <button
-            type="button"
-            className="manage-profiles-link-btn"
-            onClick={() => navigate('/profile/manage')}
-          >
-            프로필 관리
-          </button>
-        </div>
-
         {/* Section 2: 내 정보 */}
         <div className="profile-section-title">내 정보</div>
+        <div style={{ padding: '0 16px', marginBottom: '16px' }}>
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label htmlFor="displayName" style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--grey-600)' }}>이름 (닉네임) *</label>
+            <input
+              id="displayName"
+              name="displayName"
+              type="text"
+              required
+              value={displayNameVal}
+              onChange={(e) => setDisplayNameVal(e.target.value)}
+              placeholder="이름을 입력해 주세요"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid var(--border-soft)',
+                borderRadius: '8px',
+                fontSize: '14px',
+                outline: 'none',
+                marginTop: '4px'
+              }}
+            />
+          </div>
+        </div>
         <div className="info-list-container">
           {/* 생일 */}
           <div className="info-list-item" onClick={openBirthPicker}>
@@ -528,7 +518,7 @@ export default function EditProfile() {
 
             {/* Hint Text */}
             <p className="phone-disclaimer-text">
-              휴대폰번호는 로그인을 위해 저장되며, 밴드를 이용하는 기간 동안 보관되는 것에 동의합니다.
+              휴대폰번호는 로그인을 위해 저장되며, 모임을 이용하는 기간 동안 보관되는 것에 동의합니다.
             </p>
 
             {/* Interactive Numeric Keypad */}

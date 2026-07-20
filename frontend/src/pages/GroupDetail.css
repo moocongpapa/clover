@@ -1191,21 +1191,45 @@
 .month-picker-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  justify-content: center;
+  gap: 16px;
+  background: var(--grey-50);
+  padding: 8px 16px;
+  border-radius: 20px;
+  align-self: center;
+  margin: 0 auto 12px auto;
+  border: 1px solid var(--border-subtle);
 }
 .month-nav-btn {
-  background: var(--grey-100);
-  border: none;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.month-picker-value {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-size: 16px;
   font-weight: 700;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--ink-muted);
+  box-shadow: var(--shadow-1);
+  transition: all var(--dur-base) var(--ease);
+}
+.month-nav-btn:hover {
+  background: var(--grey-100);
+  color: var(--ink);
+  border-color: var(--grey-400);
+}
+.month-nav-btn:active {
+  transform: scale(0.95);
+}
+.month-picker-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 90px;
+  text-align: center;
 }
 .payments-meta-box {
   background: var(--grey-50);
@@ -2156,4 +2180,148 @@
 .fab-menu-container .fab-button.is-active {
   transform: rotate(45deg);
   background: var(--grey-600);
+}
+
+.team-member-selector {
+  margin-top: 16px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--grey-50);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+}
+
+.team-member-selector__title {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.team-member-selector__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar for member selector list */
+.team-member-selector__list::-webkit-scrollbar {
+  width: 6px;
+}
+.team-member-selector__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.team-member-selector__list::-webkit-scrollbar-thumb {
+  background: var(--grey-300);
+  border-radius: 3px;
+}
+
+.team-member-selector__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  transition: all var(--dur-base) var(--ease);
+}
+
+.team-member-selector__item.is-selected {
+  border-color: var(--accent);
+  background: rgba(254, 107, 23, 0.02);
+}
+
+.team-member-selector__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  flex-grow: 1;
+}
+
+.team-member-selector__label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.team-member-selector__choice {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.team-member-selector__choice .choice-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease);
+}
+
+.team-member-selector__choice .choice-btn.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.team-splits-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.team-split-tab-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease);
+}
+
+.team-split-tab-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.team-split-tab-btn.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.tab-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.tab-content-events,
+.tab-content-gallery,
+.tab-content-members,
+.tab-content-payments,
+.tab-content-officers,
+.tab-content-info {
+  padding: 16px 12px 0 12px;
 }

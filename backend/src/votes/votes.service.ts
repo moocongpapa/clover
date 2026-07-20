@@ -89,7 +89,7 @@ export class VotesService {
     };
 
     const myVote = votes.find((v) => v.userId === userId) ?? null;
-    const hasTeamSplit = !!(await this.prisma.eventTeamSplit.findUnique({
+    const hasTeamSplit = !!(await this.prisma.eventTeamSplit.findFirst({
       where: { eventId },
       select: { id: true },
     }));
@@ -164,7 +164,7 @@ export class VotesService {
     date: Date,
     startTime: string,
   ) {
-    const hasTeamSplit = !!(await this.prisma.eventTeamSplit.findUnique({
+    const hasTeamSplit = !!(await this.prisma.eventTeamSplit.findFirst({
       where: { eventId },
       select: { id: true },
     }));

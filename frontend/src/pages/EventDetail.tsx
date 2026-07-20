@@ -29,6 +29,24 @@ export default function EventDetailPage() {
   const [voting, setVoting] = useState(false);
   const [splitting, setSplitting] = useState(false);
   const [teamCount, setTeamCount] = useState<number>(2);
+  const [splitMembers, setSplitMembers] = useState<Array<{
+    userId: string;
+    displayName: string;
+    profileImageUrl: string | null;
+    choice: VoteChoice;
+    selected: boolean;
+  }>>([]);
+  const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (teams && teams.splits && teams.splits.length > 0) {
+      if (!selectedSplitId || !teams.splits.some(s => s.split.id === selectedSplitId)) {
+        setSelectedSplitId(teams.splits[0].split.id);
+      }
+    } else {
+      setSelectedSplitId(null);
+    }
+  }, [teams, selectedSplitId]);
 
   const load = () => {
     if (!id) return;
@@ -49,6 +67,28 @@ export default function EventDetailPage() {
   };
 
   useEffect(load, [id]);
+
+  useEffect(() => {
+    if (!votes) return;
+    const initialList = [
+      ...votes.votes.map((v) => ({
+        userId: v.user.id,
+        displayName: v.user.displayName,
+        profileImageUrl: v.user.profileImageUrl,
+        choice: v.choice === 'ABSENT' ? ('ATTEND' as VoteChoice) : v.choice,
+        selected: v.choice === 'ATTEND' || v.choice === 'LATE',
+      })),
+      ...votes.nonVoters.map((u) => ({
+        userId: u.id,
+        displayName: u.displayName,
+        profileImageUrl: u.profileImageUrl,
+        choice: 'ATTEND' as VoteChoice,
+        selected: false,
+      })),
+    ];
+    initialList.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ko'));
+    setSplitMembers(initialList);
+  }, [votes]);
 
   const handleVote = async (choice: VoteChoice) => {
     if (!id) return;
@@ -77,15 +117,24 @@ export default function EventDetailPage() {
     if (!id || !teams) return;
 
     if (!teams.canSplit) {
-      alert('모임 시작 30분 전부터만 사용할 수 있습니다.');
+      alert('모임 시작 1시간 전부터만 사용할 수 있습니다.');
       return;
     }
 
-    const attendeeCount =
-      (votes?.counts.ATTEND ?? 0) + (votes?.counts.LATE ?? 0);
+    const selectedMembers = splitMembers.filter((m) => m.selected);
+    if (selectedMembers.length === 0) {
+      alert('선택된 인원이 없습니다. 그룹을 나눌 인원을 최소 1명 이상 선택해 주세요.');
+      return;
+    }
+
+    if (selectedMembers.length < teamCount) {
+      alert(`선택된 인원(${selectedMembers.length}명)이 그룹 수(${teamCount}개)보다 적습니다.`);
+      return;
+    }
+
     if (
       !confirm(
-        `참석·늦참 ${attendeeCount}명을 ${teamCount}개 그룹으로 무작위 나눌까요?` +
+        `선택된 ${selectedMembers.length}명을 ${teamCount}개 그룹으로 무작위 나눌까요?` +
           (teams.split ? '\n기존 그룹 배정은 새로 갱신됩니다.' : ''),
       )
     ) {
@@ -95,7 +144,11 @@ export default function EventDetailPage() {
     setSplitting(true);
     setError('');
     try {
-      await api.splitEventTeams(id, teamCount);
+      const payload = selectedMembers.map((m) => ({
+        userId: m.userId,
+        choice: m.choice,
+      }));
+      await api.splitEventTeams(id, teamCount, payload);
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : '그룹 나누기 실패');
@@ -133,6 +186,12 @@ export default function EventDetailPage() {
 
   if (error && !event) return <p className="form-error">{error}</p>;
   if (!event || !votes || !teams) return <p className="loading-text">불러오는 중…</p>;
+
+  const activeSplit =
+    teams?.splits?.find((s) => s.split.id === selectedSplitId) ||
+    (teams?.split
+      ? { split: teams.split, teams: teams.teams, myTeam: teams.myTeam }
+      : null);
 
   const locked = votes.event.voteLocked || event.status === 'CANCELLED';
   const voteLockMessage =
@@ -295,58 +354,142 @@ export default function EventDetailPage() {
         <section className="team-section">
           <div className="team-section__head">
             <h2>그룹 나누기</h2>
-            {teams.myTeam && (
+            {activeSplit?.myTeam && (
               <span className="team-my-badge">
-                내 그룹 · {formatTeamLabel(teams.myTeam)}
+                내 그룹 · {formatTeamLabel(activeSplit.myTeam)}
               </span>
             )}
           </div>
 
           {teams.canManage && (
-            <div className="team-split-controls">
-              <label className="team-split-controls__label" htmlFor="team-count">
-                그룹 수
-              </label>
-              <div className="team-count-picker" id="team-count">
-                {TEAM_COUNT_OPTIONS.map((count) => (
-                  <button
-                    key={count}
-                    type="button"
-                    className={`team-count-btn${teamCount === count ? ' is-selected' : ''}`}
-                    disabled={splitting}
-                    onClick={() => setTeamCount(count)}
-                  >
-                    {count}개
-                  </button>
-                ))}
+            <>
+              <div className="team-split-controls">
+                <label className="team-split-controls__label" htmlFor="team-count">
+                  그룹 수
+                </label>
+                <div className="team-count-picker" id="team-count">
+                  {TEAM_COUNT_OPTIONS.map((count) => (
+                    <button
+                      key={count}
+                      type="button"
+                      className={`team-count-btn${teamCount === count ? ' is-selected' : ''}`}
+                      disabled={splitting}
+                      onClick={() => setTeamCount(count)}
+                    >
+                      {count}개
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary team-split-btn"
+                  disabled={splitting}
+                  onClick={handleSplitTeams}
+                >
+                  {teams.split ? '다시 나누기' : '그룹 나누기'}
+                </button>
               </div>
-              <button
-                type="button"
-                className="btn-primary team-split-btn"
-                disabled={splitting}
-                onClick={handleSplitTeams}
-              >
-                {teams.split ? '다시 나누기' : '그룹 나누기'}
-              </button>
-            </div>
+
+              <div className="team-member-selector">
+                <h4 className="team-member-selector__title">
+                  그룹 나누기 대상자 설정 ({splitMembers.filter((m) => m.selected).length}명 선택됨)
+                </h4>
+                <div className="team-member-selector__list">
+                  {splitMembers.map((member) => (
+                    <div
+                      key={member.userId}
+                      className={`team-member-selector__item${member.selected ? ' is-selected' : ''}`}
+                    >
+                      <label className="team-member-selector__label">
+                        <input
+                          type="checkbox"
+                          checked={member.selected}
+                          onChange={(e) => {
+                            setSplitMembers((prev) =>
+                              prev.map((m) =>
+                                m.userId === member.userId
+                                  ? { ...m, selected: e.target.checked }
+                                  : m
+                              )
+                            );
+                          }}
+                        />
+                        <span className="team-member-selector__name">{member.displayName}</span>
+                      </label>
+
+                      {member.selected && (
+                        <div className="team-member-selector__choice">
+                          <button
+                            type="button"
+                            className={`choice-btn${member.choice === 'ATTEND' ? ' is-active' : ''}`}
+                            onClick={() => {
+                              setSplitMembers((prev) =>
+                                prev.map((m) =>
+                                  m.userId === member.userId
+                                    ? { ...m, choice: 'ATTEND' as VoteChoice }
+                                    : m
+                                )
+                              );
+                            }}
+                          >
+                            참석
+                          </button>
+                          <button
+                            type="button"
+                            className={`choice-btn${member.choice === 'LATE' ? ' is-active' : ''}`}
+                            onClick={() => {
+                              setSplitMembers((prev) =>
+                                prev.map((m) =>
+                                  m.userId === member.userId
+                                    ? { ...m, choice: 'LATE' as VoteChoice }
+                                    : m
+                                )
+                              );
+                            }}
+                          >
+                            늦참
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
-          {!teams.canManage && !teams.split && (
+          {!teams.canManage && !activeSplit && (
             <p className="team-hint">운영진이 그룹을 나누면 여기에 표시됩니다.</p>
           )}
 
-          {teams.split && (
+          {teams.splits && teams.splits.length > 0 && (
+            <div className="team-splits-tabs">
+              {teams.splits.map((s) => (
+                <button
+                  key={s.split.id}
+                  type="button"
+                  className={`team-split-tab-btn${selectedSplitId === s.split.id ? ' is-active' : ''}`}
+                  onClick={() => setSelectedSplitId(s.split.id)}
+                >
+                  {s.split.round}회차
+                </button>
+              ))}
+            </div>
+          )}
+
+          {activeSplit && (
             <>
               <p className="team-meta">
-                {teams.split.createdBy.displayName}님이{' '}
-                {new Date(teams.split.createdAt).toLocaleString('ko-KR')}에 배정
+                {activeSplit.split.createdBy.displayName}님이{' '}
+                {new Date(activeSplit.split.createdAt).toLocaleString('ko-KR')}에 배정
+                {activeSplit.split.round && ` (${activeSplit.split.round}회차)`}
               </p>
               <div className="team-grid">
-                {teams.teams.map((team) => (
+                {activeSplit.teams.map((team) => (
                   <article
                     key={team.label}
                     className={`team-card${
-                      teams.myTeam === team.label ? ' is-mine' : ''
+                      activeSplit.myTeam === team.label ? ' is-mine' : ''
                     }`}
                   >
                     <h3 className="team-card__title">

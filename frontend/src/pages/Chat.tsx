@@ -188,10 +188,6 @@ export default function Chat() {
         // Room List View
         <div className="chat-rooms-list">
           <h1 className="chat-rooms-header">채팅</h1>
-          <div className="chat-ad-banner">
-            <span className="chat-ad-badge">AD</span>
-            <span className="chat-ad-text">🎾 테니스 라켓 특별 기획전! 초특가 30% 할인 중 🛍️</span>
-          </div>
           {groups.length === 0 ? (
             <div className="chat-empty">
               <p>가입한 모임이 없습니다.</p>

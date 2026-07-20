@@ -220,6 +220,7 @@ export class AuthService {
     return this.prisma.user.update({
       where: { id: userId },
       data: {
+        ...(dto.displayName !== undefined ? { displayName: dto.displayName } : {}),
         ...(dto.profileImageUrl !== undefined
           ? { profileImageUrl: dto.profileImageUrl }
           : {}),

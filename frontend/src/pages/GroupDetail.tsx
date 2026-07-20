@@ -64,6 +64,7 @@ export default function GroupDetail() {
   // Month Picker State for Payments
   const [payYear, setPayYear] = useState(new Date().getFullYear());
   const [payMonth, setPayMonth] = useState(new Date().getMonth() + 1);
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
 
   const upcomingEvents = events
     .filter((ev) => {
@@ -943,19 +944,6 @@ export default function GroupDetail() {
           {/* 3. 사진첩 탭 (Gallery View) */}
           {activeTab === 'gallery' && (
             <div className="tab-content-gallery">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 800 }}>사진첩 ({mediaFiles.length})</h2>
-                <label className="btn-sm btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '20px', padding: '6px 14px', cursor: 'pointer', fontWeight: 700 }}>
-                  📤 파일 업로드
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    onChange={handleUploadMedia}
-                    disabled={uploadingMedia}
-                    style={{ display: 'none' }}
-                  />
-                </label>
-              </div>
 
               {uploadingMedia && (
                 <div style={{ padding: '16px', background: 'var(--blue-50)', borderRadius: '12px', marginBottom: '16px', textAlign: 'center', color: 'var(--accent)', fontWeight: 700 }}>
@@ -964,7 +952,9 @@ export default function GroupDetail() {
               )}
 
               {mediaFiles.length === 0 ? (
-                <p style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-muted)' }}>업로드된 사진이나 동영상이 없습니다.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '45vh', color: 'var(--ink-muted)' }}>
+                  <p style={{ margin: 0, fontSize: '14px' }}>업로드된 사진이나 동영상이 없습니다.</p>
+                </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '12px' }}>
                   {mediaFiles.map((m) => (
@@ -1013,10 +1003,10 @@ export default function GroupDetail() {
 
           {/* 4. 멤버 탭 (Members View) */}
           {activeTab === 'members' && (
-            <div className="tab-content-members" style={{ padding: '0 12px' }}>
+            <div className="tab-content-members">
               {/* 1. My Activity Status */}
               <section className="section-block">
-                <h2>내 활동 상태 설정</h2>
+                <h2 className="tab-section-title">내 활동 상태 설정</h2>
                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                   {Object.keys(userStatusLabels).map((statusKey) => {
                     const myMembershipRecord = group.members.find((m: any) => m.userId === user?.id);
@@ -1045,7 +1035,7 @@ export default function GroupDetail() {
               {/* 2. Join Requests (Officers only) */}
               {isOfficer && group.pendingRequests.length > 0 && (
                 <section className="section-block">
-                  <h2>가입 신청 ({group.pendingRequests.length})</h2>
+                  <h2 className="tab-section-title">가입 신청 ({group.pendingRequests.length})</h2>
                   <p className="section-desc">회장/운영진이 승인·거절할 수 있어요.</p>
                   <ul className="member-list">
                     {group.pendingRequests.map((m: any) => (
@@ -1093,7 +1083,7 @@ export default function GroupDetail() {
 
               {/* 3. Members List */}
               <section className="section-block">
-                <h2>운영진 & 회원 ({sortedMembers.length}명)</h2>
+                <h2 className="tab-section-title">운영진 & 회원 ({sortedMembers.length}명)</h2>
                 <ul className="member-list">
                   {sortedMembers.map((m: any) => {
                     const isPresidentRole = m.role === 'PRESIDENT';
@@ -1226,12 +1216,12 @@ export default function GroupDetail() {
 
           {/* 5. 회비 탭 (Payments Board View) */}
           {activeTab === 'payments' && (
-            <div className="tab-content-payments" style={{ padding: '0 12px' }}>
+            <div className="tab-content-payments">
               <div className="payments-board">
                 <div className="month-picker-row">
-                  <button type="button" onClick={prevMonth} className="month-nav-btn">이전달</button>
+                  <button type="button" onClick={prevMonth} className="month-nav-btn" title="이전달">‹</button>
                   <span className="month-picker-value">{payYear}년 {payMonth}월</span>
-                  <button type="button" onClick={nextMonth} className="month-nav-btn">다음달</button>
+                  <button type="button" onClick={nextMonth} className="month-nav-btn" title="다음달">›</button>
                 </div>
 
                 {group.dueDay && (
@@ -1241,45 +1231,129 @@ export default function GroupDetail() {
                   </div>
                 )}
 
-                {paymentData && (
-                  <div className="payments-grid">
-                    {paymentData.payments.map((p: any) => {
-                      return (
-                        <div key={p.userId} className="payment-checklist-item">
-                          <div className="payment-member-info">
-                            <span style={{ fontWeight: 700, fontSize: '14px' }}>
-                              {formatMemberNameWithEmoji(p)}
-                            </span>
-                            {p.isExempt && <span className="payment-exempt-badge">면제</span>}
-                          </div>
-                          {isOfficer ? (
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePayment(p.userId)}
-                              disabled={p.isExempt}
-                              className={`payment-toggle-btn${p.isPaid ? ' is-paid' : ''}`}
-                            >
-                              {p.isPaid ? '납부완료' : '미납'}
-                            </button>
-                          ) : (
-                            <span style={{ fontSize: '13px', fontWeight: 700, color: p.isPaid ? 'var(--green-500)' : 'var(--red-500)' }}>
-                              {p.isPaid ? '납부완료' : '미납'}
-                            </span>
-                          )}
+                {paymentData && (() => {
+                  const totalCount = paymentData.payments.length;
+                  const paidCount = paymentData.payments.filter((p: any) => p.isPaid).length;
+                  const unpaidCount = paymentData.payments.filter((p: any) => !p.isPaid).length;
+
+                  const filteredPayments = paymentData.payments.filter((p: any) => {
+                    if (paymentFilter === 'paid') return p.isPaid;
+                    if (paymentFilter === 'unpaid') return !p.isPaid;
+                    return true;
+                  });
+
+                  return (
+                    <>
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: 'var(--grey-50)', padding: '4px', borderRadius: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentFilter('all')}
+                          style={{
+                            flex: 1,
+                            border: 'none',
+                            background: paymentFilter === 'all' ? 'var(--surface)' : 'transparent',
+                            padding: '8px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            color: paymentFilter === 'all' ? 'var(--accent)' : 'var(--ink-muted)',
+                            cursor: 'pointer',
+                            boxShadow: paymentFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          전체 ({totalCount})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentFilter('paid')}
+                          style={{
+                            flex: 1,
+                            border: 'none',
+                            background: paymentFilter === 'paid' ? 'var(--surface)' : 'transparent',
+                            padding: '8px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            color: paymentFilter === 'paid' ? 'var(--accent)' : 'var(--ink-muted)',
+                            cursor: 'pointer',
+                            boxShadow: paymentFilter === 'paid' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          납부 ({paidCount})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentFilter('unpaid')}
+                          style={{
+                            flex: 1,
+                            border: 'none',
+                            background: paymentFilter === 'unpaid' ? 'var(--surface)' : 'transparent',
+                            padding: '8px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            color: paymentFilter === 'unpaid' ? 'var(--accent)' : 'var(--ink-muted)',
+                            cursor: 'pointer',
+                            boxShadow: paymentFilter === 'unpaid' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          미납 ({unpaidCount})
+                        </button>
+                      </div>
+
+                      {filteredPayments.length === 0 ? (
+                        <p style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-muted)' }}>
+                          {paymentFilter === 'paid'
+                            ? '납부 완료된 회원이 없습니다.'
+                            : paymentFilter === 'unpaid'
+                            ? '미납된 회원이 없습니다.'
+                            : '등록된 회비 데이터가 없습니다.'}
+                        </p>
+                      ) : (
+                        <div className="payments-grid">
+                          {filteredPayments.map((p: any) => {
+                            return (
+                              <div key={p.userId} className="payment-checklist-item">
+                                <div className="payment-member-info">
+                                  <span style={{ fontWeight: 700, fontSize: '14px' }}>
+                                    {formatMemberNameWithEmoji(p)}
+                                  </span>
+                                  {p.isExempt && <span className="payment-exempt-badge">면제</span>}
+                                </div>
+                                {isOfficer ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTogglePayment(p.userId)}
+                                    disabled={p.isExempt}
+                                    className={`payment-toggle-btn${p.isPaid ? ' is-paid' : ''}`}
+                                  >
+                                    {p.isPaid ? '납부완료' : '미납'}
+                                  </button>
+                                ) : (
+                                  <span style={{ fontSize: '13px', fontWeight: 700, color: p.isPaid ? 'var(--green-500)' : 'var(--red-500)' }}>
+                                    {p.isPaid ? '납부완료' : '미납'}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
 
           {/* 6. 이력 탭 (Officer Histories View) */}
           {activeTab === 'officers' && (
-            <div className="tab-content-officers" style={{ padding: '0 12px' }}>
+            <div className="tab-content-officers">
               <div className="officers-history-section">
-                <h2>역대 운영진 이력</h2>
+                <h2 className="tab-section-title">역대 운영진 이력</h2>
                 {group.officerHistories && group.officerHistories.length === 0 ? (
                   <p className="empty-inline">이력이 존재하지 않습니다.</p>
                 ) : (
@@ -1305,7 +1379,7 @@ export default function GroupDetail() {
 
           {/* 7. 정보 탭 (Info / Settings View) */}
           {activeTab === 'info' && (
-            <div className="tab-content-info" style={{ padding: '0 12px' }}>
+            <div className="tab-content-info">
               <div className="info-main-panel">
                 {/* Basic information details */}
                 <div className="info-card">
@@ -1399,7 +1473,7 @@ export default function GroupDetail() {
       )}
 
       {/* Floating Action Button (FAB) popover & triggers */}
-      {isOfficer && (
+      {isOfficer && activeTab === 'posts' && (
         <div className="fab-menu-container">
           {showWriteMenu && (
             <div className="fab-menu-popover">
@@ -1431,6 +1505,25 @@ export default function GroupDetail() {
           >
             ✏️
           </button>
+        </div>
+      )}
+
+      {activeTab === 'gallery' && (
+        <div className="fab-menu-container">
+          <label
+            className="fab-button"
+            title="사진 업로드"
+            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0 }}
+          >
+            📷
+            <input
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleUploadMedia}
+              disabled={uploadingMedia}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
       )}
     </div>

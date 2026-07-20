@@ -147,7 +147,7 @@ model Event {
   createdBy       User        @relation("EventCreator", fields: [createdById], references: [id])
   votes           Vote[]
   notifications   NotificationLog[]
-  teamSplit       EventTeamSplit?
+  teamSplits      EventTeamSplit[]
   comments        Comment[]
 
   @@index([groupId, date])
@@ -156,13 +156,17 @@ model Event {
 
 model EventTeamSplit {
   id          String   @id @default(cuid())
-  eventId     String   @unique
+  eventId     String
+  round       Int      @default(1)
   teamCount   Int
   createdById String
   createdAt   DateTime @default(now())
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   createdBy   User     @relation("TeamSplitCreator", fields: [createdById], references: [id])
   assignments EventTeamAssignment[]
+
+  @@index([eventId])
+  @@index([eventId, round])
 }
 
 model EventTeamAssignment {

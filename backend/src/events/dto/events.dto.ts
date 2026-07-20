@@ -42,11 +42,16 @@ export class CreateEventDto {
   reminderOffsets?: string; // 쉼표로 구분된 시간 오프셋 목록
 }
 
+import { VoteChoice } from '@prisma/client';
+
 export class SplitTeamsDto {
   @IsInt()
   @Min(2)
   @Max(4)
   teamCount!: number;
+
+  @IsOptional()
+  members?: Array<{ userId: string; choice: VoteChoice }>;
 }
 
 export class UpdateEventDto {

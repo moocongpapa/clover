@@ -25,6 +25,7 @@
   --surface: var(--white);
   --surface-alt: var(--grey-100);
   --ink: var(--grey-900);
+  --ink-dark: #191f28;
   --ink-muted: var(--grey-700);
   --ink-tertiary: rgba(25, 31, 40, 0.58);
   --border: var(--grey-200);
@@ -71,6 +72,13 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 body {
