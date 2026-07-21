@@ -112,17 +112,10 @@ export default function EditProfile() {
   const [genderVal, setGenderVal] = useState<'MALE' | 'FEMALE' | ''>('');
   const [isEarlyYearVal, setIsEarlyYearVal] = useState(false);
 
-  // Picker modal states
-  const [isBirthPickerOpen, setIsBirthPickerOpen] = useState(false);
-  const [isGenderPickerOpen, setIsGenderPickerOpen] = useState(false);
-  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
-
-  // Temporary modal states
-  const [tempYear, setTempYear] = useState<number | ''>('');
-  const [tempMonth, setTempMonth] = useState<number | ''>('');
-  const [tempDay, setTempDay] = useState<number | ''>('');
-  const [tempLunar, setTempLunar] = useState(false);
-  const [tempEarly, setTempEarly] = useState(false);
+  // Inline accordion states
+  const [isBirthExpanded, setIsBirthExpanded] = useState(false);
+  const [isGenderExpanded, setIsGenderExpanded] = useState(false);
+  const [isPhoneExpanded, setIsPhoneExpanded] = useState(false);
   const [tempPhone, setTempPhone] = useState('');
 
   const loadData = () => {
@@ -226,24 +219,6 @@ export default function EditProfile() {
     }
   };
 
-  // Open birthday picker bottom sheet
-  const openBirthPicker = () => {
-    setTempYear(birthYearVal || 1991);
-    setTempMonth(birthMonthVal || 10);
-    setTempDay(birthDayVal || 4);
-    setTempEarly(isEarlyYearVal);
-    setIsBirthPickerOpen(true);
-  };
-
-  // Apply birthday selection
-  const handleApplyBirth = () => {
-    setBirthYearVal(tempYear);
-    setBirthMonthVal(tempMonth);
-    setBirthDayVal(tempDay);
-    setIsEarlyYearVal(tempEarly);
-    setIsBirthPickerOpen(false);
-  };
-
   // Format date display
   const formatBirthDisplay = () => {
     if (birthYearVal && birthMonthVal && birthDayVal) {
@@ -275,37 +250,6 @@ export default function EditProfile() {
     const part1 = clean.slice(0, 4);
     const part2 = clean.slice(4).padEnd(4, '_');
     return `010 - ${part1} - ${part2}`;
-  };
-
-  // Open phone verification modal
-  const openPhoneModal = () => {
-    const last8 = getLast8Digits(phoneNumberVal);
-    setTempPhone(last8);
-    setIsPhoneModalOpen(true);
-  };
-
-  // Numeric keypad click handler
-  const handleKeypadPress = (val: string) => {
-    if (val === 'back') {
-      setTempPhone((prev) => prev.slice(0, -1));
-    } else {
-      setTempPhone((prev) => {
-        const digits = (prev + val).replace(/\D/g, '');
-        if (digits.length > 8) return prev;
-        return digits;
-      });
-    }
-  };
-
-  const handleApplyPhone = () => {
-    const digits = tempPhone.replace(/\D/g, '');
-    if (digits.length === 8) {
-      const formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
-      setPhoneNumberVal(formatted);
-    } else {
-      setPhoneNumberVal(tempPhone);
-    }
-    setIsPhoneModalOpen(false);
   };
 
   if (error && !profile) {
@@ -341,10 +285,8 @@ export default function EditProfile() {
               id="displayName"
               name="displayName"
               type="text"
-              required
+              readOnly
               value={displayNameVal}
-              onChange={(e) => setDisplayNameVal(e.target.value)}
-              placeholder="이름을 입력해 주세요"
               style={{
                 width: '100%',
                 padding: '12px 14px',
@@ -352,43 +294,185 @@ export default function EditProfile() {
                 borderRadius: '10px',
                 fontSize: '15px',
                 outline: 'none',
-                marginTop: '6px'
+                marginTop: '6px',
+                backgroundColor: 'var(--grey-50)',
+                color: 'var(--ink-muted)',
+                cursor: 'not-allowed'
               }}
             />
           </div>
         </div>
+        
         <div className="info-list-container">
           {/* 생일 */}
-          <div className="info-list-item" onClick={openBirthPicker}>
-            <div className="info-item-label">생일</div>
-            <div className="info-item-value-wrap">
-              <span className="info-item-value">{formatBirthDisplay()}</span>
-              <span className="chevron">〉</span>
+          <div className="info-list-item-group">
+            <div className="info-list-item" onClick={() => setIsBirthExpanded(!isBirthExpanded)}>
+              <div className="info-item-label">생일</div>
+              <div className="info-item-value-wrap">
+                <span className="info-item-value">{formatBirthDisplay()}</span>
+                <span className="chevron" style={{ transform: isBirthExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>〉</span>
+              </div>
             </div>
+            {isBirthExpanded && (
+              <div className="inline-picker-container" style={{ padding: '0 16px 16px 16px', background: 'var(--surface)' }}>
+                {/* Lunar calendar & Early Year Toggle Row */}
+                <div style={{ display: 'flex', gap: '24px', paddingBottom: '12px', borderBottom: '1px solid var(--border-soft)', width: '100%' }}>
+                  <div className="lunar-toggle-row" style={{ borderBottom: 'none', padding: 0, flex: 1 }}>
+                    <span className="lunar-label">빠른 년생</span>
+                    <label className="toggle-switch-label">
+                      <input
+                        type="checkbox"
+                        checked={isEarlyYearVal}
+                        onChange={(e) => setIsEarlyYearVal(e.target.checked)}
+                      />
+                      <span className="toggle-switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Three Columns Scroll Row */}
+                <div className="picker-scroll-container">
+                  <div className="picker-scroll-highlight"></div>
+                  <ScrollPicker
+                    options={YEARS}
+                    value={birthYearVal || 1991}
+                    onChange={(val) => setBirthYearVal(val)}
+                    formatter={(val) => `${val}년`}
+                  />
+                  <ScrollPicker
+                    options={MONTHS}
+                    value={birthMonthVal || 10}
+                    onChange={(val) => setBirthMonthVal(val)}
+                    formatter={(val) => `${val}월`}
+                  />
+                  <ScrollPicker
+                    options={getDaysInMonth(birthYearVal, birthMonthVal)}
+                    value={birthDayVal || 4}
+                    onChange={(val) => setBirthDayVal(val)}
+                    formatter={(val) => `${val}일`}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 성별 */}
-          <div className="info-list-item" onClick={() => setIsGenderPickerOpen(true)}>
-            <div className="info-item-label">성별</div>
-            <div className="info-item-value-wrap">
-              <span className="info-item-value">
-                {genderVal === 'MALE' ? '남성' : genderVal === 'FEMALE' ? '여성' : '선택 안 함'}
-              </span>
-              <span className="chevron">〉</span>
+          <div className="info-list-item-group">
+            <div className="info-list-item" onClick={() => setIsGenderExpanded(!isGenderExpanded)}>
+              <div className="info-item-label">성별</div>
+              <div className="info-item-value-wrap">
+                <span className="info-item-value">
+                  {genderVal === 'MALE' ? '남성' : genderVal === 'FEMALE' ? '여성' : '선택 안 함'}
+                </span>
+                <span className="chevron" style={{ transform: isGenderExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>〉</span>
+              </div>
             </div>
+            {isGenderExpanded && (
+              <div className="inline-picker-container" style={{ padding: '0 16px 16px 16px', background: 'var(--surface)' }}>
+                <div className="picker-scroll-container">
+                  <div className="picker-scroll-highlight"></div>
+                  <ScrollPicker
+                    options={['MALE', 'FEMALE', '']}
+                    value={genderVal}
+                    onChange={(val) => setGenderVal(val as 'MALE' | 'FEMALE' | '')}
+                    formatter={(val) => val === 'MALE' ? '남성' : val === 'FEMALE' ? '여성' : '선택 안 함'}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 휴대폰 번호 */}
-          <div className="info-list-item" onClick={openPhoneModal}>
-            <div className="info-item-label">휴대폰 번호</div>
-            <div className="info-item-value-wrap">
-              <span className="info-item-value">
-                {phoneNumberVal ? phoneNumberVal : '등록되지 않음'}
-              </span>
-              <span className="chevron">〉</span>
+          <div className="info-list-item-group">
+            <div className="info-list-item" onClick={() => {
+              if (!isPhoneExpanded) {
+                const last8 = getLast8Digits(phoneNumberVal);
+                setTempPhone(last8);
+              }
+              setIsPhoneExpanded(!isPhoneExpanded);
+            }}>
+              <div className="info-item-label">휴대폰 번호</div>
+              <div className="info-item-value-wrap">
+                <span className="info-item-value">
+                  {phoneNumberVal ? phoneNumberVal : '등록되지 않음'}
+                </span>
+                <span className="chevron" style={{ transform: isPhoneExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>〉</span>
+              </div>
             </div>
-          </div>
+            {isPhoneExpanded && (
+              <div className="inline-picker-container" style={{ padding: '0 16px 16px 16px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="phone-input-wrap" style={{ marginTop: '12px' }}>
+                  <div className="phone-input-value-row">
+                    <input
+                      type="text"
+                      readOnly
+                      className="phone-active-input"
+                      value={formatTempPhoneDisplay(tempPhone)}
+                      style={{ textAlign: 'center', letterSpacing: '1px', fontSize: '20px' }}
+                    />
+                  </div>
+                </div>
 
+                <div className="phone-numeric-keypad" style={{ marginTop: '8px' }}>
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className="keypad-key"
+                      onClick={() => {
+                        setTempPhone((prev) => {
+                          const digits = (prev + n).replace(/\D/g, '');
+                          if (digits.length > 8) return prev;
+                          if (digits.length === 8) {
+                            const formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
+                            setPhoneNumberVal(formatted);
+                          }
+                          return digits;
+                        });
+                      }}
+                      style={{ height: '40px', fontSize: '16px' }}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  <button type="button" className="keypad-key empty-key" disabled style={{ height: '40px' }}></button>
+                  <button
+                    type="button"
+                    className="keypad-key"
+                    onClick={() => {
+                      setTempPhone((prev) => {
+                        const digits = (prev + '0').replace(/\D/g, '');
+                        if (digits.length > 8) return prev;
+                        if (digits.length === 8) {
+                          const formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
+                          setPhoneNumberVal(formatted);
+                        }
+                        return digits;
+                      });
+                    }}
+                    style={{ height: '40px', fontSize: '16px' }}
+                  >
+                    0
+                  </button>
+                  <button
+                    type="button"
+                    className="keypad-key backspace-key"
+                    onClick={() => {
+                      setTempPhone((prev) => {
+                        const updated = prev.slice(0, -1);
+                        const formatted = updated.length === 8 ? `010-${updated.slice(0, 4)}-${updated.slice(4)}` : '';
+                        setPhoneNumberVal(formatted);
+                        return updated;
+                      });
+                    }}
+                    style={{ height: '40px', fontSize: '16px' }}
+                  >
+                    ⌫
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Global User Photo and Bio Settings */}
@@ -458,179 +542,6 @@ export default function EditProfile() {
         </div>
       </form>
 
-      {/* Picker 1: Birthday Modal Bottom Sheet */}
-      {isBirthPickerOpen && (
-        <div className="profile-modal-overlay" onClick={() => setIsBirthPickerOpen(false)}>
-          <div className="profile-modal-content bottom-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-row">
-              <h3 className="modal-title">생년월일 선택</h3>
-              <button type="button" className="confirm-text-btn" onClick={handleApplyBirth}>
-                확인
-              </button>
-            </div>
-
-            {/* Lunar calendar & Early Year Toggle Row */}
-            <div style={{ display: 'flex', gap: '24px', padding: '12px 0', borderBottom: '1px solid var(--border-soft)', width: '100%' }}>
-              <div className="lunar-toggle-row" style={{ borderBottom: 'none', padding: 0, flex: 1 }}>
-                <span className="lunar-label">음력</span>
-                <label className="toggle-switch-label">
-                  <input
-                    type="checkbox"
-                    checked={tempLunar}
-                    onChange={(e) => setTempLunar(e.target.checked)}
-                  />
-                  <span className="toggle-switch-slider"></span>
-                </label>
-              </div>
-              <div className="lunar-toggle-row" style={{ borderBottom: 'none', padding: 0, flex: 1 }}>
-                <span className="lunar-label">빠른</span>
-                <label className="toggle-switch-label">
-                  <input
-                    type="checkbox"
-                    checked={tempEarly}
-                    onChange={(e) => setTempEarly(e.target.checked)}
-                  />
-                  <span className="toggle-switch-slider"></span>
-                </label>
-              </div>
-            </div>
-
-            {/* Three Columns Scroll Row */}
-            <div className="picker-scroll-container">
-              <div className="picker-scroll-highlight"></div>
-              <ScrollPicker
-                options={YEARS}
-                value={tempYear || 1991}
-                onChange={(val) => setTempYear(val)}
-                formatter={(val) => `${val}년`}
-              />
-              <ScrollPicker
-                options={MONTHS}
-                value={tempMonth || 10}
-                onChange={(val) => setTempMonth(val)}
-                formatter={(val) => `${val}월`}
-              />
-              <ScrollPicker
-                options={getDaysInMonth(tempYear, tempMonth)}
-                value={tempDay || 4}
-                onChange={(val) => setTempDay(val)}
-                formatter={(val) => `${val}일`}
-              />
-            </div>
-
-            <button className="bottom-sheet-close-btn" onClick={() => setIsBirthPickerOpen(false)}>
-              닫기
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Picker 2: Gender Modal Bottom Sheet */}
-      {isGenderPickerOpen && (
-        <div className="profile-modal-overlay" onClick={() => setIsGenderPickerOpen(false)}>
-          <div className="profile-modal-content bottom-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-row">
-              <h3 className="modal-title">성별 선택</h3>
-              <button 
-                type="button" 
-                className="confirm-text-btn" 
-                onClick={() => setIsGenderPickerOpen(false)}
-              >
-                확인
-              </button>
-            </div>
-            
-            <div className="picker-scroll-container">
-              <div className="picker-scroll-highlight"></div>
-              <ScrollPicker
-                options={['MALE', 'FEMALE', '']}
-                value={genderVal}
-                onChange={(val) => setGenderVal(val as 'MALE' | 'FEMALE' | '')}
-                formatter={(val) => val === 'MALE' ? '남성' : val === 'FEMALE' ? '여성' : '선택 안 함'}
-              />
-            </div>
-
-            <button className="bottom-sheet-close-btn" onClick={() => setIsGenderPickerOpen(false)}>
-              닫기
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal 3: Phone Change Fullscreen/Modal */}
-      {isPhoneModalOpen && (
-        <div className="phone-change-modal-overlay">
-          <div className="phone-change-modal-content">
-            {/* Header */}
-            <div className="phone-change-header">
-              <span className="back-arrow" onClick={() => setIsPhoneModalOpen(false)}>
-                〈
-              </span>
-              <span className="header-title">휴대폰 번호 변경</span>
-            </div>
-
-            {/* Input Field */}
-            <div className="phone-input-wrap">
-              <label className="phone-input-label">휴대폰 번호</label>
-              <div className="phone-input-value-row">
-                <input
-                  type="text"
-                  readOnly
-                  className="phone-active-input"
-                  value={formatTempPhoneDisplay(tempPhone)}
-                  style={{ textAlign: 'center', letterSpacing: '1px' }}
-                />
-              </div>
-            </div>
-
-            {/* Confirmation Button */}
-            <div className="phone-confirm-btn-wrap">
-              <button
-                type="button"
-                className="phone-confirm-btn"
-                disabled={tempPhone.length !== 8}
-                onClick={handleApplyPhone}
-              >
-                확인
-              </button>
-            </div>
-
-            {/* Hint Text */}
-            <p className="phone-disclaimer-text">
-              휴대폰번호는 로그인을 위해 저장되며, 모임을 이용하는 기간 동안 보관되는 것에 동의합니다.
-            </p>
-
-            {/* Interactive Numeric Keypad */}
-            <div className="phone-numeric-keypad">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className="keypad-key"
-                  onClick={() => handleKeypadPress(n)}
-                >
-                  {n}
-                </button>
-              ))}
-              <button type="button" className="keypad-key empty-key" disabled></button>
-              <button
-                type="button"
-                className="keypad-key"
-                onClick={() => handleKeypadPress('0')}
-              >
-                0
-              </button>
-              <button
-                type="button"
-                className="keypad-key backspace-key"
-                onClick={() => handleKeypadPress('back')}
-              >
-                ⌫
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
