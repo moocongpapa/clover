@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import GroupAvatar from '../components/GroupAvatar';
 import {
   api,
   formatEventSchedule,
@@ -207,9 +208,18 @@ export default function EventDetailPage() {
 
   return (
     <div>
-      <p className="breadcrumb">
-        <Link to={`/groups/${event.group.id}`}>{event.group.name}</Link>
-      </p>
+      <div className="event-detail-group-nav">
+        <Link to={`/groups/${event.group.id}`} className="group-nav-link">
+          <GroupAvatar
+            src={event.group.profileImageUrl}
+            name={event.group.name}
+            size={24}
+            radius={6}
+          />
+          <span className="group-nav-name">{event.group.name}</span>
+          <span className="group-nav-arrow">›</span>
+        </Link>
+      </div>
 
       <header className="event-detail-header">
         <div className="event-detail-header__top">
