@@ -8,7 +8,87 @@ import './Groups.css';
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 100 }, (_, i) => CURRENT_YEAR - i);
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+
+const getDaysInMonth = (year: number | '', month: number | '') => {
+  if (!year || !month) return Array.from({ length: 31 }, (_, i) => i + 1);
+  const numDays = new Date(Number(year), Number(month), 0).getDate();
+  return Array.from({ length: numDays }, (_, i) => i + 1);
+};
+
+interface ScrollPickerProps<T> {
+  options: T[];
+  value: T;
+  onChange: (val: T) => void;
+  formatter: (val: T) => string;
+}
+
+function ScrollPicker<T extends string | number>({ options, value, onChange, formatter }: ScrollPickerProps<T>) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const index = options.indexOf(value);
+    if (index !== -1) {
+      containerRef.current.scrollTop = index * 40;
+    }
+  }, [value, options]);
+
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    timeoutRef.current = setTimeout(() => {
+      if (!containerRef.current) return;
+      const scrollTop = containerRef.current.scrollTop;
+      const index = Math.round(scrollTop / 40);
+      if (index >= 0 && index < options.length) {
+        const selectedValue = options[index];
+        if (selectedValue !== value) {
+          onChange(selectedValue);
+        }
+      }
+    }, 100);
+  };
+
+  return (
+    <div 
+      className="scroll-picker-col" 
+      ref={containerRef}
+      onScroll={handleScroll}
+      style={{
+        height: '160px',
+        overflowY: 'scroll',
+        scrollSnapType: 'y mandatory',
+        scrollbarWidth: 'none',
+        position: 'relative',
+        padding: '60px 0',
+        width: '100%',
+        textAlign: 'center',
+      }}
+    >
+      {options.map((opt) => (
+        <div
+          key={opt}
+          className={`scroll-picker-item ${opt === value ? 'is-selected' : ''}`}
+          onClick={() => onChange(opt)}
+          style={{
+            height: '40px',
+            lineHeight: '40px',
+            fontSize: opt === value ? '19px' : '15px',
+            fontWeight: opt === value ? '800' : '500',
+            color: opt === value ? 'var(--ink-dark)' : 'var(--ink-muted)',
+            scrollSnapAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          {formatter(opt)}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function EditProfile() {
   const navigate = useNavigate();
@@ -175,39 +255,56 @@ export default function EditProfile() {
     return '선택 안 함';
   };
 
+  // Helpers for 8-digit phone numbers
+  const getDigitsOnly = (phone: string) => {
+    return phone.replace(/\D/g, '');
+  };
+
+  const getLast8Digits = (phone: string) => {
+    const digits = getDigitsOnly(phone);
+    return digits.slice(-8);
+  };
+
+  const formatTempPhoneDisplay = (rawDigits: string) => {
+    const clean = rawDigits.replace(/\D/g, '');
+    if (clean.length === 0) return '010 - ____ - ____';
+    if (clean.length <= 4) {
+      const displayPart = clean.padEnd(4, '_');
+      return `010 - ${displayPart.slice(0, 4)} - ____`;
+    }
+    const part1 = clean.slice(0, 4);
+    const part2 = clean.slice(4).padEnd(4, '_');
+    return `010 - ${part1} - ${part2}`;
+  };
+
   // Open phone verification modal
   const openPhoneModal = () => {
-    setTempPhone(phoneNumberVal || '+82 ');
+    const last8 = getLast8Digits(phoneNumberVal);
+    setTempPhone(last8);
     setIsPhoneModalOpen(true);
   };
 
   // Numeric keypad click handler
   const handleKeypadPress = (val: string) => {
     if (val === 'back') {
-      setTempPhone((prev) => {
-        // Prevent deleting prefix "+82 "
-        if (prev === '+82 ') return prev;
-        if (prev.endsWith(' ')) return prev.slice(0, -1);
-        return prev.slice(0, -1);
-      });
+      setTempPhone((prev) => prev.slice(0, -1));
     } else {
       setTempPhone((prev) => {
-        const cleaned = prev.replace(/\D/g, '');
-        if (cleaned.length >= 15) return prev; // Limit length
-        
-        // Add spacing for mobile readability
-        const raw = prev + val;
-        // Strip out non-digits to format
-        const digits = raw.replace(/\D/g, '').slice(2); // remove 82
-        if (digits.length === 3) return prev + val + ' ';
-        if (digits.length === 7) return prev + val + ' ';
-        return prev + val;
+        const digits = (prev + val).replace(/\D/g, '');
+        if (digits.length > 8) return prev;
+        return digits;
       });
     }
   };
 
   const handleApplyPhone = () => {
-    setPhoneNumberVal(tempPhone);
+    const digits = tempPhone.replace(/\D/g, '');
+    if (digits.length === 8) {
+      const formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
+      setPhoneNumberVal(formatted);
+    } else {
+      setPhoneNumberVal(tempPhone);
+    }
     setIsPhoneModalOpen(false);
   };
 
@@ -239,7 +336,7 @@ export default function EditProfile() {
         <div className="profile-section-title">내 정보</div>
         <div style={{ padding: '0 16px', marginBottom: '16px' }}>
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label htmlFor="displayName" style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--grey-600)' }}>이름 (닉네임) *</label>
+            <label htmlFor="displayName" style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--grey-600)' }}>이름 *</label>
             <input
               id="displayName"
               name="displayName"
@@ -250,12 +347,12 @@ export default function EditProfile() {
               placeholder="이름을 입력해 주세요"
               style={{
                 width: '100%',
-                padding: '10px 12px',
+                padding: '12px 14px',
                 border: '1px solid var(--border-soft)',
-                borderRadius: '8px',
-                fontSize: '14px',
+                borderRadius: '10px',
+                fontSize: '15px',
                 outline: 'none',
-                marginTop: '4px'
+                marginTop: '6px'
               }}
             />
           </div>
@@ -398,44 +495,27 @@ export default function EditProfile() {
               </div>
             </div>
 
-            {/* Three Columns Select Row */}
-            <div className="picker-wheel-row">
-              <div className="picker-wheel-col">
-                <select
-                  value={tempYear}
-                  onChange={(e) => setTempYear(e.target.value ? Number(e.target.value) : '')}
-                >
-                  {YEARS.map((y) => (
-                    <option key={y} value={y}>
-                      {y}년
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="picker-wheel-col">
-                <select
-                  value={tempMonth}
-                  onChange={(e) => setTempMonth(e.target.value ? Number(e.target.value) : '')}
-                >
-                  {MONTHS.map((m) => (
-                    <option key={m} value={m}>
-                      {m}월
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="picker-wheel-col">
-                <select
-                  value={tempDay}
-                  onChange={(e) => setTempDay(e.target.value ? Number(e.target.value) : '')}
-                >
-                  {DAYS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}일
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Three Columns Scroll Row */}
+            <div className="picker-scroll-container">
+              <div className="picker-scroll-highlight"></div>
+              <ScrollPicker
+                options={YEARS}
+                value={tempYear || 1991}
+                onChange={(val) => setTempYear(val)}
+                formatter={(val) => `${val}년`}
+              />
+              <ScrollPicker
+                options={MONTHS}
+                value={tempMonth || 10}
+                onChange={(val) => setTempMonth(val)}
+                formatter={(val) => `${val}월`}
+              />
+              <ScrollPicker
+                options={getDaysInMonth(tempYear, tempMonth)}
+                value={tempDay || 4}
+                onChange={(val) => setTempDay(val)}
+                formatter={(val) => `${val}일`}
+              />
             </div>
 
             <button className="bottom-sheet-close-btn" onClick={() => setIsBirthPickerOpen(false)}>
@@ -449,29 +529,27 @@ export default function EditProfile() {
       {isGenderPickerOpen && (
         <div className="profile-modal-overlay" onClick={() => setIsGenderPickerOpen(false)}>
           <div className="profile-modal-content bottom-sheet" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">성별 선택</h3>
-            <div className="gender-sheet-buttons">
-              <button
-                type="button"
-                className={`gender-sheet-btn ${genderVal === 'MALE' ? 'is-active' : ''}`}
-                onClick={() => {
-                  setGenderVal('MALE');
-                  setIsGenderPickerOpen(false);
-                }}
+            <div className="modal-header-row">
+              <h3 className="modal-title">성별 선택</h3>
+              <button 
+                type="button" 
+                className="confirm-text-btn" 
+                onClick={() => setIsGenderPickerOpen(false)}
               >
-                남성
-              </button>
-              <button
-                type="button"
-                className={`gender-sheet-btn ${genderVal === 'FEMALE' ? 'is-active' : ''}`}
-                onClick={() => {
-                  setGenderVal('FEMALE');
-                  setIsGenderPickerOpen(false);
-                }}
-              >
-                여성
+                확인
               </button>
             </div>
+            
+            <div className="picker-scroll-container">
+              <div className="picker-scroll-highlight"></div>
+              <ScrollPicker
+                options={['MALE', 'FEMALE', '']}
+                value={genderVal}
+                onChange={(val) => setGenderVal(val as 'MALE' | 'FEMALE' | '')}
+                formatter={(val) => val === 'MALE' ? '남성' : val === 'FEMALE' ? '여성' : '선택 안 함'}
+              />
+            </div>
+
             <button className="bottom-sheet-close-btn" onClick={() => setIsGenderPickerOpen(false)}>
               닫기
             </button>
@@ -499,7 +577,8 @@ export default function EditProfile() {
                   type="text"
                   readOnly
                   className="phone-active-input"
-                  value={tempPhone}
+                  value={formatTempPhoneDisplay(tempPhone)}
+                  style={{ textAlign: 'center', letterSpacing: '1px' }}
                 />
               </div>
             </div>
@@ -509,7 +588,7 @@ export default function EditProfile() {
               <button
                 type="button"
                 className="phone-confirm-btn"
-                disabled={tempPhone.length < 10}
+                disabled={tempPhone.length !== 8}
                 onClick={handleApplyPhone}
               >
                 확인

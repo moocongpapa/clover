@@ -641,3 +641,37 @@ input:checked + .toggle-switch-slider:before {
   transform: scale(0.98);
 }
 
+/* Scroll Picker Styles */
+.picker-scroll-container {
+  display: flex;
+  position: relative;
+  height: 160px;
+  background: var(--grey-50);
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 16px 0;
+  border: 1px solid var(--border-soft);
+}
+
+.picker-scroll-highlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 60px;
+  height: 40px;
+  border-top: 1.5px solid var(--border-soft);
+  border-bottom: 1.5px solid var(--border-soft);
+  background: rgba(0, 0, 0, 0.03);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.scroll-picker-col {
+  flex: 1;
+}
+
+.scroll-picker-col::-webkit-scrollbar {
+  display: none;
+}
+
+

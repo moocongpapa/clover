@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const API_URL = process.env.API_URL ?? 'http://localhost:3000';
-const BASE_URL = process.env.BASE_URL ?? 'http://localhost:5174';
+process.env.API_URL = process.env.API_URL ?? 'http://localhost:3001';
+process.env.BASE_URL = process.env.BASE_URL ?? 'http://localhost:5175';
+
+const API_URL = process.env.API_URL;
+const BASE_URL = process.env.BASE_URL;
 
 export default defineConfig({
   testDir: './tests',
@@ -27,7 +30,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'npm run start:e2e',
+      command: 'node scripts/e2e-reset.js && npx prisma db push --skip-generate && npx nest start',
       cwd: '../backend',
       url: `${API_URL}/auth/kakao/url`,
       reuseExistingServer: false,
@@ -35,17 +38,21 @@ export default defineConfig({
       env: {
         ...process.env,
         DATABASE_URL: 'file:./e2e.db?connection_limit=1',
-        PORT: '3000',
+        PORT: '3001',
         DEV_LOGIN_ENABLED: 'true',
         FRONTEND_URL: BASE_URL,
       },
     },
     {
-      command: 'npm run dev',
+      command: 'npx vite --port 5175',
       cwd: '../frontend',
       url: BASE_URL,
       reuseExistingServer: false,
       timeout: 60_000,
+      env: {
+        ...process.env,
+        VITE_API_URL: API_URL,
+      },
     },
   ],
 });
