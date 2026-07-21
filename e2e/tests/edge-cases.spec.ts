@@ -215,7 +215,7 @@ test.describe('Clover 비즈니스 로직 Edge Case 테스트', () => {
     }, presidentToken);
 
     expect(resSplitEarly.status).toBe(400);
-    expect(resSplitEarly.body.message).toContain('모임 시작 30분 전부터만 사용할 수 있습니다.');
+    expect(resSplitEarly.body.message).toContain('모임 시작 1시간 전부터만 사용할 수 있습니다.');
   });
 
   test('회장 권한 양도 시 직책 강등 및 권한 박탈 여부 검증', async () => {
