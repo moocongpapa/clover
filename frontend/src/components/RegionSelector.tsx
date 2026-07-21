@@ -169,12 +169,6 @@ export default function RegionSelector({
           </div>
         )}
       </div>
-      {meta && (
-        <p className="region-selector__meta">
-          행정구역 기준일:{' '}
-          {new Date(meta.updatedAt).toLocaleDateString('ko-KR')}
-        </p>
-      )}
     </div>
   );
 }
