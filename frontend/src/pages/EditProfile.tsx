@@ -94,6 +94,7 @@ export default function EditProfile() {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [bio, setBio] = useState('');
   const [error, setError] = useState('');
@@ -242,14 +243,23 @@ export default function EditProfile() {
 
   const formatTempPhoneDisplay = (rawDigits: string) => {
     const clean = rawDigits.replace(/\D/g, '');
-    if (clean.length === 0) return '010 - ____ - ____';
+    if (clean.length === 0) return '010-____-____';
     if (clean.length <= 4) {
       const displayPart = clean.padEnd(4, '_');
-      return `010 - ${displayPart.slice(0, 4)} - ____`;
+      return `010-${displayPart.slice(0, 4)}-____`;
     }
     const part1 = clean.slice(0, 4);
     const part2 = clean.slice(4).padEnd(4, '_');
-    return `010 - ${part1} - ${part2}`;
+    return `010-${part1}-${part2}`;
+  };
+
+  const formatInputPhone = (rawDigits: string) => {
+    const clean = rawDigits.replace(/\D/g, '');
+    if (clean.length === 0) return '';
+    if (clean.length <= 4) {
+      return `010-${clean}`;
+    }
+    return `010-${clean.slice(0, 4)}-${clean.slice(4)}`;
   };
 
   if (error && !profile) {
@@ -278,32 +288,16 @@ export default function EditProfile() {
       <form className="edit-profile-body" onSubmit={(e) => e.preventDefault()}>
         {/* Section 2: 내 정보 */}
         <div className="profile-section-title">내 정보</div>
-        <div style={{ padding: '0 16px', marginBottom: '16px' }}>
-          <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label htmlFor="displayName" style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--grey-600)' }}>이름 *</label>
-            <input
-              id="displayName"
-              name="displayName"
-              type="text"
-              readOnly
-              value={displayNameVal}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                border: '1px solid var(--border-soft)',
-                borderRadius: '10px',
-                fontSize: '15px',
-                outline: 'none',
-                marginTop: '6px',
-                backgroundColor: 'var(--grey-50)',
-                color: 'var(--ink-muted)',
-                cursor: 'not-allowed'
-              }}
-            />
-          </div>
-        </div>
         
         <div className="info-list-container">
+          {/* 이름 */}
+          <div className="info-list-item no-arrow" style={{ cursor: 'default' }}>
+            <div className="info-item-label">이름</div>
+            <div className="info-item-value-wrap">
+              <span className="info-item-value" style={{ color: 'var(--ink-dark)', fontWeight: '600' }}>{displayNameVal}</span>
+            </div>
+          </div>
+
           {/* 생일 */}
           <div className="info-list-item-group">
             <div className="info-list-item" onClick={() => setIsBirthExpanded(!isBirthExpanded)}>
@@ -400,76 +394,53 @@ export default function EditProfile() {
               </div>
             </div>
             {isPhoneExpanded && (
-              <div className="inline-picker-container" style={{ padding: '0 16px 16px 16px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="inline-picker-container" style={{ padding: '0 16px 16px 16px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div className="phone-input-wrap" style={{ marginTop: '12px' }}>
                   <div className="phone-input-value-row">
                     <input
-                      type="text"
-                      readOnly
-                      className="phone-active-input"
-                      value={formatTempPhoneDisplay(tempPhone)}
-                      style={{ textAlign: 'center', letterSpacing: '1px', fontSize: '20px' }}
-                    />
-                  </div>
-                </div>
-
-                <div className="phone-numeric-keypad" style={{ marginTop: '8px' }}>
-                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className="keypad-key"
-                      onClick={() => {
-                        setTempPhone((prev) => {
-                          const digits = (prev + n).replace(/\D/g, '');
-                          if (digits.length > 8) return prev;
+                      type="tel"
+                      pattern="[0-9]*"
+                      inputMode="numeric"
+                      ref={phoneInputRef}
+                      autoFocus
+                      className="phone-active-input-editable"
+                      value={formatInputPhone(tempPhone)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        let digits = val.replace(/\D/g, '');
+                        if (digits.startsWith('010')) {
+                          digits = digits.slice(3);
+                        }
+                        if (digits.length <= 8) {
+                          setTempPhone(digits);
                           if (digits.length === 8) {
                             const formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
                             setPhoneNumberVal(formatted);
+                          } else {
+                            setPhoneNumberVal('');
                           }
-                          return digits;
-                        });
-                      }}
-                      style={{ height: '40px', fontSize: '16px' }}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                  <button type="button" className="keypad-key empty-key" disabled style={{ height: '40px' }}></button>
-                  <button
-                    type="button"
-                    className="keypad-key"
-                    onClick={() => {
-                      setTempPhone((prev) => {
-                        const digits = (prev + '0').replace(/\D/g, '');
-                        if (digits.length > 8) return prev;
-                        if (digits.length === 8) {
-                          const formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
-                          setPhoneNumberVal(formatted);
                         }
-                        return digits;
-                      });
-                    }}
-                    style={{ height: '40px', fontSize: '16px' }}
-                  >
-                    0
-                  </button>
-                  <button
-                    type="button"
-                    className="keypad-key backspace-key"
-                    onClick={() => {
-                      setTempPhone((prev) => {
-                        const updated = prev.slice(0, -1);
-                        const formatted = updated.length === 8 ? `010-${updated.slice(0, 4)}-${updated.slice(4)}` : '';
-                        setPhoneNumberVal(formatted);
-                        return updated;
-                      });
-                    }}
-                    style={{ height: '40px', fontSize: '16px' }}
-                  >
-                    ⌫
-                  </button>
+                      }}
+                      placeholder="010-____-____"
+                      style={{
+                        width: '100%',
+                        padding: '12px 14px',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '10px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        outline: 'none',
+                        textAlign: 'center',
+                        color: 'var(--ink-dark)',
+                        background: 'var(--grey-50)',
+                        letterSpacing: '0.5px'
+                      }}
+                    />
+                  </div>
                 </div>
+                <p className="phone-disclaimer-text" style={{ fontSize: '11px', color: 'var(--ink-muted)', marginTop: '4px', textAlign: 'center', margin: 0 }}>
+                  앞의 '010'을 제외하고 숫자 8자리만 입력해 주세요. (예: 12345678)
+                </p>
               </div>
             )}
           </div>
