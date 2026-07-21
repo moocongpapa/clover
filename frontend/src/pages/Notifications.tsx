@@ -63,14 +63,6 @@ export default function Notifications() {
     <div className="notifications-page">
       <div className="notifications-header">
         <h1 className="notifications-title">새소식</h1>
-        <button
-          type="button"
-          onClick={handleMarkAllRead}
-          className="notifications-settings-btn"
-          title="모두 읽음으로 표시"
-        >
-          ⚙️
-        </button>
       </div>
 
       <div className="notifications-filter-bar">
