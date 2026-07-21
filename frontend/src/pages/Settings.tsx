@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../api';
 import './Settings.css';
 
 const FONTS = [
@@ -21,9 +23,7 @@ const FONTS = [
 ];
 
 export default function Settings() {
-  const [notifications, setNotifications] = useState(
-    localStorage.getItem('clover_notifications_enabled') !== 'false'
-  );
+  const { user, updateUser } = useAuth();
   const [selectedFont, setSelectedFont] = useState(
     localStorage.getItem('clover_font_family') || FONTS[0].value
   );
@@ -32,11 +32,40 @@ export default function Settings() {
   );
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const handleNotificationToggle = () => {
-    const nextVal = !notifications;
-    setNotifications(nextVal);
-    localStorage.setItem('clover_notifications_enabled', String(nextVal));
-    triggerSaveSuccess();
+  const handlePushToggle = async () => {
+    if (!user) return;
+    const nextVal = user.pushNotifyEnabled !== false ? false : true;
+    try {
+      const updated = await api.updateProfile({ pushNotifyEnabled: nextVal });
+      updateUser(updated);
+      triggerSaveSuccess();
+    } catch (err) {
+      console.error(err);
+      alert('설정 변경에 실패했습니다.');
+    }
+  };
+
+  const handleTestFcm = async () => {
+    try {
+      await api.testFcm();
+      alert('테스트 푸시 알림이 발송되었습니다! 기기 알림창을 확인해 주세요.');
+    } catch (err) {
+      console.error(err);
+      alert('테스트 알림 발송에 실패했습니다. 환경설정이나 FCM 토큰 상태를 확인해 주세요.');
+    }
+  };
+
+  const handleKakaoToggle = async () => {
+    if (!user) return;
+    const nextVal = user.kakaoNotifyEnabled !== false ? false : true;
+    try {
+      const updated = await api.updateProfile({ kakaoNotifyEnabled: nextVal });
+      updateUser(updated);
+      triggerSaveSuccess();
+    } catch (err) {
+      console.error(err);
+      alert('설정 변경에 실패했습니다.');
+    }
   };
 
   const handleFontChange = (fontValue: string) => {
@@ -71,16 +100,55 @@ export default function Settings() {
       <div className="settings-container form-card">
         <section className="settings-section">
           <h2 className="settings-section__title">알림 설정</h2>
-          <div className="settings-row">
+          
+          <div className="settings-row" style={{ marginBottom: '16px' }}>
             <div className="settings-row__info">
-              <span className="settings-row__label">푸시 알림 켜기</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="settings-row__label">앱 푸시 알림 받기</span>
+                {user?.pushNotifyEnabled !== false && (
+                  <button
+                    type="button"
+                    onClick={handleTestFcm}
+                    className="btn-test-fcm"
+                    style={{
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid var(--accent)',
+                      background: 'none',
+                      color: 'var(--accent)',
+                      cursor: 'pointer',
+                      fontWeight: 600
+                    }}
+                  >
+                    테스트 발송
+                  </button>
+                )}
+              </div>
               <p className="settings-row__desc">모임 가입 승인 및 이벤트 리마인더 푸시 알림을 수신합니다.</p>
             </div>
             <label className="toggle-switch">
               <input
                 type="checkbox"
-                checked={notifications}
-                onChange={handleNotificationToggle}
+                checked={user?.pushNotifyEnabled !== false}
+                onChange={handlePushToggle}
+                disabled={!user}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div className="settings-row">
+            <div className="settings-row__info">
+              <span className="settings-row__label">카카오톡 알림 받기</span>
+              <p className="settings-row__desc">이벤트 생성·변경 및 마감 하루 전 카카오 채널 메시지를 수신합니다.</p>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={user?.kakaoNotifyEnabled !== false}
+                onChange={handleKakaoToggle}
+                disabled={!user}
               />
               <span className="toggle-slider"></span>
             </label>

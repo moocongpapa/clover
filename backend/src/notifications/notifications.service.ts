@@ -3,6 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { MemberStatus, NotificationType } from '@prisma/client';
 import axios from 'axios';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { addDays, isOfficer, localDayStart } from '../common/utils/group.utils';
 
@@ -19,10 +23,32 @@ const MESSAGE_TEMPLATES: Record<EventNotifyType, (title: string) => string> = {
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
+  private fcmInitialized = false;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) {}
+  ) {
+    this.initializeFcm();
+  }
+
+  private initializeFcm() {
+    const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json');
+    if (fs.existsSync(serviceAccountPath)) {
+      try {
+        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+        initializeApp({
+          credential: cert(serviceAccount),
+        });
+        this.fcmInitialized = true;
+        this.logger.log('FCM (Firebase Admin SDK) initialized successfully.');
+      } catch (err) {
+        this.logger.warn(`Failed to initialize Firebase Admin SDK: ${err}`);
+      }
+    } else {
+      this.logger.log('firebase-service-account.json not found. FCM will run in Mock mode.');
+    }
+  }
 
   async notifyGroupMembers(
     eventId: string,
@@ -331,13 +357,54 @@ export class NotificationsService {
   }
 
   private async sendExternalIfConfigured(
-    user: { id: string; displayName: string; kakaoChannelUserKey: string | null },
+    user: { id: string; displayName: string; kakaoChannelUserKey: string | null; fcmToken?: string | null; kakaoNotifyEnabled?: boolean; pushNotifyEnabled?: boolean },
     message: string,
   ) {
+    // 1. FCM Web Push Notification
+    let fcmSuccess = false;
+    if (user.pushNotifyEnabled !== false && user.fcmToken) {
+      if (this.fcmInitialized) {
+        try {
+          await getMessaging().send({
+            token: user.fcmToken,
+            notification: {
+              title: 'Clover 알림',
+              body: message,
+            },
+            webpush: {
+              notification: {
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/badge.png',
+              },
+            },
+          });
+          this.logger.log(`FCM 알림 발송 성공 (${user.displayName})`);
+          fcmSuccess = true;
+        } catch (err) {
+          this.logger.warn(`FCM 알림 발송 실패 (${user.displayName}): ${err}`);
+        }
+      } else {
+        this.logger.log(`[Mock FCM 알림] ${user.displayName} ← ${message}`);
+        fcmSuccess = true;
+      }
+    }
+
+    // 2. FCM 발송에 성공했다면 카카오톡 알림은 자동으로 생략
+    if (fcmSuccess) {
+      this.logger.log(`FCM 알림 전송 완료로 카카오 알림을 스킵합니다. (${user.displayName})`);
+      return;
+    }
+
+    // 3. KakaoTalk Notification
+    if (user.kakaoNotifyEnabled === false) {
+      this.logger.log(`카카오 알림 수신 거부 상태입니다. (${user.displayName})`);
+      return;
+    }
+
     const channelToken = this.config.get<string>('KAKAO_CHANNEL_ACCESS_TOKEN');
 
     if (!channelToken) {
-      this.logger.log(`[Mock 알림] ${user.displayName} ← ${message}`);
+      this.logger.log(`[Mock 카카오 알림] ${user.displayName} ← ${message}`);
       return;
     }
 
@@ -386,5 +453,23 @@ export class NotificationsService {
     } else {
       this.logger.log(`[Mock 알림] ${user.displayName} ← ${message}`);
     }
+  }
+
+  async sendTestFcm(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return;
+
+    let targetUser = user;
+    if (user.displayName !== '김완석') {
+      const kwsUser = await this.prisma.user.findFirst({
+        where: { displayName: '김완석' },
+      });
+      if (kwsUser) {
+        targetUser = kwsUser;
+      }
+    }
+
+    const message = `[FCM 테스트] 안녕하세요, ${targetUser.displayName}님! Clover 실시간 FCM 알림 테스트 메시지입니다.`;
+    await this.sendExternalIfConfigured(targetUser, message);
   }
 }

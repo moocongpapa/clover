@@ -13,6 +13,7 @@ import {
   setToken,
   type User,
 } from '../api';
+import { requestFcmToken } from '../firebase';
 
 interface AuthContextValue {
   user: User | null;
@@ -48,6 +49,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const syncFcmToken = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    
+    try {
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+      }
+      
+      if (Notification.permission === 'granted') {
+        const token = await requestFcmToken();
+        if (token) {
+          await api.updateFcmToken(token);
+          console.log('FCM token synchronized successfully.');
+        }
+      }
+    } catch (err) {
+      console.warn('FCM token synchronization failed: ', err);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      syncFcmToken();
+    }
+  }, [user]);
 
   const login = async (displayName: string) => {
     const res = await api.devLogin(displayName);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { api, API_BASE } from '../api';
+import { api, API_BASE, type Announcement } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
 import './Chat.css';
@@ -28,12 +28,36 @@ export default function Chat() {
   const queryGroupId = searchParams.get('groupId');
   const [groups, setGroups] = useState<any[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(queryGroupId);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [showNoticePopup, setShowNoticePopup] = useState(false);
 
   useEffect(() => {
     if (queryGroupId) {
       setActiveGroupId(queryGroupId);
     }
   }, [queryGroupId]);
+
+  // Load latest announcement when active group changes
+  useEffect(() => {
+    if (!activeGroupId) {
+      setAnnouncement(null);
+      setShowNoticePopup(false);
+      return;
+    }
+
+    api.listAnnouncements(activeGroupId)
+      .then((res) => {
+        if (res && res.length > 0) {
+          setAnnouncement(res[0]); // Most recent announcement
+        } else {
+          setAnnouncement(null);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setAnnouncement(null);
+      });
+  }, [activeGroupId]);
   const [messages, setMessages] = useState<MessagePayload[]>([]);
   const [inputText, setInputText] = useState('');
   const [loadingRooms, setLoadingRooms] = useState(true);
@@ -67,7 +91,7 @@ export default function Chat() {
     // Load existing messages via REST API
     api.getChatHistory(activeGroupId, 100)
       .then((res) => {
-        setMessages(res.reverse()); // old messages first
+        setMessages(res); // old messages first
         scrollToBottom();
       })
       .catch((err) => console.error(err))
@@ -243,10 +267,16 @@ export default function Chat() {
             </div>
           </header>
 
-          <div className="chat-room-notice-banner">
-            <span className="chat-room-notice-badge">공지</span>
-            <span className="chat-room-notice-text">모임 내 상호존중을 지키며 매너있는 대화를 나누어 주세요.</span>
-          </div>
+          {announcement && (
+            <div 
+              className="chat-room-notice-banner"
+              onClick={() => setShowNoticePopup(true)}
+              style={{ cursor: 'pointer' }}
+            >
+              <span className="chat-room-notice-badge">공지</span>
+              <span className="chat-room-notice-text">{announcement.title}</span>
+            </div>
+          )}
 
           <div className="chat-messages-scroller" ref={scrollerRef}>
             {loadingChats && <p className="chat-loading">채팅 내역을 불러오는 중…</p>}
@@ -374,6 +404,36 @@ export default function Chat() {
               </button>
             </form>
           </div>
+
+          {showNoticePopup && announcement && (
+            <div className="notice-popup-overlay" onClick={() => setShowNoticePopup(false)}>
+              <div className="notice-popup-content-box" onClick={(e) => e.stopPropagation()}>
+                <header className="notice-popup-header">
+                  <h2 className="notice-popup-title">📢 공지사항</h2>
+                  <button className="notice-popup-close-x" onClick={() => setShowNoticePopup(false)}>✕</button>
+                </header>
+                <div className="notice-popup-meta">
+                  <span className="notice-popup-author">{announcement.author.displayName}</span>
+                  <span className="notice-popup-date">
+                    {new Date(announcement.createdAt).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+                <div className="notice-popup-body">
+                  <h3 className="notice-popup-content-title">{announcement.title}</h3>
+                  <p className="notice-popup-text">{announcement.content}</p>
+                </div>
+                <footer className="notice-popup-footer">
+                  <button className="notice-popup-close-btn" onClick={() => setShowNoticePopup(false)}>닫기</button>
+                </footer>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

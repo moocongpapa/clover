@@ -51,6 +51,14 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   isEarlyYear?: boolean | null;
+
+  @IsOptional()
+  @IsBoolean()
+  kakaoNotifyEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  pushNotifyEnabled?: boolean;
 }
 
 export class CreateProfileCardDto {
@@ -71,4 +79,10 @@ export class UpdateProfileCardDto {
   @IsOptional()
   @IsString()
   profileImageUrl?: string | null;
+}
+
+export class UpdateFcmTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  fcmToken!: string;
 }

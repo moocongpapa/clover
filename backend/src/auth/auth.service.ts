@@ -23,6 +23,8 @@ const USER_PROFILE_SELECT = {
   isEarlyYear: true,
   phoneNumber: true,
   bio: true,
+  kakaoNotifyEnabled: true,
+  pushNotifyEnabled: true,
   createdAt: true,
   role: true,
 } as const;
@@ -232,8 +234,22 @@ export class AuthService {
         ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber } : {}),
         ...(dto.gender !== undefined ? { gender: dto.gender } : {}),
         ...(dto.isEarlyYear !== undefined ? { isEarlyYear: dto.isEarlyYear ?? false } : {}),
+        ...(dto.kakaoNotifyEnabled !== undefined ? { kakaoNotifyEnabled: dto.kakaoNotifyEnabled } : {}),
+        ...(dto.pushNotifyEnabled !== undefined ? { pushNotifyEnabled: dto.pushNotifyEnabled } : {}),
       },
       select: USER_PROFILE_SELECT,
+    });
+  }
+
+  async updateFcmToken(userId: string, fcmToken: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { fcmToken },
+      select: {
+        id: true,
+        displayName: true,
+        fcmToken: true,
+      },
     });
   }
 
@@ -322,6 +338,8 @@ export class AuthService {
     birthDate?: Date | string | null;
     phoneNumber?: string | null;
     bio?: string | null;
+    kakaoNotifyEnabled: boolean;
+    pushNotifyEnabled: boolean;
   }) {
     const accessToken = this.jwtService.sign({ sub: user.id });
     return {
@@ -336,6 +354,8 @@ export class AuthService {
         birthDate: user.birthDate ?? null,
         phoneNumber: user.phoneNumber ?? null,
         bio: user.bio ?? null,
+        kakaoNotifyEnabled: user.kakaoNotifyEnabled,
+        pushNotifyEnabled: user.pushNotifyEnabled,
       },
     };
   }

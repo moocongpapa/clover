@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Patch, Post, Delete, UseGuards, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { DevLoginDto, KakaoCallbackDto, UpdateProfileDto, CreateProfileCardDto, UpdateProfileCardDto } from './dto/auth.dto';
+import { DevLoginDto, KakaoCallbackDto, UpdateProfileDto, CreateProfileCardDto, UpdateProfileCardDto, UpdateFcmTokenDto } from './dto/auth.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
@@ -34,6 +34,12 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateProfileDto) {
     return this.authService.updateProfile(user.id, dto);
+  }
+
+  @Patch('me/fcm-token')
+  @UseGuards(JwtAuthGuard)
+  updateFcmToken(@CurrentUser() user: AuthUser, @Body() dto: UpdateFcmTokenDto) {
+    return this.authService.updateFcmToken(user.id, dto.fcmToken);
   }
 
   @Get('me/profile-cards')

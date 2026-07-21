@@ -21,6 +21,8 @@ export interface User {
   phoneNumber?: string | null;
   bio?: string | null;
   role?: string;
+  kakaoNotifyEnabled?: boolean;
+  pushNotifyEnabled?: boolean;
 }
 
 export interface UserProfileCard {
@@ -152,6 +154,8 @@ export const api = {
     isEarlyYear?: boolean | null;
     phoneNumber?: string | null;
     gender?: 'MALE' | 'FEMALE' | null;
+    kakaoNotifyEnabled?: boolean | null;
+    pushNotifyEnabled?: boolean | null;
   }) =>
     request<User>('/auth/me', {
       method: 'PATCH',
@@ -339,6 +343,15 @@ export const api = {
 
   getChatHistory: (groupId: string, limit = 50) =>
     request<any[]>(`/groups/${groupId}/chats?limit=${limit}`),
+  updateFcmToken: (fcmToken: string) =>
+    request<any>('/auth/me/fcm-token', {
+      method: 'PATCH',
+      body: JSON.stringify({ fcmToken }),
+    }),
+  testFcm: () =>
+    request<{ ok: boolean }>('/notifications/dev/test-fcm', {
+      method: 'POST',
+    }),
 };
 
 export type VoteChoice = 'ATTEND' | 'ABSENT' | 'LATE';
