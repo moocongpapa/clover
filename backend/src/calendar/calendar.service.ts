@@ -29,6 +29,16 @@ export class CalendarService {
             profileImageUrl: true,
           },
         },
+        createdBy: {
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
+        },
         votes: {
           where: { userId },
           select: { choice: true },
@@ -99,6 +109,7 @@ export class CalendarService {
       location: event.location,
       status: event.status,
       group: event.group,
+      createdBy: event.createdBy,
       myVote: event.votes[0]?.choice ?? null,
       voteCount: event._count.votes,
       voteCounts: countsByEvent.get(event.id)!,

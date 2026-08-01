@@ -10,6 +10,7 @@ import CreateGroup from './pages/CreateGroup';
 import EditGroup from './pages/EditGroup';
 import GroupDetail from './pages/GroupDetail';
 import CreateEvent from './pages/CreateEvent';
+import EditEvent from './pages/EditEvent';
 import EventDetail from './pages/EventDetail';
 import Calendar from './pages/Calendar';
 import InviteJoin from './pages/InviteJoin';
@@ -93,6 +94,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <EventDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="events/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <EditEvent />
                 </ProtectedRoute>
               }
             />

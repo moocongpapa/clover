@@ -1,5 +1,6 @@
 .edit-profile-page {
-  max-width: 560px;
+  max-width: 800px;
+  width: 100%;
   margin: 0 auto;
   padding: 16px;
   background: var(--background);
@@ -380,7 +381,8 @@ input:checked + .toggle-switch-slider:before {
 }
 
 .phone-change-modal-content {
-  max-width: 560px;
+  max-width: 800px;
+  width: 100%;
   margin: 0 auto;
   height: 100%;
   padding: 16px;

@@ -9,7 +9,8 @@ NC='\033[0m' # 색상 초기화
 echo -e "${BLUE}=== Clover 웹 서비스 시작 스크립트 ===${NC}"
 
 # 1. 포트 확인 및 기존 프로세스 정리
-echo -e "${YELLOW}[1/4] 기존 실행 중인 백엔드(3500) 및 프론트엔드(5174) 포트 정리 중...${NC}"
+echo -e "${YELLOW}[1/4] 기존 실행 중인 백엔드(3000/3500) 및 프론트엔드(5174) 포트 정리 중...${NC}"
+lsof -ti :3000 | xargs kill -9 2>/dev/null
 lsof -ti :3500 | xargs kill -9 2>/dev/null
 lsof -ti :5174 | xargs kill -9 2>/dev/null
 

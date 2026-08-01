@@ -102,6 +102,14 @@
   gap: 10px;
 }
 
+@media (min-width: 768px) {
+  .group-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 16px;
+  }
+}
+
 .group-card {
   display: block;
   padding: 12px 14px;
@@ -294,7 +302,9 @@
 /* ── Forms ── */
 
 .form-card {
-  max-width: 560px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
   padding: var(--space-5);
   background: var(--surface);
   border: 1px solid var(--border);

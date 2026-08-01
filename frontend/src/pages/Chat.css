@@ -1,18 +1,19 @@
 /* ── Chat Page Layout ── */
 .chat-container {
   position: fixed;
-  top: var(--header-height);
-  bottom: var(--tab-bar-height);
+  top: var(--header-height, 52px);
+  bottom: var(--tab-bar-height, 48px);
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 640px;
+  max-width: 768px;
   display: flex;
   flex-direction: column;
   background: var(--grey-50);
   z-index: 50;
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
 }
 
 /* Chat Rooms List */

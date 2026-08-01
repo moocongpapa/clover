@@ -478,7 +478,7 @@ export interface Event {
 }
 
 export interface EventDetail extends Event {
-  group: { id: string; name: string };
+  group: { id: string; name: string; profileImageUrl?: string | null };
 }
 
 export interface CreateEventInput {
@@ -526,6 +526,7 @@ export interface CalendarEvent {
     category: string;
     profileImageUrl?: string | null;
   };
+  createdBy?: User;
   myVote: VoteChoice | null;
   voteCount: number;
   voteCounts: { ATTEND: number; ABSENT: number; LATE: number };
@@ -622,11 +623,7 @@ export function groupVotesByChoice(votes: VoteResults['votes']) {
   return VOTE_CHOICES.map((choice) => ({
     choice,
     label: VOTE_LABELS[choice],
-    voters: votes
-      .filter((v) => v.choice === choice)
-      .sort((a, b) =>
-        a.user.displayName.localeCompare(b.user.displayName, 'ko'),
-      ),
+    voters: votes.filter((v) => v.choice === choice),
   }));
 }
 

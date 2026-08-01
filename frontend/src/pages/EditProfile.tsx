@@ -24,7 +24,7 @@ interface ScrollPickerProps<T> {
 
 function ScrollPicker<T extends string | number>({ options, value, onChange, formatter }: ScrollPickerProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -239,18 +239,6 @@ export default function EditProfile() {
   const getLast8Digits = (phone: string) => {
     const digits = getDigitsOnly(phone);
     return digits.slice(-8);
-  };
-
-  const formatTempPhoneDisplay = (rawDigits: string) => {
-    const clean = rawDigits.replace(/\D/g, '');
-    if (clean.length === 0) return '010-____-____';
-    if (clean.length <= 4) {
-      const displayPart = clean.padEnd(4, '_');
-      return `010-${displayPart.slice(0, 4)}-____`;
-    }
-    const part1 = clean.slice(0, 4);
-    const part2 = clean.slice(4).padEnd(4, '_');
-    return `010-${part1}-${part2}`;
   };
 
   const formatInputPhone = (rawDigits: string) => {

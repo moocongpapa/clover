@@ -230,13 +230,21 @@ export default function EventDetailPage() {
             )}
           </h1>
           {event.status === 'ACTIVE' && (
-            <button
-              type="button"
-              className="btn-danger event-detail-header__delete"
-              onClick={handleCancel}
-            >
-              일정 삭제
-            </button>
+            <div className="event-detail-header__actions">
+              <Link
+                to={`/events/${event.id}/edit`}
+                className="btn-secondary event-detail-header__edit"
+              >
+                일정 수정
+              </Link>
+              <button
+                type="button"
+                className="btn-danger event-detail-header__delete"
+                onClick={handleCancel}
+              >
+                일정 삭제
+              </button>
+            </div>
           )}
         </div>
         <p className="event-detail-header__desc">{event.description}</p>
@@ -246,96 +254,93 @@ export default function EventDetailPage() {
             {formatEventSchedule(event.date, event.startTime, event.endTime)}
           </p>
           <p className="event-detail-meta__line">{event.location}</p>
+          {event.createdBy && (
+            <div className="event-detail-creator">
+              <span className="event-detail-creator__label">등록자:</span>
+              <div className="event-detail-creator__user">
+                {event.createdBy.profileImageUrl ? (
+                  <img
+                    src={event.createdBy.profileImageUrl}
+                    alt=""
+                    className="event-detail-creator__avatar"
+                  />
+                ) : (
+                  <span className="event-detail-creator__avatar-fallback">
+                    {event.createdBy.displayName[0]}
+                  </span>
+                )}
+                <span className="event-detail-creator__name">
+                  {formatMemberDisplayName(event.createdBy)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
       <section className="vote-section">
         <div className="vote-section__head">
-          <h2>참석 투표</h2>
-          {myChoice && (
-            <span className={`vote-my-badge vote-my-badge--${myChoice.toLowerCase()}`}>
-              {VOTE_LABELS[myChoice]}
-            </span>
-          )}
+          <div className="vote-section__head-title">
+            <h2>참석 투표</h2>
+            {myChoice && (
+              <span className={`vote-my-badge vote-my-badge--${myChoice.toLowerCase()}`}>
+                {VOTE_LABELS[myChoice]}
+              </span>
+            )}
+          </div>
+          <div className="vote-section__head-status">
+            <h3>투표 현황</h3>
+            <span className="vote-section__total">{votes.votes.length}명</span>
+          </div>
         </div>
 
         {!votes.myVote && !locked && (
           <p className="vote-hint">참석 여부를 선택해 주세요</p>
         )}
+        {locked && <p className="vote-locked-banner">{voteLockMessage}</p>}
 
-        {locked ? (
-          <p className="vote-locked-banner">{voteLockMessage}</p>
-        ) : (
-          <div className="vote-segment" role="group" aria-label="참석 투표">
-            {(['ATTEND', 'ABSENT', 'LATE'] as VoteChoice[]).map((c) => (
-              <button
-                key={c}
-                type="button"
-                className={`vote-segment__btn vote-segment__btn--${c.toLowerCase()}${
-                  myChoice === c ? ' is-selected' : ''
-                }`}
-                disabled={voting}
-                onClick={() => handleVote(c)}
-              >
-                <span className="vote-segment__label">{VOTE_LABELS[c]}</span>
-                <span className="vote-segment__count">({votes.counts[c]})</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {locked && (
-          <div className="vote-segment vote-segment--readonly" aria-hidden>
-            {(['ATTEND', 'ABSENT', 'LATE'] as VoteChoice[]).map((c) => (
-              <div
-                key={c}
-                className={`vote-segment__btn vote-segment__btn--${c.toLowerCase()}${
-                  myChoice === c ? ' is-selected' : ''
-                }`}
-              >
-                <span className="vote-segment__label">{VOTE_LABELS[c]}</span>
-                <span className="vote-segment__count">({votes.counts[c]})</span>
+        <div className="vote-row-pairs">
+          {votesByChoice.map(({ choice, label, voters }) => (
+            <div key={choice} className="vote-row-pair">
+              <div className="vote-row-pair__left">
+                <button
+                  type="button"
+                  className={`vote-segment__btn vote-segment__btn--${choice.toLowerCase()}${
+                    myChoice === choice ? ' is-selected' : ''
+                  }`}
+                  disabled={voting || locked}
+                  onClick={() => handleVote(choice)}
+                >
+                  <span className="vote-segment__label">{label}</span>
+                  <span className="vote-segment__count">({votes.counts[choice]})</span>
+                </button>
               </div>
-            ))}
-          </div>
-        )}
 
-        <div className="vote-section__subhead">
-          <h3>투표 현황</h3>
-          <span className="vote-section__total">{votes.votes.length}명</span>
+              <div className="vote-row-pair__right">
+                <div className={`vote-status-block vote-status-block--${choice.toLowerCase()}`}>
+                  <div className="vote-status-block__content">
+                    {voters.length > 0 ? (
+                      <div className="vote-voter-list">
+                        {voters.map((v) => (
+                          <Link to={`/profile/${v.user.id}`} key={v.user.id} className="vote-voter-chip">
+                            {v.user.profileImageUrl ? (
+                              <img src={v.user.profileImageUrl} alt="" className="vote-voter-chip__avatar" />
+                            ) : (
+                              <span className="vote-voter-chip__avatar-fallback">{v.user.displayName[0]}</span>
+                            )}
+                            <span className="vote-voter-chip__name">{formatMemberDisplayName(v.user)}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="vote-voter-empty-text">투표한 회원이 없습니다</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-
-        {votes.votes.length === 0 ? (
-          <p className="vote-empty">아직 투표한 회원이 없습니다</p>
-        ) : (
-          <div className="vote-status-container">
-            {votesByChoice.map(({ choice, label, voters }) => (
-              <div key={choice} className={`vote-status-block vote-status-block--${choice.toLowerCase()}`}>
-                <div className="vote-status-block__header">
-                  <span className="vote-status-block__badge">{label} {voters.length}</span>
-                </div>
-                <div className="vote-status-block__content">
-                  {voters.length > 0 ? (
-                    <div className="vote-voter-list">
-                      {voters.map((v) => (
-                        <Link to={`/profile/${v.user.id}`} key={v.user.id} className="vote-voter-chip">
-                          {v.user.profileImageUrl ? (
-                            <img src={v.user.profileImageUrl} alt="" className="vote-voter-chip__avatar" />
-                          ) : (
-                            <span className="vote-voter-chip__avatar-fallback">{v.user.displayName[0]}</span>
-                          )}
-                          <span className="vote-voter-chip__name">{formatMemberDisplayName(v.user)}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="vote-voter-empty-text">투표한 회원이 없습니다</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="vote-section__subhead vote-section__subhead--nonvoters">
           <h3>미투표</h3>

@@ -29,7 +29,7 @@ export class EventsService {
   async listByGroup(groupId: string, userId: string) {
     await this.groupsService.requireApprovedMember(groupId, userId);
 
-    return this.prisma.event.findMany({
+    const events = await this.prisma.event.findMany({
       where: { groupId },
       include: {
         createdBy: {
@@ -39,6 +39,13 @@ export class EventsService {
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     });
+
+    const creators = events.map((e) => e.createdBy).filter(Boolean);
+    if (creators.length > 0) {
+      await this.groupsService.resolveGroupProfilesForUsers(groupId, creators);
+    }
+
+    return events;
   }
 
   async getById(eventId: string, userId: string) {
@@ -465,8 +472,9 @@ export class EventsService {
       userId,
     );
 
-    if (!isOfficer(membership.role)) {
-      throw new ForbiddenException('운영진만 이 작업을 수행할 수 있습니다.');
+    const isCreator = event.createdById === userId;
+    if (!isOfficer(membership.role) && !isCreator) {
+      throw new ForbiddenException('운영진 또는 작성자만 이 작업을 수행할 수 있습니다.');
     }
 
     return event;

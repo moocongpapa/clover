@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, type RegionSido, type RegionsData } from '../api';
+import { api, type RegionSido } from '../api';
 import './RegionSelector.css';
 
 export interface RegionSelection {
@@ -28,15 +28,13 @@ export default function RegionSelector({
   required = true,
 }: RegionSelectorProps) {
   const [tree, setTree] = useState<RegionSido[]>([]);
-  const [meta, setMeta] = useState<RegionsData['meta'] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .getRegions()
-      .then((data) => {
-        setTree(data.tree);
-        setMeta(data.meta);
+      .then((res) => {
+        setTree(res.tree);
       })
       .finally(() => setLoading(false));
   }, []);

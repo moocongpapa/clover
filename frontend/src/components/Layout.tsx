@@ -38,59 +38,62 @@ export default function Layout() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <Link to="/" className="brand">
-          <span className="brand-mark">
-            <CloverLogo size={22} />
-          </span>
-          <span className="brand-text">Clover</span>
-        </Link>
+        <div className="site-header-inner">
+          <Link to="/" className="brand">
+            <span className="brand-mark">
+              <CloverLogo size={22} />
+            </span>
+            <span className="brand-text">Clover</span>
+          </Link>
 
-        {user && (
-          <nav className="site-nav site-nav--desktop" aria-label="주요 메뉴">
-            <NavLink to="/" end className={navClass}>
-              홈
-            </NavLink>
-            <NavLink to="/chat" className={navClass}>
-              채팅
-            </NavLink>
-          </nav>
-        )}
+          {user && (
+            <nav className="site-nav site-nav--desktop" aria-label="주요 메뉴">
+              <NavLink to="/" end className={navClass}>
+                홈
+              </NavLink>
+              <NavLink to="/chat" className={navClass}>
+                채팅
+              </NavLink>
+            </nav>
+          )}
 
-        <div className="header-actions">
-          {user ? (
-            <>
-              <NotificationBell />
-              <div className="profile-dropdown-container">
-                <button
-                  type="button"
-                  className="user-chip-btn"
-                  onClick={toggleDropdown}
-                  aria-expanded={dropdownOpen}
-                  aria-label="사용자 메뉴"
-                >
-                  {user.profileImageUrl ? (
-                    <img src={user.profileImageUrl} alt="" />
-                  ) : (
-                    <span className="avatar-fallback">
-                      {user.displayName[0]}
-                    </span>
-                  )}
-                  <span className="user-chip__name">{user.displayName}</span>
-                  <span className={`dropdown-arrow ${dropdownOpen ? 'is-open' : ''}`}>▼</span>
-                </button>
+          <div className="header-actions">
+            {user ? (
+              <>
+                <NotificationBell />
+                <div className="profile-dropdown-container">
+                  <button
+                    type="button"
+                    className="user-chip-btn"
+                    onClick={toggleDropdown}
+                    aria-expanded={dropdownOpen}
+                    aria-label="사용자 메뉴"
+                  >
+                    {user.profileImageUrl ? (
+                      <img src={user.profileImageUrl} alt="" />
+                    ) : (
+                      <span className="avatar-fallback">
+                        {user.displayName[0]}
+                      </span>
+                    )}
+                    <span className="user-chip__name">{user.displayName}</span>
+                    <span className={`dropdown-arrow ${dropdownOpen ? 'is-open' : ''}`}>▼</span>
+                  </button>
 
-                {dropdownOpen && (
-                  <div className="profile-dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                    <div className="menu-group">
-                      <Link to="/profile" className="menu-item" onClick={() => setDropdownOpen(false)}>
-                        내 정보
-                      </Link>
-                      <Link to="/settings" className="menu-item" onClick={() => setDropdownOpen(false)}>
-                        설정
-                      </Link>
-                    </div>
-                    <div className="menu-divider" />
-                    <div className="menu-group">
+                  {dropdownOpen && (
+                    <div className="profile-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                      <div className="menu-group">
+                        <Link to="/profile" className="menu-item" onClick={() => setDropdownOpen(false)}>
+                          내 정보
+                        </Link>
+                        <Link to="/settings" className="menu-item" onClick={() => setDropdownOpen(false)}>
+                          설정
+                        </Link>
+                        <Link to="/announcements" className="menu-item" onClick={() => setDropdownOpen(false)}>
+                          공지사항
+                        </Link>
+                      </div>
+                      <div className="menu-divider" />
                       <button
                         type="button"
                         className="menu-item menu-item--logout"
@@ -102,15 +105,15 @@ export default function Layout() {
                         로그아웃
                       </button>
                     </div>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <Link to="/login" className="btn-primary btn-header-cta">
-              시작하기
-            </Link>
-          )}
+                  )}
+                </div>
+              </>
+            ) : (
+              <Link to="/login" className="btn-primary btn-header-cta">
+                시작하기
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
