@@ -109,6 +109,9 @@ async function request<T>(
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      clearToken();
+    }
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? `요청 실패 (${res.status})`);
   }

@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
-import { api, isProfileComplete, type User } from '../api';
+import { api, clearToken, isProfileComplete, type User } from '../api';
 import { useAuth } from '../context/AuthContext';
 import './EditProfile.css';
 import './Groups.css';
@@ -165,7 +165,11 @@ export default function EditProfile() {
           setBirthDayVal(1);
         }
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        clearToken();
+        setError(e.message);
+        navigate('/login', { replace: true });
+      });
   };
 
   useEffect(() => {
@@ -362,7 +366,37 @@ export default function EditProfile() {
   };
 
   if (error && !profile) {
-    return <p className="form-error">{error}</p>;
+    return (
+      <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+        <p style={{ color: 'var(--ink-dark)', marginBottom: '8px', fontSize: '16px', fontWeight: '700' }}>
+          로그인 정보가 만료되었습니다
+        </p>
+        <p style={{ color: 'var(--ink-muted)', marginBottom: '24px', fontSize: '13px' }}>
+          원활한 서비스 이용을 위해 카카오 계정으로 다시 로그인해 주세요.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            navigate('/login', { replace: true });
+          }}
+          style={{
+            background: '#fee500',
+            color: '#191919',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '14px 28px',
+            fontWeight: '700',
+            fontSize: '15px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+          }}
+        >
+          카카오로 로그인하기
+        </button>
+      </div>
+    );
   }
 
   if (!profile) {
