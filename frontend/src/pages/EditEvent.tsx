@@ -1,12 +1,36 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import BackButton from '../components/BackButton';
 import '../pages/Groups.css';
 
+// 30-minute interval time options from 00:00 to 23:30
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const hour = Math.floor(i / 2);
+  const min = i % 2 === 0 ? '00' : '30';
+  const val = `${String(hour).padStart(2, '0')}:${min}`;
+  const period = hour < 12 ? '오전' : '오후';
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  const label = `${period} ${String(displayHour).padStart(2, '0')}:${min}`;
+  return { val, label };
+});
+
+function formatDateWithDay(dateStr: string) {
+  if (!dateStr) return '날짜를 선택해 주세요';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    return `${parts[0]}년 ${parts[1]}월 ${parts[2]}일 (${days[d.getDay()]})`;
+  }
+  return dateStr;
+}
+
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -14,7 +38,7 @@ export default function EditEvent() {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('19:00');
-  const [endTime, setEndTime] = useState('');
+  const [endTime, setEndTime] = useState('21:00');
   const [eventLocation, setEventLocation] = useState('');
   const [description, setDescription] = useState('');
 
@@ -29,6 +53,13 @@ export default function EditEvent() {
     { label: '1시간 전', value: 1 },
   ];
 
+  const quickTimePresets = [
+    { label: '저녁 7:00 ~ 9:00', start: '19:00', end: '21:00' },
+    { label: '저녁 8:00 ~ 10:00', start: '20:00', end: '22:00' },
+    { label: '오전 10:00 ~ 12:00', start: '10:00', end: '12:00' },
+    { label: '오후 2:00 ~ 4:00', start: '14:00', end: '16:00' },
+  ];
+
   const handleOffsetToggle = (val: number) => {
     setSelectedOffsets((prev) =>
       prev.includes(val) ? prev.filter((o) => o !== val) : [...prev, val],
@@ -41,7 +72,6 @@ export default function EditEvent() {
       .getEvent(id)
       .then((ev) => {
         setTitle(ev.title);
-        // format ISO date string to YYYY-MM-DD for input[type="date"]
         const d = new Date(ev.date);
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -66,6 +96,27 @@ export default function EditEvent() {
         setFetching(false);
       });
   }, [id]);
+
+  const handleStartTimeChange = (newStart: string) => {
+    setStartTime(newStart);
+    const [h, m] = newStart.split(':').map(Number);
+    const endH = (h + 2) % 24;
+    setEndTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+  };
+
+  const calculateDuration = () => {
+    if (!startTime || !endTime) return null;
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const diff = (eh * 60 + em) - (sh * 60 + sm);
+    if (diff <= 0) return null;
+    const hours = Math.floor(diff / 60);
+    const mins = diff % 60;
+    if (mins === 0) return `${hours}시간`;
+    return `${hours}시간 ${mins}분`;
+  };
+
+  const durationText = calculateDuration();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -160,77 +211,154 @@ export default function EditEvent() {
 
           {/* Date */}
           <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
-              날짜 <span style={{ color: '#ef4444' }}>*</span>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '8px' }}>
+              일자 (날짜) <span style={{ color: '#ef4444' }}>*</span>
             </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
+            <div
+              onClick={() => dateInputRef.current?.showPicker?.()}
               style={{
-                width: '100%',
-                height: '46px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                height: '48px',
                 padding: '0 14px',
                 background: 'var(--grey-50)',
                 border: '1.5px solid var(--border)',
                 borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: '600',
-                color: 'var(--ink-dark)',
-                outline: 'none'
+                cursor: 'pointer',
               }}
-            />
+            >
+              <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--ink-dark)' }}>
+                {formatDateWithDay(date)}
+              </span>
+              <span style={{ fontSize: '18px' }}>📅</span>
+              <input
+                ref={dateInputRef}
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+              />
+            </div>
           </div>
 
           <div style={{ height: '1px', background: 'var(--border-subtle, #f1f5f9)' }} />
 
-          {/* Time (Start & End) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
-                시작 시간 <span style={{ color: '#ef4444' }}>*</span>
+          {/* Time (30-Minute Step Selector & Quick Presets) */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)' }}>
+                시간 (30분 단위) <span style={{ color: '#ef4444' }}>*</span>
               </label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  height: '46px',
-                  padding: '0 10px',
-                  background: 'var(--grey-50)',
-                  border: '1.5px solid var(--border)',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: 'var(--ink-dark)',
-                  outline: 'none'
-                }}
-              />
+              {durationText && (
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: 'var(--brand-primary)',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  padding: '2px 8px',
+                  borderRadius: '6px'
+                }}>
+                  ⏱️ 총 {durationText} 진행
+                </span>
+              )}
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
-                종료 시간
-              </label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: '46px',
-                  padding: '0 10px',
-                  background: 'var(--grey-50)',
-                  border: '1.5px solid var(--border)',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: 'var(--ink-dark)',
-                  outline: 'none'
-                }}
-              />
+
+            {/* Quick Time Presets */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+              {quickTimePresets.map((p) => {
+                const isSelected = startTime === p.start && endTime === p.end;
+                return (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => {
+                      setStartTime(p.start);
+                      setEndTime(p.end);
+                    }}
+                    style={{
+                      padding: '4px 10px',
+                      background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'var(--grey-100)',
+                      color: isSelected ? '#10b981' : 'var(--ink-muted)',
+                      border: `1px solid ${isSelected ? '#10b981' : 'transparent'}`,
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 30-Minute Dropdown Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '8px' }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
+                  시작 시간
+                </span>
+                <select
+                  value={startTime}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    height: '48px',
+                    padding: '0 10px',
+                    background: 'var(--grey-50)',
+                    border: '1.5px solid var(--border)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    color: 'var(--ink-dark)',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {TIME_OPTIONS.map((opt) => (
+                    <option key={opt.val} value={opt.val}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <span style={{ fontSize: '16px', color: 'var(--ink-muted)', fontWeight: 'bold', paddingTop: '16px' }}>
+                ~
+              </span>
+
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
+                  종료 시간
+                </span>
+                <select
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '48px',
+                    padding: '0 10px',
+                    background: 'var(--grey-50)',
+                    border: '1.5px solid var(--border)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    color: 'var(--ink-dark)',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">미정 (종료 시간 없음)</option>
+                  {TIME_OPTIONS.map((opt) => (
+                    <option key={opt.val} value={opt.val}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>
