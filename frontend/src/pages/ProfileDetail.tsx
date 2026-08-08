@@ -12,7 +12,10 @@ export default function ProfileDetail() {
   const [showFullPhoto, setShowFullPhoto] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || id === 'edit') {
+      navigate('/profile/edit', { replace: true });
+      return;
+    }
     setLoading(true);
     api
       .getUser(id)
@@ -24,7 +27,7 @@ export default function ProfileDetail() {
         setError(e.message || '프로필을 불러오지 못했습니다.');
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, navigate]);
 
   useEffect(() => {
     if (!showFullPhoto) return;
@@ -43,11 +46,48 @@ export default function ProfileDetail() {
 
   if (error || !profile) {
     return (
-      <div className="profile-detail-error">
-        <p className="form-error">{error || '사용자를 찾을 수 없습니다.'}</p>
-        <button type="button" className="btn-outline" onClick={() => navigate(-1)}>
-          뒤로가기
-        </button>
+      <div className="profile-detail-error" style={{ textAlign: 'center', padding: '60px 24px' }}>
+        <p className="form-error" style={{ fontSize: '16px', marginBottom: '20px' }}>
+          {error || '존재하지 않는 회원입니다.'}
+        </p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => navigate('/')}
+            style={{
+              background: 'var(--brand-primary)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px 20px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            홈으로 이동
+          </button>
+          <button
+            type="button"
+            className="btn-outline"
+            onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              navigate('/login');
+            }}
+            style={{
+              background: '#fee500',
+              color: '#191919',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px 20px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            }}
+          >
+            카카오로 시작하기
+          </button>
+        </div>
       </div>
     );
   }
