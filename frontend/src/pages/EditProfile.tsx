@@ -433,14 +433,6 @@ export default function EditProfile() {
           {saveStatus === 'saved' && (
             <span style={{ fontSize: '12px', color: 'var(--brand-primary)', fontWeight: '700' }}>저장됨 ✓</span>
           )}
-          <button
-            type="button"
-            className="confirm-btn"
-            onClick={() => (isFirstOnboarding ? handleComplete() : navigate(-1))}
-            disabled={loading}
-          >
-            {isFirstOnboarding ? '완료' : '닫기'}
-          </button>
         </div>
       </div>
 
@@ -717,6 +709,41 @@ export default function EditProfile() {
             />
             <p className="form-hint">{bio.length}/500</p>
           </div>
+        </div>
+
+        {/* Bottom Center Complete Button */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '24px 16px 48px 16px',
+          width: '100%',
+        }}>
+          <button
+            type="button"
+            onClick={() => handleComplete()}
+            disabled={loading}
+            style={{
+              width: '100%',
+              maxWidth: '360px',
+              height: '50px',
+              background: 'var(--brand-primary)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(34, 197, 94, 0.28)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {loading ? '저장 중…' : '완료'}
+          </button>
         </div>
       </form>
     </div>
