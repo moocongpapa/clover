@@ -107,11 +107,13 @@ export default function EditProfile() {
       return () => clearTimeout(timer);
     }
   }, [error]);
-  const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [removeImage, setRemoveImage] = useState(false);
 
+  const [loading, setLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [displayNameVal, setDisplayNameVal] = useState('');
 
   // Profile data states (defaults to 1995-01-01 if empty)
@@ -141,6 +143,9 @@ export default function EditProfile() {
           setPreviewUrl(me.profileImageUrl);
         }
         setPhoneNumberVal(me.phoneNumber ?? '');
+        if (me.phoneNumber) {
+          setTempPhone(me.phoneNumber.replace(/\D/g, '').slice(-8));
+        }
         setGenderVal(me.gender ?? '');
         setIsEarlyYearVal(me.isEarlyYear ?? false);
 
@@ -167,17 +172,50 @@ export default function EditProfile() {
     loadData();
   }, []);
 
-  const handleImageChange = (file: File | null) => {
-    if (imageFile && previewUrl?.startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrl);
+  // Real-time auto-saving helper
+  const autoSave = async (overrides?: Partial<Parameters<typeof api.updateProfile>[0]>) => {
+    if (!profile) return;
+
+    const trimmedName = overrides?.displayName !== undefined ? overrides.displayName : displayNameVal.trim();
+    const by = overrides?.birthYear !== undefined ? overrides.birthYear : (birthYearVal ? Number(birthYearVal) : null);
+    const early = overrides?.isEarlyYear !== undefined ? overrides.isEarlyYear : isEarlyYearVal;
+    const g = overrides?.gender !== undefined ? overrides.gender : (genderVal || null);
+    const phone = overrides?.phoneNumber !== undefined ? overrides.phoneNumber : phoneNumberVal.trim();
+    const b = overrides?.bio !== undefined ? overrides.bio : (bio.trim() || null);
+
+    let bd = overrides?.birthDate;
+    if (bd === undefined && birthYearVal && birthMonthVal && birthDayVal) {
+      bd = new Date(Date.UTC(Number(birthYearVal), Number(birthMonthVal) - 1, Number(birthDayVal), 12, 0, 0)).toISOString();
     }
+
+    setSaveStatus('saving');
+    try {
+      const updated = await api.updateProfile({
+        displayName: trimmedName || profile.displayName,
+        ...(overrides?.profileImageUrl !== undefined ? { profileImageUrl: overrides.profileImageUrl } : {}),
+        bio: b,
+        birthYear: by,
+        birthDate: bd ?? null,
+        isEarlyYear: early,
+        phoneNumber: phone || null,
+        gender: g,
+      });
+      updateUser(updated);
+      setProfile(updated);
+      setSaveStatus('saved');
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+      return updated;
+    } catch (err) {
+      console.error('Auto-save error:', err);
+      setSaveStatus('idle');
+    }
+  };
+
+  const handleImageChange = async (file: File | null) => {
     if (!file) {
-      setImageFile(null);
-      if (!removeImage && profile?.profileImageUrl) {
-        setPreviewUrl(profile.profileImageUrl);
-      } else {
-        setPreviewUrl(null);
-      }
+      setPreviewUrl(null);
+      await autoSave({ profileImageUrl: null });
       return;
     }
     if (!file.type.startsWith('image/')) {
@@ -189,12 +227,69 @@ export default function EditProfile() {
       return;
     }
     setError('');
-    setRemoveImage(false);
-    setImageFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    setLoading(true);
+    try {
+      const uploaded = await api.uploadProfileImage(file);
+      setPreviewUrl(uploaded.url);
+      await autoSave({ profileImageUrl: uploaded.url });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '이미지 업로드 실패');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = async (e?: FormEvent) => {
+  const handleNameChange = (newName: string) => {
+    setDisplayNameVal(newName);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      if (newName.trim()) {
+        autoSave({ displayName: newName.trim() });
+      }
+    }, 600);
+  };
+
+  const handleBioChange = (newBio: string) => {
+    setBio(newBio);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      autoSave({ bio: newBio.trim() || null });
+    }, 600);
+  };
+
+  const handleDateChange = (newY: number, newM: number, newD: number, newEarly = isEarlyYearVal) => {
+    setBirthYearVal(newY);
+    setBirthMonthVal(newM);
+    setBirthDayVal(newD);
+    setIsEarlyYearVal(newEarly);
+    const iso = new Date(Date.UTC(newY, newM - 1, newD, 12, 0, 0)).toISOString();
+    autoSave({ birthYear: newY, birthDate: iso, isEarlyYear: newEarly });
+  };
+
+  const handleGenderChange = (val: 'MALE' | 'FEMALE') => {
+    setGenderVal(val);
+    autoSave({ gender: val });
+  };
+
+  const handlePhoneInputChange = (val: string) => {
+    let digits = val.replace(/\D/g, '');
+    if (digits.startsWith('010')) {
+      digits = digits.slice(3);
+    }
+    if (digits.length <= 8) {
+      setTempPhone(digits);
+      if (digits.length === 8) {
+        const formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
+        setPhoneNumberVal(formatted);
+        autoSave({ phoneNumber: formatted });
+      } else {
+        setPhoneNumberVal('');
+      }
+    }
+  };
+
+  // Header confirm / complete button (validates mandatory fields)
+  const handleComplete = async (e?: FormEvent) => {
     if (e) e.preventDefault();
     if (!profile) return;
 
@@ -225,39 +320,11 @@ export default function EditProfile() {
     }
 
     setLoading(true);
-    setError('');
     try {
-      let profileImageUrl: string | null | undefined = undefined;
-      if (imageFile) {
-        const uploaded = await api.uploadProfileImage(imageFile);
-        profileImageUrl = uploaded.url;
-      } else if (removeImage) {
-        profileImageUrl = null;
+      const updated = await autoSave();
+      if (updated) {
+        navigate('/', { replace: true });
       }
-
-      // Construct UTC ISO birthDate
-      const year = Number(birthYearVal);
-      const month = Number(birthMonthVal) - 1;
-      const day = Number(birthDayVal);
-      const constructedBirthDate = new Date(Date.UTC(year, month, day, 12, 0, 0)).toISOString();
-
-      let formattedPhone = phoneNumberVal.trim();
-      if (!formattedPhone.startsWith('010') && cleanPhone.length === 8) {
-        formattedPhone = `010-${cleanPhone.slice(0, 4)}-${cleanPhone.slice(4)}`;
-      }
-
-      const updated = await api.updateProfile({
-        displayName: trimmedName,
-        ...(profileImageUrl !== undefined ? { profileImageUrl } : {}),
-        bio: bio.trim() || null,
-        birthYear: year,
-        birthDate: constructedBirthDate,
-        isEarlyYear: isEarlyYearVal,
-        phoneNumber: formattedPhone,
-        gender: genderVal,
-      });
-      updateUser(updated);
-      navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 실패');
     } finally {
@@ -265,7 +332,6 @@ export default function EditProfile() {
     }
   };
 
-  // Format date display
   const formatBirthDisplay = () => {
     if (birthYearVal && birthMonthVal && birthDayVal) {
       return `${isEarlyYearVal ? '빠른 ' : ''}${birthYearVal}년 ${birthMonthVal}월 ${birthDayVal}일`;
@@ -281,18 +347,9 @@ export default function EditProfile() {
       if (!birthYearVal) setBirthYearVal(1995);
       if (!birthMonthVal) setBirthMonthVal(1);
       if (!birthDayVal) setBirthDayVal(1);
+      handleDateChange(Number(birthYearVal) || 1995, Number(birthMonthVal) || 1, Number(birthDayVal) || 1);
     }
     setIsBirthExpanded(!isBirthExpanded);
-  };
-
-  // Helpers for 8-digit phone numbers
-  const getDigitsOnly = (phone: string) => {
-    return phone.replace(/\D/g, '');
-  };
-
-  const getLast8Digits = (phone: string) => {
-    const digits = getDigitsOnly(phone);
-    return digits.slice(-8);
   };
 
   const formatInputPhone = (rawDigits: string) => {
@@ -324,7 +381,7 @@ export default function EditProfile() {
 
   return (
     <div className="edit-profile-page">
-      {/* Native Band-style Header */}
+      {/* Native Band-style Header with real-time status */}
       <div className="edit-profile-header">
         <div className="header-left">
           {!isFirstOnboarding ? (
@@ -334,9 +391,23 @@ export default function EditProfile() {
           )}
           <span className="header-title">{isFirstOnboarding ? '회원 정보 입력' : '내 프로필'}</span>
         </div>
-        <button type="button" className="confirm-btn" onClick={() => handleSubmit()} disabled={loading}>
-          {loading ? '저장 중…' : '확인'}
-        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {saveStatus === 'saving' && (
+            <span style={{ fontSize: '12px', color: 'var(--ink-muted)', fontWeight: '500' }}>저장 중…</span>
+          )}
+          {saveStatus === 'saved' && (
+            <span style={{ fontSize: '12px', color: 'var(--brand-primary)', fontWeight: '700' }}>저장됨 ✓</span>
+          )}
+          <button
+            type="button"
+            className="confirm-btn"
+            onClick={() => (isFirstOnboarding ? handleComplete() : navigate(-1))}
+            disabled={loading}
+          >
+            {isFirstOnboarding ? '완료' : '닫기'}
+          </button>
+        </div>
       </div>
 
       {isFirstOnboarding && (
@@ -391,7 +462,8 @@ export default function EditProfile() {
               <input
                 type="text"
                 value={displayNameVal}
-                onChange={(e) => setDisplayNameVal(e.target.value)}
+                onChange={(e) => handleNameChange(e.target.value)}
+                onBlur={() => displayNameVal.trim() && autoSave({ displayName: displayNameVal.trim() })}
                 placeholder="이름을 입력하세요"
                 style={{
                   width: '100%',
@@ -432,7 +504,11 @@ export default function EditProfile() {
                       <input
                         type="checkbox"
                         checked={isEarlyYearVal}
-                        onChange={(e) => setIsEarlyYearVal(e.target.checked)}
+                        onChange={(e) => {
+                          const early = e.target.checked;
+                          setIsEarlyYearVal(early);
+                          handleDateChange(Number(birthYearVal) || 1995, Number(birthMonthVal) || 1, Number(birthDayVal) || 1, early);
+                        }}
                       />
                       <span className="toggle-switch-slider"></span>
                     </label>
@@ -446,9 +522,7 @@ export default function EditProfile() {
                     options={YEARS}
                     value={Number(birthYearVal) || 1995}
                     onChange={(val) => {
-                      setBirthYearVal(val);
-                      if (!birthMonthVal) setBirthMonthVal(1);
-                      if (!birthDayVal) setBirthDayVal(1);
+                      handleDateChange(val, Number(birthMonthVal) || 1, Number(birthDayVal) || 1);
                     }}
                     formatter={(val) => `${val}년`}
                   />
@@ -456,9 +530,7 @@ export default function EditProfile() {
                     options={MONTHS}
                     value={Number(birthMonthVal) || 1}
                     onChange={(val) => {
-                      setBirthMonthVal(val);
-                      if (!birthYearVal) setBirthYearVal(1995);
-                      if (!birthDayVal) setBirthDayVal(1);
+                      handleDateChange(Number(birthYearVal) || 1995, val, Number(birthDayVal) || 1);
                     }}
                     formatter={(val) => `${val}월`}
                   />
@@ -466,9 +538,7 @@ export default function EditProfile() {
                     options={getDaysInMonth(Number(birthYearVal) || 1995, Number(birthMonthVal) || 1)}
                     value={Number(birthDayVal) || 1}
                     onChange={(val) => {
-                      setBirthDayVal(val);
-                      if (!birthYearVal) setBirthYearVal(1995);
-                      if (!birthMonthVal) setBirthMonthVal(1);
+                      handleDateChange(Number(birthYearVal) || 1995, Number(birthMonthVal) || 1, val);
                     }}
                     formatter={(val) => `${val}일`}
                   />
@@ -497,7 +567,7 @@ export default function EditProfile() {
                   <ScrollPicker
                     options={['MALE', 'FEMALE']}
                     value={genderVal || 'MALE'}
-                    onChange={(val) => setGenderVal(val as 'MALE' | 'FEMALE')}
+                    onChange={(val) => handleGenderChange(val as 'MALE' | 'FEMALE')}
                     formatter={(val) => val === 'MALE' ? '남성' : '여성'}
                   />
                 </div>
@@ -509,7 +579,7 @@ export default function EditProfile() {
           <div className="info-list-item-group">
             <div className="info-list-item" onClick={() => {
               if (!isPhoneExpanded) {
-                const last8 = getLast8Digits(phoneNumberVal);
+                const last8 = phoneNumberVal ? phoneNumberVal.replace(/\D/g, '').slice(-8) : '';
                 setTempPhone(last8);
               }
               setIsPhoneExpanded(!isPhoneExpanded);
@@ -536,22 +606,7 @@ export default function EditProfile() {
                       autoFocus
                       className="phone-active-input-editable"
                       value={formatInputPhone(tempPhone)}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        let digits = val.replace(/\D/g, '');
-                        if (digits.startsWith('010')) {
-                          digits = digits.slice(3);
-                        }
-                        if (digits.length <= 8) {
-                          setTempPhone(digits);
-                          if (digits.length === 8) {
-                            const formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
-                            setPhoneNumberVal(formatted);
-                          } else {
-                            setPhoneNumberVal('');
-                          }
-                        }
-                      }}
+                      onChange={(e) => handlePhoneInputChange(e.target.value)}
                       placeholder="010-____-____"
                       style={{
                         width: '100%',
@@ -605,7 +660,6 @@ export default function EditProfile() {
                 className="profile-reset-image-btn"
                 onClick={() => {
                   handleImageChange(null);
-                  setRemoveImage(true);
                   if (fileInputRef.current) {
                     fileInputRef.current.value = '';
                   }
@@ -625,25 +679,12 @@ export default function EditProfile() {
               maxLength={500}
               placeholder="간단한 자기소개를 입력해 주세요"
               value={bio}
-              onChange={(e) => setBio(e.target.value)}
+              onChange={(e) => handleBioChange(e.target.value)}
             />
             <p className="form-hint">{bio.length}/500</p>
           </div>
         </div>
-
-        {/* Save button row at the bottom right */}
-        <div className="profile-bottom-actions">
-          <button
-            type="button"
-            className="profile-bottom-save-btn"
-            onClick={() => handleSubmit()}
-            disabled={loading}
-          >
-            {loading ? '저장 중…' : '저장'}
-          </button>
-        </div>
       </form>
-
     </div>
   );
 }
