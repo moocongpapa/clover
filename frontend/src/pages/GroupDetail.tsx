@@ -1771,31 +1771,23 @@ export default function GroupDetail() {
         </>
       )}
 
-      {/* Floating Action Button (FAB) popover & triggers for ALL approved members */}
-      {membership?.status === 'APPROVED' && activeTab === 'posts' && (
+      {/* Floating Action Button (FAB) popover & triggers for ALL approved members on posts & events tabs */}
+      {membership?.status === 'APPROVED' && (activeTab === 'posts' || activeTab === 'events') && (
         <div className="fab-menu-container">
           {showWriteMenu && (
-            <div className="fab-menu-popover">
-              <button
-                type="button"
-                className="fab-popover-item"
-                onClick={() => {
-                  setPostType('GENERAL');
-                  setAnnouncementTitle('');
-                  setAnnouncementContent('');
-                  setWritingAnnouncement(true);
-                  setShowWriteMenu(false);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              >
-                📝 게시글 작성
-              </button>
-              {isOfficer && (
+            <>
+              <div
+                className="fab-backdrop"
+                onClick={() => setShowWriteMenu(false)}
+                style={{ position: 'fixed', inset: 0, zIndex: 990 }}
+              />
+              <div className="fab-menu-popover" style={{ zIndex: 995 }}>
                 <button
                   type="button"
                   className="fab-popover-item"
                   onClick={() => {
-                    setPostType('NOTICE');
+                    setActiveTab('posts');
+                    setPostType('GENERAL');
                     setAnnouncementTitle('');
                     setAnnouncementContent('');
                     setWritingAnnouncement(true);
@@ -1803,17 +1795,37 @@ export default function GroupDetail() {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                 >
-                  📢 공지글 작성
+                  📝 게시글 작성
                 </button>
-              )}
-              <Link
-                to={`/groups/${group.id}/events/new`}
-                className="fab-popover-item"
-                style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}
-              >
-                📅 일정/투표 등록
-              </Link>
-            </div>
+                {isOfficer && (
+                  <>
+                    <button
+                      type="button"
+                      className="fab-popover-item"
+                      onClick={() => {
+                        setActiveTab('posts');
+                        setPostType('NOTICE');
+                        setAnnouncementTitle('');
+                        setAnnouncementContent('');
+                        setWritingAnnouncement(true);
+                        setShowWriteMenu(false);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      📢 공지글 작성
+                    </button>
+                    <Link
+                      to={`/groups/${group.id}/events/new`}
+                      className="fab-popover-item"
+                      style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}
+                      onClick={() => setShowWriteMenu(false)}
+                    >
+                      📅 일정/투표 등록
+                    </Link>
+                  </>
+                )}
+              </div>
+            </>
           )}
           <button
             type="button"
