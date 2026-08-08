@@ -167,11 +167,14 @@ export class AuthService {
       }
     }
 
+    const rawImage = kakaoUser.properties.profile_image ?? null;
+    const profileImageUrl = rawImage ? rawImage.replace(/^http:\/\//i, 'https://') : null;
+
     const user = await this.prisma.user.upsert({
       where: { kakaoId: String(kakaoUser.id) },
       update: {
         displayName: kakaoUser.properties.nickname,
-        profileImageUrl: kakaoUser.properties.profile_image ?? null,
+        profileImageUrl,
         ...(gender ? { gender } : {}),
         ...(birthYear ? { birthYear } : {}),
         ...(birthDate ? { birthDate } : {}),
@@ -181,7 +184,7 @@ export class AuthService {
       create: {
         kakaoId: String(kakaoUser.id),
         displayName: kakaoUser.properties.nickname,
-        profileImageUrl: kakaoUser.properties.profile_image ?? null,
+        profileImageUrl,
         gender,
         birthYear,
         birthDate,

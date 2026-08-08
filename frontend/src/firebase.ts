@@ -1,26 +1,35 @@
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken } from 'firebase/messaging';
 
-// Firebase configuration (using Vite env variables or mock fallbacks)
+const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+
+// Only initialize Firebase if real keys are provided (prevents 400 bad request in mock mode)
+const isFirebaseConfigured = Boolean(
+  apiKey &&
+  apiKey !== 'MOCK_API_KEY' &&
+  projectId &&
+  projectId !== 'mock-app'
+);
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'MOCK_API_KEY',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'mock-app.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'mock-app',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'mock-app.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '000000000000',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:000000000000:web:0000000000000000000000',
+  apiKey: apiKey || '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+  projectId: projectId || '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+// Initialize Firebase only when configured
+export const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
+export const messaging = isFirebaseConfigured && typeof window !== 'undefined' ? getMessaging(app!) : null;
 
 export async function requestFcmToken(): Promise<string | null> {
-  if (!messaging) return null;
+  if (!isFirebaseConfigured || !messaging) return null;
   const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
   if (!vapidKey) {
-    // Graceful fallback when FCM Web Push VAPID key is not configured
     return null;
   }
 

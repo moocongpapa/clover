@@ -22,8 +22,10 @@ export default function GroupAvatar({
     ...(radius !== undefined ? { borderRadius: `${radius}px` } : {}),
   };
 
-  if (src) {
-    return <img src={src} alt={`${name} 대표 이미지`} className={classes} style={style} />;
+  const secureSrc = src ? src.replace(/^http:\/\//i, 'https://') : null;
+
+  if (secureSrc) {
+    return <img src={secureSrc} alt={`${name} 대표 이미지`} className={classes} style={style} />;
   }
 
   return (
