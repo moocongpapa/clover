@@ -380,6 +380,14 @@ export class NotificationsService {
     await this.prisma.notificationLog.create({ data });
   }
 
+  private getFrontendLink(): string {
+    const fromConfig = this.config.get<string>('FRONTEND_URL');
+    if (fromConfig && !fromConfig.includes('localhost')) {
+      return fromConfig;
+    }
+    return 'https://clover-gilt.vercel.app';
+  }
+
   private async sendExternalIfConfigured(
     user: { id: string; displayName: string; kakaoChannelUserKey: string | null; fcmToken?: string | null; kakaoNotifyEnabled?: boolean; pushNotifyEnabled?: boolean },
     message: string,
@@ -440,6 +448,7 @@ export class NotificationsService {
           ? 'https://kapi.kakao.com/v2/api/talk/memo/default/send'
           : 'https://kapi.kakao.com/v1/api/talk/friends/message/default/send';
 
+        const linkUrl = this.getFrontendLink();
         const params = new URLSearchParams();
         if (!isSelf) {
           params.append('receiver_uuids', JSON.stringify([user.kakaoChannelUserKey]));
@@ -450,8 +459,8 @@ export class NotificationsService {
             object_type: 'text',
             text: message,
             link: {
-              web_url: this.config.get<string>('FRONTEND_URL') || 'https://clover-gilt.vercel.app',
-              mobile_web_url: this.config.get<string>('FRONTEND_URL') || 'https://clover-gilt.vercel.app',
+              web_url: linkUrl,
+              mobile_web_url: linkUrl,
             },
           }),
         );
@@ -505,6 +514,7 @@ export class NotificationsService {
 
     const message = `[Clover 알림 테스트] 카카오톡 실시간 메시지 연동이 성공적으로 완료되었습니다! 🍀\n\n모임 일정, 투표 마감, 공지사항 알림이 카카오톡으로 실시간 전달됩니다.`;
 
+    const linkUrl = this.getFrontendLink();
     const params = new URLSearchParams();
     params.append(
       'template_object',
@@ -512,8 +522,8 @@ export class NotificationsService {
         object_type: 'text',
         text: message,
         link: {
-          web_url: this.config.get<string>('FRONTEND_URL') || 'https://clover-gilt.vercel.app',
-          mobile_web_url: this.config.get<string>('FRONTEND_URL') || 'https://clover-gilt.vercel.app',
+          web_url: linkUrl,
+          mobile_web_url: linkUrl,
         },
       }),
     );
