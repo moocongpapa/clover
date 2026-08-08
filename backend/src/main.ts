@@ -24,14 +24,23 @@ async function bootstrap() {
         callback(null, true);
         return;
       }
-      const isAllowed =
-        allowedOrigins.includes(origin) ||
-        /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(
-          origin,
-        );
-      callback(null, isAllowed);
+      try {
+        const hostname = new URL(origin).hostname;
+        const isAllowed =
+          allowedOrigins.includes(origin) ||
+          hostname.endsWith('.vercel.app') ||
+          hostname === 'localhost' ||
+          /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(
+            origin,
+          );
+        callback(null, isAllowed);
+      } catch {
+        callback(null, true);
+      }
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   });
 
   app.useGlobalPipes(
