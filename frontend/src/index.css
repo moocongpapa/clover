@@ -19,6 +19,9 @@
   --red-500: #f04452;
   --green-500: #03b26c;
   --orange-500: #fe6b17;
+  --brand-primary: #10b981;
+  --brand-hover: #059669;
+  --brand-subtle: rgba(16, 185, 129, 0.1);
 
   /* Semantic aliases */
   --bg: var(--grey-50);

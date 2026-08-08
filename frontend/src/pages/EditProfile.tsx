@@ -726,23 +726,26 @@ export default function EditProfile() {
             style={{
               width: '100%',
               maxWidth: '360px',
-              height: '50px',
-              background: 'var(--brand-primary)',
+              height: '52px',
+              backgroundColor: '#10b981',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
-              fontWeight: '700',
+              borderRadius: '14px',
+              fontSize: '17px',
+              fontWeight: '800',
+              letterSpacing: '-0.02em',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(34, 197, 94, 0.28)',
+              boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.15s ease',
             }}
           >
-            {loading ? '저장 중…' : '완료'}
+            <span style={{ color: '#ffffff', fontWeight: '800', fontSize: '17px' }}>
+              {loading ? '저장 중…' : '완료'}
+            </span>
           </button>
         </div>
       </form>
