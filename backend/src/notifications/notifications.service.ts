@@ -33,20 +33,33 @@ export class NotificationsService {
   }
 
   private initializeFcm() {
+    const rawEnvServiceAccount = this.config.get<string>('FIREBASE_SERVICE_ACCOUNT');
     const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json');
-    if (fs.existsSync(serviceAccountPath)) {
-      try {
+
+    try {
+      if (rawEnvServiceAccount) {
+        const serviceAccount = JSON.parse(rawEnvServiceAccount);
+        initializeApp({
+          credential: cert(serviceAccount),
+        });
+        this.fcmInitialized = true;
+        this.logger.log('FCM (Firebase Admin SDK) initialized via environment variable successfully.');
+        return;
+      }
+
+      if (fs.existsSync(serviceAccountPath)) {
         const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
         initializeApp({
           credential: cert(serviceAccount),
         });
         this.fcmInitialized = true;
-        this.logger.log('FCM (Firebase Admin SDK) initialized successfully.');
-      } catch (err) {
-        this.logger.warn(`Failed to initialize Firebase Admin SDK: ${err}`);
+        this.logger.log('FCM (Firebase Admin SDK) initialized via file successfully.');
+        return;
       }
-    } else {
-      this.logger.log('firebase-service-account.json not found. FCM will run in Mock mode.');
+
+      this.logger.log('Firebase Service Account not provided. FCM will gracefully fallback to KakaoTalk notifications.');
+    } catch (err) {
+      this.logger.warn(`Failed to initialize Firebase Admin SDK: ${err}`);
     }
   }
 
