@@ -54,10 +54,7 @@ export default function EditEvent() {
   ];
 
   const quickTimePresets = [
-    { label: '저녁 7:00 ~ 9:00', start: '19:00', end: '21:00' },
-    { label: '저녁 8:00 ~ 10:00', start: '20:00', end: '22:00' },
-    { label: '오전 10:00 ~ 12:00', start: '10:00', end: '12:00' },
-    { label: '오후 2:00 ~ 4:00', start: '14:00', end: '16:00' },
+    { label: '저녁 7:30 ~ 10:00 (추천)', start: '19:30', end: '22:00' },
   ];
 
   const handleOffsetToggle = (val: number) => {
@@ -107,20 +104,6 @@ export default function EditEvent() {
     const endH = (h + hoursToAdd) % 24;
     setEndTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
   };
-
-  const calculateDuration = () => {
-    if (!startTime || !endTime) return null;
-    const [sh, sm] = startTime.split(':').map(Number);
-    const [eh, em] = endTime.split(':').map(Number);
-    const diff = (eh * 60 + em) - (sh * 60 + sm);
-    if (diff <= 0) return null;
-    const hours = Math.floor(diff / 60);
-    const mins = diff % 60;
-    if (mins === 0) return `${hours}시간`;
-    return `${hours}시간 ${mins}분`;
-  };
-
-  const durationText = calculateDuration();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -251,22 +234,10 @@ export default function EditEvent() {
 
           {/* Time (30-Minute Step Selector & Quick Presets) */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ marginBottom: '8px' }}>
               <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)' }}>
                 시간 (30분 단위) <span style={{ color: '#ef4444' }}>*</span>
               </label>
-              {durationText && (
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: 'var(--brand-primary)',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  padding: '2px 8px',
-                  borderRadius: '6px'
-                }}>
-                  ⏱️ 총 {durationText} 진행
-                </span>
-              )}
             </div>
 
             {/* Quick Time Presets */}
