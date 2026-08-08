@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import {
   api,
   formatDateTime,
   formatEventTimeRange,
   formatTeamLabel,
+  isProfileComplete,
   VOTE_CHOICES,
   VOTE_LABELS,
   type CalendarEvent,
@@ -685,5 +686,8 @@ export default function Home() {
 
   if (loading) return <p className="loading-text">불러오는 중…</p>;
   if (!user) return <GuestLanding />;
+  if (!isProfileComplete(user)) {
+    return <Navigate to="/profile/edit?required=true" replace />;
+  }
   return <HomeDashboard />;
 }

@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
-import { api, type User } from '../api';
+import { api, isProfileComplete, type User } from '../api';
 import { useAuth } from '../context/AuthContext';
 import './EditProfile.css';
 import './Groups.css';
@@ -93,6 +93,7 @@ function ScrollPicker<T extends string | number>({ options, value, onChange, for
 
 export default function EditProfile() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { updateUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
@@ -113,10 +114,10 @@ export default function EditProfile() {
 
   const [displayNameVal, setDisplayNameVal] = useState('');
 
-  // Profile data states
-  const [birthYearVal, setBirthYearVal] = useState<number | ''>('');
-  const [birthMonthVal, setBirthMonthVal] = useState<number | ''>('');
-  const [birthDayVal, setBirthDayVal] = useState<number | ''>('');
+  // Profile data states (defaults to 1995-01-01 if empty)
+  const [birthYearVal, setBirthYearVal] = useState<number | ''>(1995);
+  const [birthMonthVal, setBirthMonthVal] = useState<number | ''>(1);
+  const [birthDayVal, setBirthDayVal] = useState<number | ''>(1);
   const [phoneNumberVal, setPhoneNumberVal] = useState('');
   const [genderVal, setGenderVal] = useState<'MALE' | 'FEMALE' | ''>('');
   const [isEarlyYearVal, setIsEarlyYearVal] = useState(false);
@@ -126,6 +127,8 @@ export default function EditProfile() {
   const [isGenderExpanded, setIsGenderExpanded] = useState(false);
   const [isPhoneExpanded, setIsPhoneExpanded] = useState(false);
   const [tempPhone, setTempPhone] = useState('');
+
+  const isFirstOnboarding = searchParams.get('required') === 'true' || (profile !== null && !isProfileComplete(profile));
 
   const loadData = () => {
     api
@@ -137,16 +140,24 @@ export default function EditProfile() {
         if (me.profileImageUrl) {
           setPreviewUrl(me.profileImageUrl);
         }
-        setBirthYearVal(me.birthYear ?? '');
         setPhoneNumberVal(me.phoneNumber ?? '');
         setGenderVal(me.gender ?? '');
         setIsEarlyYearVal(me.isEarlyYear ?? false);
 
-        // Parse birthDate
+        // Parse birthDate / birthYear
         if (me.birthDate) {
           const bDate = new Date(me.birthDate);
-          setBirthMonthVal(bDate.getMonth() + 1);
-          setBirthDayVal(bDate.getDate());
+          setBirthYearVal(bDate.getUTCFullYear() || bDate.getFullYear());
+          setBirthMonthVal(bDate.getUTCMonth() + 1 || bDate.getMonth() + 1);
+          setBirthDayVal(bDate.getUTCDate() || bDate.getDate());
+        } else if (me.birthYear) {
+          setBirthYearVal(me.birthYear);
+          setBirthMonthVal(1);
+          setBirthDayVal(1);
+        } else {
+          setBirthYearVal(1995);
+          setBirthMonthVal(1);
+          setBirthDayVal(1);
         }
       })
       .catch((e) => setError(e.message));
@@ -187,6 +198,32 @@ export default function EditProfile() {
     if (e) e.preventDefault();
     if (!profile) return;
 
+    const trimmedName = displayNameVal.trim();
+    if (!trimmedName) {
+      setError('이름(닉네임)을 입력해 주세요.');
+      return;
+    }
+
+    if (!birthYearVal || !birthMonthVal || !birthDayVal) {
+      setIsBirthExpanded(true);
+      setError('생년월일을 선택해 주세요.');
+      return;
+    }
+
+    if (!genderVal) {
+      setIsGenderExpanded(true);
+      setGenderVal('MALE');
+      setError('성별을 선택해 주세요.');
+      return;
+    }
+
+    const cleanPhone = phoneNumberVal.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 8) {
+      setIsPhoneExpanded(true);
+      setError('휴대폰 번호 8자리를 입력해 주세요.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -198,29 +235,29 @@ export default function EditProfile() {
         profileImageUrl = null;
       }
 
-      // Construct birthDate
-      let constructedBirthDate: string | null = null;
-      if (birthYearVal && birthMonthVal && birthDayVal) {
-        constructedBirthDate = new Date(
-          Number(birthYearVal),
-          Number(birthMonthVal) - 1,
-          Number(birthDayVal),
-          12, 0, 0 // Safe midday
-        ).toISOString();
+      // Construct UTC ISO birthDate
+      const year = Number(birthYearVal);
+      const month = Number(birthMonthVal) - 1;
+      const day = Number(birthDayVal);
+      const constructedBirthDate = new Date(Date.UTC(year, month, day, 12, 0, 0)).toISOString();
+
+      let formattedPhone = phoneNumberVal.trim();
+      if (!formattedPhone.startsWith('010') && cleanPhone.length === 8) {
+        formattedPhone = `010-${cleanPhone.slice(0, 4)}-${cleanPhone.slice(4)}`;
       }
 
       const updated = await api.updateProfile({
-        displayName: displayNameVal.trim(),
+        displayName: trimmedName,
         ...(profileImageUrl !== undefined ? { profileImageUrl } : {}),
         bio: bio.trim() || null,
-        birthYear: birthYearVal ? Number(birthYearVal) : null,
+        birthYear: year,
         birthDate: constructedBirthDate,
         isEarlyYear: isEarlyYearVal,
-        phoneNumber: phoneNumberVal.trim() || null,
-        gender: genderVal || null,
+        phoneNumber: formattedPhone,
+        gender: genderVal,
       });
       updateUser(updated);
-      navigate(-1);
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 실패');
     } finally {
@@ -234,9 +271,18 @@ export default function EditProfile() {
       return `${isEarlyYearVal ? '빠른 ' : ''}${birthYearVal}년 ${birthMonthVal}월 ${birthDayVal}일`;
     }
     if (birthYearVal) {
-      return `${isEarlyYearVal ? '빠른 ' : ''}${birthYearVal}년`;
+      return `${isEarlyYearVal ? '빠른 ' : ''}${birthYearVal}년 1월 1일`;
     }
-    return '선택 안 함';
+    return '선택해 주세요';
+  };
+
+  const handleToggleBirth = () => {
+    if (!isBirthExpanded) {
+      if (!birthYearVal) setBirthYearVal(1995);
+      if (!birthMonthVal) setBirthMonthVal(1);
+      if (!birthDayVal) setBirthDayVal(1);
+    }
+    setIsBirthExpanded(!isBirthExpanded);
   };
 
   // Helpers for 8-digit phone numbers
@@ -266,20 +312,70 @@ export default function EditProfile() {
     return <p className="loading-text">불러오는 중…</p>;
   }
 
-  const avatarFallback = profile.displayName[0];
+  const handleBackClick = () => {
+    if (isFirstOnboarding) {
+      setError('서비스 이용을 위해 필수 정보(이름, 생년월일, 성별, 휴대폰 번호)를 입력하고 [확인]을 눌러주세요.');
+      return;
+    }
+    navigate(-1);
+  };
+
+  const avatarFallback = (displayNameVal || profile.displayName || 'U')[0];
 
   return (
     <div className="edit-profile-page">
       {/* Native Band-style Header */}
       <div className="edit-profile-header">
         <div className="header-left">
-          <BackButton onClick={() => navigate(-1)} />
-          <span className="header-title">내 프로필</span>
+          {!isFirstOnboarding ? (
+            <BackButton onClick={handleBackClick} />
+          ) : (
+            <div style={{ width: '8px' }} />
+          )}
+          <span className="header-title">{isFirstOnboarding ? '회원 정보 입력' : '내 프로필'}</span>
         </div>
         <button type="button" className="confirm-btn" onClick={() => handleSubmit()} disabled={loading}>
           {loading ? '저장 중…' : '확인'}
         </button>
       </div>
+
+      {isFirstOnboarding && (
+        <div style={{
+          margin: '12px 16px 0',
+          padding: '14px 16px',
+          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(16, 185, 129, 0.08))',
+          border: '1.5px solid var(--brand-primary)',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <span style={{ fontSize: '24px' }}>🍀</span>
+          <div>
+            <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--brand-primary)', marginBottom: '2px' }}>
+              환영합니다! 필수 회원 정보 입력
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--ink-muted)', lineHeight: '1.4' }}>
+              원활한 모임 활동 및 알림 수신을 위해 <strong>이름, 생년월일, 성별, 휴대폰 번호</strong>를 입력해 주세요.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          margin: '12px 16px 0',
+          padding: '10px 14px',
+          background: '#fee2e2',
+          border: '1px solid #ef4444',
+          borderRadius: '8px',
+          color: '#b91c1c',
+          fontSize: '13px',
+          fontWeight: '600'
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       <form className="edit-profile-body" onSubmit={(e) => e.preventDefault()}>
         {/* Section 2: 내 정보 */}
@@ -288,18 +384,41 @@ export default function EditProfile() {
         <div className="info-list-container">
           {/* 이름 */}
           <div className="info-list-item no-arrow" style={{ cursor: 'default' }}>
-            <div className="info-item-label">이름</div>
-            <div className="info-item-value-wrap">
-              <span className="info-item-value" style={{ color: 'var(--ink-dark)', fontWeight: '600' }}>{displayNameVal}</span>
+            <div className="info-item-label">
+              이름 <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
+            </div>
+            <div className="info-item-value-wrap" style={{ flex: 1, maxWidth: '200px' }}>
+              <input
+                type="text"
+                value={displayNameVal}
+                onChange={(e) => setDisplayNameVal(e.target.value)}
+                placeholder="이름을 입력하세요"
+                style={{
+                  width: '100%',
+                  border: '1px solid var(--border-soft)',
+                  borderRadius: '8px',
+                  padding: '6px 10px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: 'var(--ink-dark)',
+                  textAlign: 'right',
+                  outline: 'none',
+                  background: 'var(--surface)',
+                }}
+              />
             </div>
           </div>
 
           {/* 생일 */}
           <div className="info-list-item-group">
-            <div className="info-list-item" onClick={() => setIsBirthExpanded(!isBirthExpanded)}>
-              <div className="info-item-label">생일</div>
+            <div className="info-list-item" onClick={handleToggleBirth}>
+              <div className="info-item-label">
+                생일 <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
+              </div>
               <div className="info-item-value-wrap">
-                <span className="info-item-value">{formatBirthDisplay()}</span>
+                <span className="info-item-value" style={{ color: birthYearVal ? 'var(--ink-dark)' : 'var(--ink-muted)', fontWeight: birthYearVal ? '600' : 'normal' }}>
+                  {formatBirthDisplay()}
+                </span>
                 <span className="chevron" style={{ transform: isBirthExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>〉</span>
               </div>
             </div>
@@ -325,20 +444,32 @@ export default function EditProfile() {
                   <div className="picker-scroll-highlight"></div>
                   <ScrollPicker
                     options={YEARS}
-                    value={birthYearVal || 1991}
-                    onChange={(val) => setBirthYearVal(val)}
+                    value={Number(birthYearVal) || 1995}
+                    onChange={(val) => {
+                      setBirthYearVal(val);
+                      if (!birthMonthVal) setBirthMonthVal(1);
+                      if (!birthDayVal) setBirthDayVal(1);
+                    }}
                     formatter={(val) => `${val}년`}
                   />
                   <ScrollPicker
                     options={MONTHS}
-                    value={birthMonthVal || 10}
-                    onChange={(val) => setBirthMonthVal(val)}
+                    value={Number(birthMonthVal) || 1}
+                    onChange={(val) => {
+                      setBirthMonthVal(val);
+                      if (!birthYearVal) setBirthYearVal(1995);
+                      if (!birthDayVal) setBirthDayVal(1);
+                    }}
                     formatter={(val) => `${val}월`}
                   />
                   <ScrollPicker
-                    options={getDaysInMonth(birthYearVal, birthMonthVal)}
-                    value={birthDayVal || 4}
-                    onChange={(val) => setBirthDayVal(val)}
+                    options={getDaysInMonth(Number(birthYearVal) || 1995, Number(birthMonthVal) || 1)}
+                    value={Number(birthDayVal) || 1}
+                    onChange={(val) => {
+                      setBirthDayVal(val);
+                      if (!birthYearVal) setBirthYearVal(1995);
+                      if (!birthMonthVal) setBirthMonthVal(1);
+                    }}
                     formatter={(val) => `${val}일`}
                   />
                 </div>
@@ -349,10 +480,12 @@ export default function EditProfile() {
           {/* 성별 */}
           <div className="info-list-item-group">
             <div className="info-list-item" onClick={() => setIsGenderExpanded(!isGenderExpanded)}>
-              <div className="info-item-label">성별</div>
+              <div className="info-item-label">
+                성별 <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
+              </div>
               <div className="info-item-value-wrap">
-                <span className="info-item-value">
-                  {genderVal === 'MALE' ? '남성' : genderVal === 'FEMALE' ? '여성' : '선택 안 함'}
+                <span className="info-item-value" style={{ color: genderVal ? 'var(--ink-dark)' : 'var(--ink-muted)', fontWeight: genderVal ? '600' : 'normal' }}>
+                  {genderVal === 'MALE' ? '남성' : genderVal === 'FEMALE' ? '여성' : '선택해 주세요'}
                 </span>
                 <span className="chevron" style={{ transform: isGenderExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>〉</span>
               </div>
@@ -362,10 +495,10 @@ export default function EditProfile() {
                 <div className="picker-scroll-container">
                   <div className="picker-scroll-highlight"></div>
                   <ScrollPicker
-                    options={['MALE', 'FEMALE', '']}
-                    value={genderVal}
-                    onChange={(val) => setGenderVal(val as 'MALE' | 'FEMALE' | '')}
-                    formatter={(val) => val === 'MALE' ? '남성' : val === 'FEMALE' ? '여성' : '선택 안 함'}
+                    options={['MALE', 'FEMALE']}
+                    value={genderVal || 'MALE'}
+                    onChange={(val) => setGenderVal(val as 'MALE' | 'FEMALE')}
+                    formatter={(val) => val === 'MALE' ? '남성' : '여성'}
                   />
                 </div>
               </div>
@@ -381,10 +514,12 @@ export default function EditProfile() {
               }
               setIsPhoneExpanded(!isPhoneExpanded);
             }}>
-              <div className="info-item-label">휴대폰 번호</div>
+              <div className="info-item-label">
+                휴대폰 번호 <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
+              </div>
               <div className="info-item-value-wrap">
-                <span className="info-item-value">
-                  {phoneNumberVal ? phoneNumberVal : '등록되지 않음'}
+                <span className="info-item-value" style={{ color: phoneNumberVal ? 'var(--ink-dark)' : 'var(--ink-muted)', fontWeight: phoneNumberVal ? '600' : 'normal' }}>
+                  {phoneNumberVal ? phoneNumberVal : '010-____-____ 입력'}
                 </span>
                 <span className="chevron" style={{ transform: isPhoneExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>〉</span>
               </div>

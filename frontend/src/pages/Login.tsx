@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { api } from '../api';
+import { api, isProfileComplete } from '../api';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
 
@@ -17,7 +17,11 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      if (!isProfileComplete(user)) {
+        navigate('/profile/edit?required=true', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
   }, [user, navigate]);
 
@@ -29,7 +33,11 @@ export default function Login() {
         .kakaoCallback(code)
         .then((res) => {
           loginWithToken(res.accessToken, res.user);
-          navigate('/');
+          if (!isProfileComplete(res.user)) {
+            navigate('/profile/edit?required=true', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
         })
         .catch((e) => setError(e.message))
         .finally(() => setLoading(false));

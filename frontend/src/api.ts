@@ -25,6 +25,15 @@ export interface User {
   pushNotifyEnabled?: boolean;
 }
 
+export function isProfileComplete(user?: User | null): boolean {
+  if (!user) return false;
+  const hasName = Boolean(user.displayName && user.displayName.trim().length > 0);
+  const hasBirth = Boolean(user.birthDate || user.birthYear);
+  const hasGender = Boolean(user.gender === 'MALE' || user.gender === 'FEMALE');
+  const hasPhone = Boolean(user.phoneNumber && user.phoneNumber.trim().length >= 8);
+  return hasName && hasBirth && hasGender && hasPhone;
+}
+
 export interface UserProfileCard {
   id: string;
   userId: string;
