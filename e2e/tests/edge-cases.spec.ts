@@ -164,9 +164,8 @@ test.describe('Clover 비즈니스 로직 Edge Case 테스트', () => {
   test('조 편성(팀 나누기) 제약 조건 검증', async () => {
     // 1. 참석자가 아무도 없는 상태에서 조 편성 시도
     // 시간 제약 검증을 우회하기 위해, 현재 시간 기준으로 10분 후로 재생성
-    const now = new Date();
-    now.setMinutes(now.getMinutes() + 10);
-    const nearStartTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const nearDate = new Date(Date.now() + 10 * 60 * 1000);
+    const nearStartTime = `${String(nearDate.getHours()).padStart(2, '0')}:${String(nearDate.getMinutes()).padStart(2, '0')}`;
 
     const nearEvent = await createEvent(presidentToken, groupId, {
       title: '참석자 없는 동적 모임',
@@ -199,8 +198,8 @@ test.describe('Clover 비즈니스 로직 Edge Case 테스트', () => {
     // 미래(2시간 후) 모임 생성
     const farEvent = await createEvent(presidentToken, groupId, {
       title: '2시간 뒤 미래 모임',
-      date: today(),
-      startTime: futureStartTime(),
+      date: tomorrow(),
+      startTime: '19:00',
       location: '온라인',
       description: '조편성 시각 외 모임',
     });

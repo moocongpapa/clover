@@ -161,18 +161,21 @@ export function tomorrow(): string {
   return formatDate(d);
 }
 
+export function yesterday(): string {
+  const d = new Date(Date.now() - 24 * 3600 * 1000);
+  return formatDate(d);
+}
+
 export function today(): string {
   return formatDate(new Date());
 }
 
 export function pastStartTime(): string {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - 30);
+  const d = new Date(Date.now() - 30 * 60 * 1000);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 export function futureStartTime(): string {
-  const d = new Date();
-  d.setHours(d.getHours() + 2);
-  return `${String(d.getHours()).padStart(2, '0')}:00`;
+  const d = new Date(Date.now() + 2 * 3600 * 1000);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }

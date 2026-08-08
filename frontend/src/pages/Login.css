@@ -28,23 +28,36 @@
 }
 
 .btn-kakao {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  height: 48px;
-  line-height: 48px;
+  height: 50px;
   background: #fee500;
   color: #191919;
   text-align: center;
   text-decoration: none;
   font-weight: 700;
-  font-size: 17px;
+  font-size: 16px;
   border-radius: var(--radius-l);
   margin-bottom: var(--space-4);
-  transition: opacity var(--dur-base) var(--ease);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all var(--dur-base) var(--ease);
 }
 
 .btn-kakao:hover {
-  opacity: 0.92;
+  background: #fada00;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-kakao:active {
+  transform: scale(0.98);
+}
+
+.kakao-symbol {
+  flex-shrink: 0;
 }
 
 .login-divider {
@@ -109,4 +122,168 @@
   color: var(--danger);
   font-size: 15px;
   margin-top: 12px;
+}
+
+/* ── Kakao OAuth Login Modal Window ── */
+.kakao-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.kakao-modal-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.25s var(--ease);
+}
+
+.kakao-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #FEE500;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.kakao-modal-header-brand {
+  font-size: 18px;
+  font-weight: 900;
+  color: #191919;
+  letter-spacing: -0.03em;
+}
+
+.kakao-modal-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: #191919;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-s);
+  transition: opacity var(--dur-base) var(--ease);
+}
+
+.kakao-modal-close:hover {
+  opacity: 0.7;
+}
+
+.kakao-modal-body {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kakao-modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink-dark);
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+
+.kakao-modal-sub {
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  margin-bottom: 20px;
+}
+
+.kakao-modal-field {
+  margin-bottom: 14px;
+}
+
+.kakao-modal-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-dark);
+  margin-bottom: 6px;
+}
+
+.kakao-modal-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  font-size: 14px;
+  color: var(--ink-dark);
+  background: var(--grey-50);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  outline: none;
+  transition: all var(--dur-base) var(--ease);
+}
+
+.kakao-modal-input:focus {
+  border-color: #FEE500;
+  background: var(--surface);
+  box-shadow: 0 0 0 2px rgba(254, 229, 0, 0.4);
+}
+
+.kakao-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.kakao-modal-btn-cancel {
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-dark);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease);
+}
+
+.kakao-modal-btn-cancel:hover {
+  background: var(--grey-100);
+}
+
+.kakao-modal-btn-submit {
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #191919;
+  background: #FEE500;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(254, 229, 0, 0.4);
+  transition: all var(--dur-base) var(--ease);
+}
+
+.kakao-modal-btn-submit:hover {
+  background: #fada00;
+}
+
+.kakao-modal-tip {
+  margin-top: 20px;
+  padding: 12px 14px;
+  background: var(--grey-50);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-m);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-muted);
 }

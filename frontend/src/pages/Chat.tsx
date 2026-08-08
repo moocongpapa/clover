@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { api, API_BASE, type Announcement } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
+import BackButton from '../components/BackButton';
 import './Chat.css';
 
 import { useSearchParams } from 'react-router-dom';
@@ -246,13 +247,7 @@ export default function Chat() {
         // Chat Window View
         <div className="chat-room-window">
           <header className="chat-room-header">
-            <button
-              onClick={() => setActiveGroupId(null)}
-              className="chat-back-btn"
-              type="button"
-            >
-              ◀
-            </button>
+            <BackButton onClick={() => setActiveGroupId(null)} />
             {activeGroup && (
               <GroupAvatar
                 src={activeGroup.profileImageUrl}

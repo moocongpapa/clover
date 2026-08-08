@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import { api, type UserProfileCard, type MyGroup } from '../api';
 import './ManageProfiles.css';
 
@@ -105,9 +106,7 @@ export default function ManageProfiles() {
     <div className="manage-profiles-page">
       {/* Header */}
       <div className="manage-profiles-header">
-        <span className="back-arrow" onClick={() => navigate(-1)}>
-          〈
-        </span>
+        <BackButton onClick={() => navigate(-1)} />
         <span className="header-title">프로필 관리</span>
       </div>
 

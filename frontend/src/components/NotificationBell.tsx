@@ -6,6 +6,7 @@ import {
   notificationLink,
   type NotificationItem,
 } from '../api';
+import GroupAvatar from './GroupAvatar';
 import './NotificationBell.css';
 
 function formatRelativeTime(iso: string) {
@@ -117,9 +118,19 @@ export default function NotificationBell() {
                     className={`notification-bell__item${item.readAt ? '' : ' is-unread'}`}
                     onClick={() => setOpen(false)}
                   >
-                    <span className="notification-bell__item-icon" aria-hidden>
-                      {notificationIcon(item.type)}
-                    </span>
+                    {item.group?.profileImageUrl ? (
+                      <GroupAvatar
+                        src={item.group.profileImageUrl}
+                        name={item.group.name}
+                        size={32}
+                        radius={8}
+                        className="notification-bell__item-icon"
+                      />
+                    ) : (
+                      <span className="notification-bell__item-icon" aria-hidden>
+                        {notificationIcon(item.type)}
+                      </span>
+                    )}
                     <span className="notification-bell__item-body">
                       <span className="notification-bell__message">
                         {item.message ||

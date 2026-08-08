@@ -59,8 +59,8 @@
   --space-5: 16px;
   --space-6: 20px;
 
-  /* Mobile layout — compact */
-  --page-padding: 12px;
+  /* Mobile layout — unified 16px page padding */
+  --page-padding: 16px;
   --header-height: 52px;
   --tab-bar-height: 48px;
   --touch-min: 40px;

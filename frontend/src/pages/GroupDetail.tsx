@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import {
   api,
   formatCategoryEmoji,
@@ -45,21 +46,110 @@ export default function GroupDetail() {
   const [announcementTitle, setAnnouncementTitle] = useState('');
   const [announcementContent, setAnnouncementContent] = useState('');
   const [writingAnnouncement, setWritingAnnouncement] = useState(false);
+  const [postType, setPostType] = useState<'NOTICE' | 'GENERAL'>('GENERAL');
 
   // Gallery States
   const [mediaFiles, setMediaFiles] = useState<any[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (selectedMediaIndex === null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedMediaIndex(null);
+      } else if (e.key === 'ArrowLeft') {
+        setSelectedMediaIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
+      } else if (e.key === 'ArrowRight') {
+        setSelectedMediaIndex((prev) =>
+          prev !== null && prev < mediaFiles.length - 1 ? prev + 1 : prev,
+        );
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedMediaIndex, mediaFiles.length]);
 
   // Tab State
   const [activeTab, setActiveTab] = useState<GroupTab>('posts');
   const [eventSubTab, setEventSubTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [memberFilter, setMemberFilter] = useState<'all' | 'officer' | 'member' | 'injured'>('all');
 
   // New Feed States
-  const [eventCommentsMap, setEventCommentsMap] = useState<Record<string, any[]>>({});
-  const [eventVotesMap, setEventVotesMap] = useState<Record<string, any>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [feedFilter, setFeedFilter] = useState<'all' | 'announcements'>('all');
   const [showWriteMenu, setShowWriteMenu] = useState(false);
+
+  // Reaction Buttons (좋아요, 최고, 싫어요, 체크)
+  const REACTION_OPTIONS = [
+    { type: 'LIKE', emoji: '❤️', label: '좋아요' },
+    { type: 'BEST', emoji: '👍', label: '최고' },
+    { type: 'DISLIKE', emoji: '👎', label: '싫어요' },
+    { type: 'CHECK', emoji: '✅', label: '체크' },
+  ] as const;
+
+  const [reactionsMap, setReactionsMap] = useState<
+    Record<string, Record<string, { count: number; active: boolean }>>
+  >({});
+
+  const [announcementCommentsMap, setAnnouncementCommentsMap] = useState<
+    Record<string, Array<{ id: string; author: string; time: string; content: string }>>
+  >({});
+
+  const handleToggleReaction = (itemId: string, reactionType: string) => {
+    setReactionsMap((prev) => {
+      const currentItemMap = prev[itemId] || {
+        LIKE: { count: 0, active: false },
+        BEST: { count: 0, active: false },
+        DISLIKE: { count: 0, active: false },
+        CHECK: { count: 0, active: false },
+      };
+      const currentReaction = currentItemMap[reactionType] || { count: 0, active: false };
+      const nextActive = !currentReaction.active;
+      const nextCount = Math.max(0, currentReaction.count + (nextActive ? 1 : -1));
+
+      return {
+        ...prev,
+        [itemId]: {
+          ...currentItemMap,
+          [reactionType]: {
+            count: nextCount,
+            active: nextActive,
+          },
+        },
+      };
+    });
+  };
+
+  const getAnnouncementComments = (announcementId: string) => {
+    return announcementCommentsMap[announcementId] || [];
+  };
+
+  const handleAddAnnouncementComment = (announcementId: string, content: string) => {
+    if (!content.trim()) return;
+    const currentComments = getAnnouncementComments(announcementId);
+    const userHeaderInfo = user ? getMemberHeaderInfo(user) : '회원';
+    const nowStr = new Date().toLocaleDateString('ko-KR', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const newComment = {
+      id: `ann-c-${Date.now()}`,
+      author: userHeaderInfo,
+      time: nowStr,
+      content: content.trim(),
+    };
+
+    setAnnouncementCommentsMap((prev) => ({
+      ...prev,
+      [announcementId]: [...currentComments, newComment],
+    }));
+
+    setCommentInputs((prev) => ({ ...prev, [announcementId]: '' }));
+  };
 
   // Month Picker State for Payments
   const [payYear, setPayYear] = useState(new Date().getFullYear());
@@ -80,7 +170,10 @@ export default function GroupDetail() {
       const d = new Date(ev.date);
       const [h, m] = (ev.startTime).split(':').map(Number);
       d.setHours(h, m, 0, 0);
-      return d.getTime() < Date.now();
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      threeMonthsAgo.setHours(0, 0, 0, 0);
+      return d.getTime() < Date.now() && d.getTime() >= threeMonthsAgo.getTime();
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -103,24 +196,21 @@ export default function GroupDetail() {
 
   useEffect(load, [id]);
 
-  // Load comments and votes for all events when events list changes
   useEffect(() => {
-    if (events.length > 0) {
-      events.forEach((ev) => {
-        api.getComments(ev.id)
-          .then((res) => {
-            setEventCommentsMap((prev) => ({ ...prev, [ev.id]: res }));
-          })
-          .catch(() => {});
-
-        api.getVotes(ev.id)
-          .then((res) => {
-            setEventVotesMap((prev) => ({ ...prev, [ev.id]: res }));
-          })
-          .catch(() => {});
-      });
+    if (message) {
+      const timer = setTimeout(() => setMessage(''), 3000);
+      return () => clearTimeout(timer);
     }
-  }, [events]);
+  }, [message]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+
 
   // Load payment checklist when info tab (or payments section) is selected or year/month changes
   useEffect(() => {
@@ -260,10 +350,49 @@ export default function GroupDetail() {
     try {
       await api.updateMyStatus(group.id, userStatus);
       load();
-      setMessage('활동 상태가 업데이트되었습니다.');
     } catch (e) {
       setError(e instanceof Error ? e.message : '활동 상태 변경 실패');
     }
+  };
+
+  const renderUserDisplayWithBadge = (userObj: any) => {
+    if (!userObj) return null;
+    const genderEmoji = userObj.gender === 'MALE' ? '🙋‍♂️' : userObj.gender === 'FEMALE' ? '🙋‍♀️' : '👤';
+    const birthYearText = userObj.birthYear ? String(userObj.birthYear).slice(-2) : '';
+    const member = group?.members?.find((m: any) => m.user.id === userObj.id);
+    const roleLabel = member ? ROLE_LABELS[member.role] : (userObj.role ? ROLE_LABELS[userObj.role] : '회원');
+
+    return (
+      <span className="user-display-badge-container">
+        <span className="user-display-name-text">
+          {genderEmoji} {birthYearText ? birthYearText + ' ' : ''}{userObj.displayName}
+        </span>
+        <span className="user-role-pill-badge">{roleLabel}</span>
+      </span>
+    );
+  };
+
+  const formatCommentAuthorBadge = (authorInput: any) => {
+    if (typeof authorInput === 'object' && authorInput !== null) {
+      return renderUserDisplayWithBadge(authorInput);
+    }
+    if (typeof authorInput === 'string') {
+      const parts = authorInput.split('/');
+      if (parts.length >= 3) {
+        const year = parts[0];
+        const name = parts[1];
+        const role = parts[2];
+        return (
+          <span className="user-display-badge-container">
+            <span className="user-display-name-text">
+              🙋‍♂️ {year} {name}
+            </span>
+            <span className="user-role-pill-badge">{role}</span>
+          </span>
+        );
+      }
+    }
+    return <span className="user-display-name-text">{String(authorInput)}</span>;
   };
 
   const getMemberHeaderInfo = (userObj: any) => {
@@ -274,70 +403,28 @@ export default function GroupDetail() {
     return `${birthYearText ? birthYearText + '/' : ''}${userObj.displayName}/${roleLabel}`;
   };
 
-  const handleAddFeedComment = async (eventId: string, content: string) => {
-    if (!content.trim()) return;
-    try {
-      await api.addComment(eventId, content);
-      // Reload comments for this event
-      const res = await api.getComments(eventId);
-      setEventCommentsMap((prev) => ({ ...prev, [eventId]: res }));
-      setCommentInputs((prev) => ({ ...prev, [eventId]: '' }));
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '댓글 등록 실패');
-    }
-  };
-
-  const handleVoteDirect = async (eventId: string, choice: 'ATTEND' | 'LATE' | 'ABSENT') => {
-    try {
-      const currentVote = eventVotesMap[eventId]?.myVote?.choice;
-      if (currentVote === choice) {
-        await api.cancelVote(eventId);
-      } else {
-        await api.castVote(eventId, choice);
-      }
-      // Reload votes for this event
-      const res = await api.getVotes(eventId);
-      setEventVotesMap((prev) => ({ ...prev, [eventId]: res }));
-
-      // Reload event list to update general event stats (like total vote count)
-      if (id) {
-        const e = await api.listEvents(id);
-        setEvents(e);
-      }
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '투표 처리에 실패했습니다.');
-    }
-  };
-
   const feedItems = (() => {
     if (!group) return [];
-    const items = [
-      ...announcements.map((ann) => ({
-        feedType: 'announcement' as const,
+    const items = announcements.map((ann) => {
+      const isNotice = ann.title.startsWith('[공지]') || ann.title.startsWith('📢');
+      return {
+        feedType: isNotice ? ('notice' as const) : ('post' as const),
         id: ann.id,
         title: ann.title,
         content: ann.content,
         createdAt: new Date(ann.createdAt),
         author: ann.author,
+        isNotice,
         raw: ann,
-      })),
-      ...events.map((ev) => ({
-        feedType: 'event' as const,
-        id: ev.id,
-        title: ev.title,
-        content: ev.description,
-        createdAt: new Date(ev.date),
-        author: ev.createdBy,
-        raw: ev,
-      })),
-    ];
+      };
+    });
     // Sort descending by date/createdAt
     items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return items;
   })();
 
   const filteredFeedItems = feedFilter === 'announcements'
-    ? feedItems.filter(item => item.feedType === 'announcement')
+    ? feedItems.filter(item => item.isNotice)
     : feedItems;
 
   const roleEmoji = (role: string) => {
@@ -396,8 +483,13 @@ export default function GroupDetail() {
     e.preventDefault();
     if (!announcementTitle.trim() || !announcementContent.trim() || !id) return;
     try {
+      const finalTitle =
+        postType === 'NOTICE' && !announcementTitle.startsWith('[공지]')
+          ? `[공지] ${announcementTitle}`
+          : announcementTitle;
+
       await api.createAnnouncement({
-        title: announcementTitle,
+        title: finalTitle,
         content: announcementContent,
         groupId: id,
       });
@@ -407,46 +499,88 @@ export default function GroupDetail() {
       const ann = await api.listAnnouncements(id);
       setAnnouncements(ann);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '공지사항 등록 실패');
+      alert(err instanceof Error ? err.message : '게시글 등록 실패');
     }
   };
 
   const handleUploadMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !id) return;
+    const files = e.target.files;
+    if (!files || files.length === 0 || !id) return;
+    const fileList = Array.from(files);
     setUploadingMedia(true);
     try {
-      const uploaded = await api.uploadGalleryFile(file);
-      await api.createGroupMedia(id, {
-        url: uploaded.url,
-        fileType: uploaded.fileType,
-      });
+      if (fileList.length === 1) {
+        const uploaded = await api.uploadGalleryFile(fileList[0]);
+        await api.createGroupMedia(id, {
+          url: uploaded.url,
+          fileType: uploaded.fileType,
+        });
+      } else {
+        const uploadedList = await api.uploadMultipleGalleryFiles(fileList);
+        for (const uploaded of uploadedList) {
+          await api.createGroupMedia(id, {
+            url: uploaded.url,
+            fileType: uploaded.fileType,
+          });
+        }
+      }
       const med = await api.getGroupMedia(id);
       setMediaFiles(med);
     } catch (err) {
       alert(err instanceof Error ? err.message : '미디어 업로드 실패');
     } finally {
       setUploadingMedia(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteMedia = async (mediaId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    if (!id) return;
+    if (!window.confirm('이 사진을 정말 삭제하시겠습니까?')) {
+      return;
+    }
+    try {
+      await api.deleteGroupMedia(id, mediaId);
+      const med = await api.getGroupMedia(id);
+      setMediaFiles(med);
+      if (selectedMediaIndex !== null) {
+        setSelectedMediaIndex(null);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '사진 삭제 실패');
     }
   };
 
   // Emojis for member activity status
+  // Member activity status labels and options
   const userStatusLabels: Record<string, string> = {
-    HEALTHY: '🟢',
-    INJURED: '🤕',
-    UNAVAILABLE: '🚨',
+    ACTIVE: '🟢 정상',
+    HEALTHY: '🟢 정상',
+    INACTIVE_INJURED: '🔴 장기간 참석 불가능 (부상)',
+    INJURED: '🔴 장기간 참석 불가능 (부상)',
+    INACTIVE_BUSINESS_TRIP: '🔴 장기간 참석 불가능 (출장)',
+    INACTIVE_CHILDCARE: '🔴 장기간 참석 불가능 (육아)',
+    INACTIVE_WORK: '🔴 장기간 참석 불가능 (업무)',
+    INACTIVE_OTHER: '🔴 장기간 참석 불가능 (기타)',
+    UNAVAILABLE: '🔴 장기간 참석 불가능 (기타)',
   };
+
+  const INACTIVE_REASON_OPTIONS = [
+    { value: 'INJURED', label: '🩹 부상' },
+    { value: 'BUSINESS_TRIP', label: '💼 출장' },
+    { value: 'CHILDCARE', label: '👶 육아' },
+    { value: 'WORK', label: '🏢 업무' },
+    { value: 'OTHER', label: '📝 기타' },
+  ];
 
   return (
     <div className="group-detail">
       {/* Header Bar */}
       <div className="group-detail-header-bar">
-        <button type="button" onClick={() => navigate('/')} className="header-back-btn">
-          〈 뒤로가기
-        </button>
-        <div className="header-actions">
-          <Link to={`/chat?groupId=${group.id}`} className="header-icon-btn" title="채팅">💬</Link>
-        </div>
+        <BackButton onClick={() => navigate('/')} label="홈" />
       </div>
 
       {/* Group Info Section */}
@@ -502,29 +636,141 @@ export default function GroupDetail() {
         </div>
       </div>
 
-      {message && <p className="info-banner">{message}</p>}
-
-      {!membership && (
-        <button type="button" className="btn-primary" onClick={handleJoin} style={{ margin: '16px auto', display: 'block', width: '90%' }}>
-          가입 신청
-        </button>
-      )}
-
-      {membership?.status === 'PENDING' && (
-        <div className="join-status-row" style={{ margin: '16px 12px' }}>
-          <p className="info-banner">가입 승인 대기 중입니다. 회장이 확인할 때까지 기다려 주세요.</p>
-          <button type="button" className="btn-ghost" onClick={handleCancelJoin}>
-            신청 취소
+      {message && (
+        <div className="info-banner" style={{ margin: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>{message}</span>
+          <button
+            type="button"
+            onClick={() => setMessage('')}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: 'var(--ink-muted)',
+              cursor: 'pointer',
+              marginLeft: '8px',
+              padding: '0 4px'
+            }}
+            title="닫기"
+          >
+            ✕
           </button>
         </div>
       )}
 
-      {membership?.status === 'REJECTED' && (
-        <div className="join-status-row" style={{ margin: '16px 12px' }}>
-          <p className="info-banner info-banner--warn">가입이 거절되었습니다.</p>
-          <button type="button" className="btn-primary" onClick={handleJoin}>
-            다시 신청
-          </button>
+      {!isApproved && (
+        <div className="group-preview-container">
+          {/* 1. Group Introduction Card */}
+          <div className="info-card">
+            <h3 className="info-card-title">📖 모임 소개</h3>
+            <p style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--ink-dark)', whiteSpace: 'pre-wrap', margin: 0 }}>
+              {group.description || '등록된 모임 소개글이 없습니다.'}
+            </p>
+          </div>
+
+          {/* 2. Group Specs / Info Summary */}
+          <div className="info-card">
+            <h3 className="info-card-title">ℹ️ 모임 기본 정보</h3>
+            <div className="info-details-list">
+              <div className="info-detail-row">
+                <span className="info-detail-label">🏷️ 종목/카테고리</span>
+                <span className="info-detail-val" style={{ fontWeight: 700, color: 'var(--accent)' }}>
+                  {group.customSportName || group.category}
+                </span>
+              </div>
+              <div className="info-detail-row">
+                <span className="info-detail-label">📍 활동 지역</span>
+                <span className="info-detail-val">
+                  {group.activityRegion || '지역 미설정'}
+                </span>
+              </div>
+              <div className="info-detail-row">
+                <span className="info-detail-label">👥 회원 수</span>
+                <span className="info-detail-val">
+                  {group.members.length}명
+                  {group.maxMembers ? ` (정원 ${group.maxMembers}명)` : ''}
+                </span>
+              </div>
+              <div className="info-detail-row">
+                <span className="info-detail-label">💰 회비 납부</span>
+                <span className="info-detail-val">
+                  {group.dueDay ? `매월 ${group.dueDay}일` : '회비 미설정'}
+                  {group.officerFeeExempt && ' (운영진 면제)'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Arenas / Venues if any */}
+          {group.arenas && group.arenas.length > 0 && (
+            <div className="info-card">
+              <h3 className="info-card-title">🏟️ 주요 활동 구장</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {group.arenas.map((arena: any, idx: number) => (
+                  <div key={arena.id || idx} style={{ padding: '10px 12px', background: 'var(--grey-50)', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--ink-dark)', marginBottom: '2px' }}>
+                      {arena.placeName}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
+                      {arena.address}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 4. Join CTA Action Banner */}
+          <div className="group-preview-join-card">
+            {!user ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => navigate('/login')}
+                style={{ width: '100%', padding: '14px', fontSize: '15px', fontWeight: 800 }}
+              >
+                로그인하고 가입 신청하기
+              </button>
+            ) : !membership ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleJoin}
+                style={{ width: '100%', padding: '14px', fontSize: '15px', fontWeight: 800 }}
+              >
+                🌱 모임 가입 신청하기
+              </button>
+            ) : membership?.status === 'PENDING' ? (
+              <div className="join-status-box">
+                <p className="info-banner" style={{ margin: '0 0 10px 0', textAlign: 'center' }}>
+                  ⏳ 가입 승인 대기 중입니다. 회장의 승인을 기다려 주세요.
+                </p>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={handleCancelJoin}
+                  style={{ width: '100%' }}
+                >
+                  신청 취소
+                </button>
+              </div>
+            ) : membership?.status === 'REJECTED' ? (
+              <div className="join-status-box">
+                <p className="info-banner info-banner--warn" style={{ margin: '0 0 10px 0', textAlign: 'center' }}>
+                  가입이 거절되었습니다.
+                </p>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleJoin}
+                  style={{ width: '100%' }}
+                >
+                  다시 가입 신청하기
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       )}
 
@@ -604,39 +850,79 @@ export default function GroupDetail() {
                 </button>
               </div>
 
-              {/* Write announcement inline form */}
+              {/* Write post modal popup */}
               {writingAnnouncement && (
-                <form onSubmit={handleCreateAnnouncement} className="feed-write-form">
-                  <h3 className="feed-write-form-title">새 공지사항 등록</h3>
-                  <div className="form-group" style={{ marginBottom: '12px' }}>
-                    <input
-                      type="text"
-                      placeholder="제목을 입력하세요..."
-                      value={announcementTitle}
-                      onChange={(e) => setAnnouncementTitle(e.target.value)}
-                      required
-                      className="feed-write-input"
-                    />
+                <div
+                  className="post-write-modal-backdrop"
+                  onClick={() => {
+                    setWritingAnnouncement(false);
+                    setAnnouncementTitle('');
+                    setAnnouncementContent('');
+                  }}
+                >
+                  <div className="post-write-modal-card" onClick={(e) => e.stopPropagation()}>
+                    <div className="post-write-modal-header">
+                      <h3 className="post-write-modal-title">
+                        {postType === 'NOTICE' ? '📢 새 공지사항 등록' : '📝 새 게시글 작성'}
+                      </h3>
+                      <button
+                        type="button"
+                        className="post-write-modal-close"
+                        onClick={() => {
+                          setWritingAnnouncement(false);
+                          setAnnouncementTitle('');
+                          setAnnouncementContent('');
+                        }}
+                        title="닫기"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleCreateAnnouncement} className="post-write-modal-body">
+                      <div className="form-group" style={{ marginBottom: '14px' }}>
+                        <label className="post-write-field-label">제목</label>
+                        <input
+                          type="text"
+                          placeholder={postType === 'NOTICE' ? '공지 제목을 입력하세요...' : '게시글 제목을 입력하세요...'}
+                          value={announcementTitle}
+                          onChange={(e) => setAnnouncementTitle(e.target.value)}
+                          required
+                          autoComplete="off"
+                          className="post-write-input"
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label className="post-write-field-label">내용</label>
+                        <textarea
+                          placeholder={postType === 'NOTICE' ? '공지 내용을 입력하세요...' : '모임 회원들과 공유할 내용을 자유롭게 작성해보세요...'}
+                          value={announcementContent}
+                          onChange={(e) => setAnnouncementContent(e.target.value)}
+                          required
+                          rows={6}
+                          className="post-write-textarea"
+                        />
+                      </div>
+
+                      <div className="post-write-modal-actions">
+                        <button
+                          type="button"
+                          className="post-write-btn-cancel"
+                          onClick={() => {
+                            setWritingAnnouncement(false);
+                            setAnnouncementTitle('');
+                            setAnnouncementContent('');
+                          }}
+                        >
+                          취소
+                        </button>
+                        <button type="submit" className="post-write-btn-submit">
+                          등록
+                        </button>
+                      </div>
+                    </form>
                   </div>
-                  <div className="form-group" style={{ marginBottom: '12px' }}>
-                    <textarea
-                      placeholder="공지 내용을 입력하세요..."
-                      value={announcementContent}
-                      onChange={(e) => setAnnouncementContent(e.target.value)}
-                      required
-                      rows={4}
-                      className="feed-write-textarea"
-                    />
-                  </div>
-                  <div className="feed-write-form-actions">
-                    <button type="submit" className="btn-sm btn-primary">
-                      등록 완료
-                    </button>
-                    <button type="button" className="btn-sm btn-ghost" onClick={() => setWritingAnnouncement(false)}>
-                      취소
-                    </button>
-                  </div>
-                </form>
+                </div>
               )}
 
               {/* Feed Items List */}
@@ -645,8 +931,6 @@ export default function GroupDetail() {
               ) : (
                 <div className="feed-list">
                   {filteredFeedItems.map((item) => {
-                    const comments = eventCommentsMap[item.id] || [];
-
                     return (
                       <div key={`${item.feedType}-${item.id}`} className="feed-card">
                         {/* Post Header */}
@@ -658,7 +942,7 @@ export default function GroupDetail() {
                           )}
                           <div className="feed-card-meta">
                             <span className="feed-card-author-name">
-                              {getMemberHeaderInfo(item.author)}
+                              {formatCommentAuthorBadge(item.author)}
                             </span>
                             <div className="feed-card-time-row">
                               <span className="feed-card-time">
@@ -670,8 +954,10 @@ export default function GroupDetail() {
                                   minute: '2-digit',
                                 })}
                               </span>
-                              {item.feedType === 'announcement' && (
+                              {item.isNotice ? (
                                 <span className="feed-card-badge">중요공지</span>
+                              ) : (
+                                <span className="feed-card-badge feed-card-badge--general">일반글</span>
                               )}
                             </div>
                           </div>
@@ -679,186 +965,88 @@ export default function GroupDetail() {
 
                         {/* Post Body Content */}
                         <div className="feed-card-body">
-                          {item.feedType === 'announcement' && (
-                            <h3 className="feed-announcement-title">{item.title}</h3>
-                          )}
+                          <h3 className="feed-announcement-title">{item.title}</h3>
                           <p className="feed-card-text">{item.content}</p>
-
-                          {/* Event Attachment Vote Card */}
-                          {item.feedType === 'event' && (
-                            <div className="feed-vote-box">
-                              <div className="feed-vote-header">
-                                <span className="feed-vote-status-badge">투표 중</span>
-                                <span className="feed-vote-count-text">
-                                  {item.raw._count?.votes ?? 0}명 참여
-                                </span>
-                              </div>
-                              <Link to={`/events/${item.id}`} className="feed-vote-title-link">
-                                <h4 className="feed-vote-title">{item.title}</h4>
-                              </Link>
-                              <div className="feed-vote-details">
-                                📍 {item.raw.location} · 📅 {formatEventDate(item.raw.date)}
-                              </div>
-                              <div className="feed-vote-options">
-                                {(() => {
-                                  const votesRes = eventVotesMap[item.id];
-                                  const myChoice = votesRes?.myVote?.choice;
-                                  
-                                  const votesList = votesRes?.votes || [];
-                                  const attendCount = votesList.filter((v: any) => v.choice === 'ATTEND').length;
-                                  const lateCount = votesList.filter((v: any) => v.choice === 'LATE').length;
-                                  const absentCount = votesList.filter((v: any) => v.choice === 'ABSENT').length;
-
-                                  return (
-                                    <>
-                                      <button
-                                        type="button"
-                                        className={`feed-vote-option-btn-item ${myChoice === 'ATTEND' ? 'is-selected' : ''}`}
-                                        onClick={() => handleVoteDirect(item.id, 'ATTEND')}
-                                      >
-                                        <span className="feed-vote-option-dot" />
-                                        <span className="feed-vote-option-label">참석</span>
-                                        <span className="feed-vote-option-count">{attendCount}명</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className={`feed-vote-option-btn-item ${myChoice === 'LATE' ? 'is-selected' : ''}`}
-                                        onClick={() => handleVoteDirect(item.id, 'LATE')}
-                                      >
-                                        <span className="feed-vote-option-dot" />
-                                        <span className="feed-vote-option-label">늦참</span>
-                                        <span className="feed-vote-option-count">{lateCount}명</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className={`feed-vote-option-btn-item ${myChoice === 'ABSENT' ? 'is-selected' : ''}`}
-                                        onClick={() => handleVoteDirect(item.id, 'ABSENT')}
-                                      >
-                                        <span className="feed-vote-option-dot" />
-                                        <span className="feed-vote-option-label">불참</span>
-                                        <span className="feed-vote-option-count">{absentCount}명</span>
-                                      </button>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                              <Link to={`/events/${item.id}`} className="feed-vote-action-btn">
-                                투표 상세 보기
-                              </Link>
-                            </div>
-                          )}
                         </div>
 
                         {/* Post Footer info */}
                         <div className="feed-card-footer">
-                          <span className="feed-footer-stat">댓글 {item.feedType === 'event' ? comments.length : 2}</span>
-                          <span className="feed-footer-stat">👁️ 28</span>
+                          <span className="feed-footer-stat">
+                            댓글 {getAnnouncementComments(item.id).length}
+                          </span>
                         </div>
 
-                        {/* Feed Comment Action Row */}
-                        <div className="feed-comment-actions-bar">
-                          <button type="button" className="feed-comment-action-btn-item">
-                            😊 표정짓기
-                          </button>
-                          <button
-                            type="button"
-                            className="feed-comment-action-btn-item"
-                            onClick={() => {
-                              const inputEl = document.getElementById(`input-${item.id}`);
-                              if (inputEl) inputEl.focus();
-                            }}
-                          >
-                            💬 댓글쓰기
-                          </button>
+                        {/* Direct 4-Emoji Reaction Bar */}
+                        <div className="feed-reaction-bar">
+                          {REACTION_OPTIONS.map(({ type, emoji, label }) => {
+                            const itemMap = reactionsMap[item.id] || {
+                              LIKE: { count: 0, active: false },
+                              BEST: { count: 0, active: false },
+                              DISLIKE: { count: 0, active: false },
+                              CHECK: { count: 0, active: false },
+                            };
+                            const reaction = itemMap[type] || { count: 0, active: false };
+                            return (
+                              <button
+                                key={type}
+                                type="button"
+                                className={`feed-reaction-btn${reaction.active ? ' is-active' : ''}`}
+                                onClick={() => handleToggleReaction(item.id, type)}
+                              >
+                                <span className="feed-reaction-emoji">{emoji}</span>
+                                <span className="feed-reaction-label">{label}</span>
+                                {reaction.count > 0 && (
+                                  <span className="feed-reaction-count">{reaction.count}</span>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
 
                         {/* Inline Comments Thread */}
                         <div className="feed-comments-thread">
-                          {/* Announcement Mock Comments to match Naver Band mockup */}
-                          {item.feedType === 'announcement' && (
-                            <div className="feed-comments-list">
-                              <div className="feed-comment-item">
+                          <div className="feed-comments-list">
+                            {getAnnouncementComments(item.id).map((c) => (
+                              <div key={c.id} className="feed-comment-item">
                                 <div className="feed-comment-avatar-fallback">👤</div>
                                 <div className="feed-comment-body">
                                   <div className="feed-comment-author-row">
-                                    <span className="feed-comment-author">95/최순용/회원</span>
-                                    <span className="feed-comment-time">7월 6일 오전 9:22</span>
+                                    <span className="feed-comment-author">
+                                      {formatCommentAuthorBadge(c.author)}
+                                    </span>
+                                    <span className="feed-comment-time">{c.time}</span>
                                   </div>
-                                  <p className="feed-comment-content">출산으로 인해 3달 쉬겠습니다.</p>
+                                  <p className="feed-comment-content">{c.content}</p>
                                 </div>
                               </div>
-                              <div className="feed-comment-item">
-                                <div className="feed-comment-avatar-fallback">👤</div>
-                                <div className="feed-comment-body">
-                                  <div className="feed-comment-author-row">
-                                    <span className="feed-comment-author">88/이상헌/회원</span>
-                                    <span className="feed-comment-time">7월 6일 오후 2:34</span>
-                                  </div>
-                                  <p className="feed-comment-content">대구 장기출장입니다.</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                            ))}
+                          </div>
 
-                          {/* Event Real Comments */}
-                          {item.feedType === 'event' && (
-                            <>
-                              {comments.length > 0 && (
-                                <div className="feed-comments-list">
-                                  {comments.map((comment: any) => (
-                                    <div key={comment.id} className="feed-comment-item">
-                                      {comment.user.profileImageUrl ? (
-                                        <img src={comment.user.profileImageUrl} alt="" className="feed-comment-avatar" />
-                                      ) : (
-                                        <div className="feed-comment-avatar-fallback">{comment.user.displayName[0]}</div>
-                                      )}
-                                      <div className="feed-comment-body">
-                                        <div className="feed-comment-author-row">
-                                          <span className="feed-comment-author">
-                                            {getMemberHeaderInfo(comment.user)}
-                                          </span>
-                                          <span className="feed-comment-time">
-                                            {new Date(comment.createdAt).toLocaleDateString('ko-KR', {
-                                              month: 'numeric',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit',
-                                            })}
-                                          </span>
-                                        </div>
-                                        <p className="feed-comment-content">{comment.content}</p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Submit comment form row */}
-                              <div className="feed-comment-input-row">
-                                <input
-                                  id={`input-${item.id}`}
-                                  type="text"
-                                  placeholder="댓글을 입력하세요..."
-                                  className="feed-comment-input"
-                                  value={commentInputs[item.id] || ''}
-                                  onChange={(e) =>
-                                    setCommentInputs((prev) => ({ ...prev, [item.id]: e.target.value }))
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      handleAddFeedComment(item.id, commentInputs[item.id] || '');
-                                    }
-                                  }}
-                                />
-                                <button
-                                  type="button"
-                                  className="feed-comment-submit-btn"
-                                  onClick={() => handleAddFeedComment(item.id, commentInputs[item.id] || '')}
-                                >
-                                  등록
-                                </button>
-                              </div>
-                            </>
-                          )}
+                          <div className="feed-comment-input-row">
+                            <input
+                              id={`input-${item.id}`}
+                              type="text"
+                              placeholder="댓글을 입력하세요..."
+                              className="feed-comment-input"
+                              value={commentInputs[item.id] || ''}
+                              onChange={(e) =>
+                                setCommentInputs((prev) => ({ ...prev, [item.id]: e.target.value }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                  e.preventDefault();
+                                  handleAddAnnouncementComment(item.id, commentInputs[item.id] || '');
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="feed-comment-submit-btn"
+                              onClick={() => handleAddAnnouncementComment(item.id, commentInputs[item.id] || '')}
+                            >
+                              등록
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -957,45 +1145,50 @@ export default function GroupDetail() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '12px' }}>
-                  {mediaFiles.map((m) => (
-                    <div key={m.id} className="gallery-item" style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px', background: 'var(--grey-100)', aspectRatio: '1/1', boxShadow: 'var(--shadow-1)' }}>
-                      {m.fileType === 'VIDEO' ? (
-                        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                          <video
-                            src={m.url}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onClick={(e) => {
-                              const video = e.currentTarget;
-                              if (video.paused) {
-                                video.play();
-                                video.controls = true;
-                              } else {
-                                video.pause();
-                                video.controls = false;
-                              }
-                            }}
-                          />
-                          <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, pointerEvents: 'none' }}>
-                            ▶ Video
+                  {mediaFiles.map((m, idx) => (
+                    <div
+                      key={m.id}
+                        className="gallery-item"
+                        style={{
+                          position: 'relative',
+                          overflow: 'hidden',
+                          borderRadius: '12px',
+                          background: 'var(--grey-100)',
+                          aspectRatio: '1/1',
+                          boxShadow: 'var(--shadow-1)',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => setSelectedMediaIndex(idx)}
+                      >
+                        {m.fileType === 'VIDEO' ? (
+                          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                            <video
+                              src={m.url}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                            <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, pointerEvents: 'none' }}>
+                              ▶ Video
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100%', height: '100%' }}>
-                          <img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </a>
-                      )}
-                      <div style={{ position: 'absolute', bottom: '0', left: '0', right: '0', padding: '6px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
-                        {m.uploadedBy.profileImageUrl ? (
-                          <img src={m.uploadedBy.profileImageUrl} alt="" style={{ width: '14px', height: '14px', borderRadius: '50%' }} />
                         ) : (
-                          <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#fff', color: '#333', display: 'grid', placeItems: 'center', fontSize: '8px', fontWeight: 700 }}>
-                            {m.uploadedBy.displayName[0]}
+                          <div style={{ width: '100%', height: '100%' }}>
+                            <img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                         )}
-                        <span style={{ fontSize: '10px', color: '#fff', fontWeight: 600 }}>{m.uploadedBy.displayName}</span>
+
+                        <div style={{ position: 'absolute', bottom: '0', left: '0', right: '0', padding: '6px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
+                          {m.uploadedBy?.profileImageUrl ? (
+                            <img src={m.uploadedBy.profileImageUrl} alt="" style={{ width: '14px', height: '14px', borderRadius: '50%' }} />
+                          ) : (
+                            <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#fff', color: '#333', display: 'grid', placeItems: 'center', fontSize: '8px', fontWeight: 700 }}>
+                              {m.uploadedBy?.displayName?.[0] || 'U'}
+                            </div>
+                          )}
+                          <span style={{ fontSize: '10px', color: '#fff', fontWeight: 600 }}>{m.uploadedBy?.displayName}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -1005,32 +1198,79 @@ export default function GroupDetail() {
           {activeTab === 'members' && (
             <div className="tab-content-members">
               {/* 1. My Activity Status */}
-              <section className="section-block">
-                <h2 className="tab-section-title">내 활동 상태 설정</h2>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  {Object.keys(userStatusLabels).map((statusKey) => {
-                    const myMembershipRecord = group.members.find((m: any) => m.userId === user?.id);
-                    const isSelected = myMembershipRecord?.userStatus === statusKey;
-                    return (
-                      <button
-                        key={statusKey}
-                        type="button"
-                        onClick={() => handleUpdateMyStatus(statusKey)}
-                        className="filter-btn"
-                        style={{
-                          flex: 1,
-                          background: isSelected ? 'var(--accent)' : 'var(--surface)',
-                          color: isSelected ? 'var(--white)' : 'var(--ink-muted)',
-                          borderColor: isSelected ? 'var(--accent)' : 'var(--border)',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {userStatusLabels[statusKey]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
+              {(() => {
+                const myMembershipRecord = group.members.find((m: any) => m.userId === user?.id);
+                const rawStatus = myMembershipRecord?.userStatus || 'ACTIVE';
+                const isInactive = rawStatus.startsWith('INACTIVE_') || rawStatus === 'INJURED' || rawStatus === 'UNAVAILABLE';
+                const currentMainStatus = isInactive ? 'INACTIVE' : 'ACTIVE';
+
+                let currentReason = 'INJURED';
+                if (rawStatus === 'INJURED' || rawStatus === 'INACTIVE_INJURED') currentReason = 'INJURED';
+                else if (rawStatus === 'INACTIVE_BUSINESS_TRIP') currentReason = 'BUSINESS_TRIP';
+                else if (rawStatus === 'INACTIVE_CHILDCARE') currentReason = 'CHILDCARE';
+                else if (rawStatus === 'INACTIVE_WORK') currentReason = 'WORK';
+                else if (rawStatus === 'INACTIVE_OTHER' || rawStatus === 'UNAVAILABLE') currentReason = 'OTHER';
+
+                const handleSelectMainStatus = async (mainType: 'ACTIVE' | 'INACTIVE') => {
+                  if (mainType === 'ACTIVE') {
+                    await handleUpdateMyStatus('ACTIVE');
+                  } else {
+                    await handleUpdateMyStatus(`INACTIVE_${currentReason}`);
+                  }
+                };
+
+                const handleSelectReason = async (reasonKey: string) => {
+                  await handleUpdateMyStatus(`INACTIVE_${reasonKey}`);
+                };
+
+                return (
+                  <section className="compact-activity-status-card">
+                    <div className="compact-activity-status-header">
+                      <span className="compact-activity-status-label">내 활동 상태</span>
+                      <span className={`compact-activity-status-badge ${currentMainStatus === 'ACTIVE' ? 'is-active' : 'is-inactive'}`}>
+                        {currentMainStatus === 'ACTIVE'
+                          ? '🟢 정상 활동'
+                          : `🔴 ${INACTIVE_REASON_OPTIONS.find((o) => o.value === currentReason)?.label || '장기 불참'}`}
+                      </span>
+                    </div>
+                    <div className="compact-activity-controls-row">
+                      <div className="compact-segmented-toggle">
+                        <button
+                          type="button"
+                          className={`compact-toggle-btn ${currentMainStatus === 'ACTIVE' ? 'is-selected' : ''}`}
+                          onClick={() => handleSelectMainStatus('ACTIVE')}
+                        >
+                          <span>🟢 정상</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`compact-toggle-btn ${currentMainStatus === 'INACTIVE' ? 'is-selected' : ''}`}
+                          onClick={() => handleSelectMainStatus('INACTIVE')}
+                        >
+                          <span>🔴 장기 불참</span>
+                        </button>
+                      </div>
+                      {currentMainStatus === 'INACTIVE' && (
+                        <div className="compact-reason-wrapper">
+                          <select
+                            id="inactive-reason-select"
+                            className="compact-reason-select"
+                            value={currentReason}
+                            onChange={(e) => handleSelectReason(e.target.value)}
+                            aria-label="불참 사유 선택"
+                          >
+                            {INACTIVE_REASON_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                );
+              })()}
 
               {/* 2. Join Requests (Officers only) */}
               {isOfficer && group.pendingRequests.length > 0 && (
@@ -1082,17 +1322,95 @@ export default function GroupDetail() {
               )}
 
               {/* 3. Members List */}
-              <section className="section-block">
-                <h2 className="tab-section-title">운영진 & 회원 ({sortedMembers.length}명)</h2>
-                <ul className="member-list">
-                  {sortedMembers.map((m: any) => {
-                    const isPresidentRole = m.role === 'PRESIDENT';
-                    const isStaff = m.role === 'VICE_PRESIDENT' || m.role === 'SECRETARY' || m.role === 'OFFICER';
-                    const badgeClass = isPresidentRole 
-                      ? 'member-item-card__badge--president' 
-                      : isStaff 
-                        ? 'member-item-card__badge--officer' 
-                        : '';
+              {(() => {
+                const officerCount = sortedMembers.filter(
+                  (m: any) =>
+                    m.role === 'PRESIDENT' ||
+                    m.role === 'VICE_PRESIDENT' ||
+                    m.role === 'SECRETARY' ||
+                    m.role === 'OFFICER'
+                ).length;
+
+                const regularMemberCount = sortedMembers.filter((m: any) => m.role === 'MEMBER').length;
+
+                const injuredCount = sortedMembers.filter(
+                  (m: any) =>
+                    m.userStatus === 'INJURED' ||
+                    m.userStatus === 'INACTIVE_INJURED' ||
+                    m.userStatus?.startsWith('INACTIVE_') ||
+                    m.userStatus === 'UNAVAILABLE'
+                ).length;
+
+                const filteredMembers = sortedMembers.filter((m: any) => {
+                  const isStaff =
+                    m.role === 'PRESIDENT' ||
+                    m.role === 'VICE_PRESIDENT' ||
+                    m.role === 'SECRETARY' ||
+                    m.role === 'OFFICER';
+                  const isInjured =
+                    m.userStatus === 'INJURED' ||
+                    m.userStatus === 'INACTIVE_INJURED' ||
+                    m.userStatus?.startsWith('INACTIVE_') ||
+                    m.userStatus === 'UNAVAILABLE';
+
+                  if (memberFilter === 'officer') return isStaff;
+                  if (memberFilter === 'member') return m.role === 'MEMBER';
+                  if (memberFilter === 'injured') return isInjured;
+                  return true;
+                });
+
+                return (
+                  <section className="section-block">
+                    <div className="member-list-filter-header">
+                      <h2 className="tab-section-title" style={{ margin: 0 }}>
+                        회원 목록 ({filteredMembers.length}명)
+                      </h2>
+                      <div className="member-filter-pills-bar">
+                        <button
+                          type="button"
+                          className={`member-filter-pill ${memberFilter === 'all' ? 'is-active' : ''}`}
+                          onClick={() => setMemberFilter('all')}
+                        >
+                          전체 ({sortedMembers.length})
+                        </button>
+                        <button
+                          type="button"
+                          className={`member-filter-pill ${memberFilter === 'officer' ? 'is-active' : ''}`}
+                          onClick={() => setMemberFilter('officer')}
+                        >
+                          운영진 ({officerCount})
+                        </button>
+                        <button
+                          type="button"
+                          className={`member-filter-pill ${memberFilter === 'member' ? 'is-active' : ''}`}
+                          onClick={() => setMemberFilter('member')}
+                        >
+                          회원 ({regularMemberCount})
+                        </button>
+                        <button
+                          type="button"
+                          className={`member-filter-pill member-filter-pill--injured ${memberFilter === 'injured' ? 'is-active' : ''}`}
+                          onClick={() => setMemberFilter('injured')}
+                        >
+                          부상자 ({injuredCount})
+                        </button>
+                      </div>
+                    </div>
+
+                    {filteredMembers.length === 0 ? (
+                      <p style={{ textAlign: 'center', padding: '36px 0', color: 'var(--ink-muted)', fontSize: '13px' }}>
+                        해당 조건의 회원이 없습니다.
+                      </p>
+                    ) : (
+                      <ul className="member-list">
+                        {filteredMembers.map((m: any) => {
+                          const isPresidentRole = m.role === 'PRESIDENT';
+                          const isStaff = m.role === 'VICE_PRESIDENT' || m.role === 'SECRETARY' || m.role === 'OFFICER';
+                          const badgeClass = isPresidentRole
+                            ? 'member-item-card__badge--president'
+                            : isStaff
+                              ? 'member-item-card__badge--officer'
+                              : '';
 
                     return (
                       <li key={m.id} className="member-item-card">
@@ -1210,32 +1528,70 @@ export default function GroupDetail() {
                     );
                   })}
                 </ul>
-              </section>
-            </div>
-          )}
+              )}
+            </section>
+          );
+        })()}
+        </div>
+      )}
 
           {/* 5. 회비 탭 (Payments Board View) */}
           {activeTab === 'payments' && (
             <div className="tab-content-payments">
               <div className="payments-board">
-                <div className="month-picker-row">
-                  <button type="button" onClick={prevMonth} className="month-nav-btn" title="이전달">‹</button>
-                  <span className="month-picker-value">{payYear}년 {payMonth}월</span>
-                  <button type="button" onClick={nextMonth} className="month-nav-btn" title="다음달">›</button>
+                {/* Compact Payments Control Header */}
+                <div className="compact-payments-header-card">
+                  <div className="compact-payments-top-row">
+                    <div className="compact-month-picker">
+                      <button type="button" onClick={prevMonth} className="compact-month-btn" title="이전달">‹</button>
+                      <span className="compact-month-title">{payYear}년 {payMonth}월</span>
+                      <button type="button" onClick={nextMonth} className="compact-month-btn" title="다음달">›</button>
+                    </div>
+
+                    {paymentData && (() => {
+                      const totalCount = paymentData.payments.length;
+                      const paidCount = paymentData.payments.filter((p: any) => p.isPaid).length;
+                      const unpaidCount = paymentData.payments.filter((p: any) => !p.isPaid).length;
+
+                      return (
+                        <div className="compact-payment-filter-group">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentFilter('all')}
+                            className={`compact-filter-pill ${paymentFilter === 'all' ? 'is-active' : ''}`}
+                          >
+                            전체 {totalCount}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentFilter('paid')}
+                            className={`compact-filter-pill compact-filter-pill--paid ${paymentFilter === 'paid' ? 'is-active' : ''}`}
+                          >
+                            납부 {paidCount}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentFilter('unpaid')}
+                            className={`compact-filter-pill compact-filter-pill--unpaid ${paymentFilter === 'unpaid' ? 'is-active' : ''}`}
+                          >
+                            미납 {unpaidCount}
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {group.dueDay && (
+                    <div className="compact-dues-notice-line">
+                      <span>💡 매월 <strong>{group.dueDay}일</strong> 납부일</span>
+                      {group.officerFeeExempt && (
+                        <span className="compact-dues-notice-badge">운영진 면제</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {group.dueDay && (
-                  <div className="payments-meta-box">
-                    💡 <strong>매월 {group.dueDay}일</strong>은 회비 납부일입니다.
-                    {group.officerFeeExempt && <span style={{ marginLeft: '6px' }}> (운영진 회비 면제 적용 중)</span>}
-                  </div>
-                )}
-
                 {paymentData && (() => {
-                  const totalCount = paymentData.payments.length;
-                  const paidCount = paymentData.payments.filter((p: any) => p.isPaid).length;
-                  const unpaidCount = paymentData.payments.filter((p: any) => !p.isPaid).length;
-
                   const filteredPayments = paymentData.payments.filter((p: any) => {
                     if (paymentFilter === 'paid') return p.isPaid;
                     if (paymentFilter === 'unpaid') return !p.isPaid;
@@ -1244,68 +1600,8 @@ export default function GroupDetail() {
 
                   return (
                     <>
-                      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: 'var(--grey-50)', padding: '4px', borderRadius: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentFilter('all')}
-                          style={{
-                            flex: 1,
-                            border: 'none',
-                            background: paymentFilter === 'all' ? 'var(--surface)' : 'transparent',
-                            padding: '8px',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            color: paymentFilter === 'all' ? 'var(--accent)' : 'var(--ink-muted)',
-                            cursor: 'pointer',
-                            boxShadow: paymentFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          전체 ({totalCount})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentFilter('paid')}
-                          style={{
-                            flex: 1,
-                            border: 'none',
-                            background: paymentFilter === 'paid' ? 'var(--surface)' : 'transparent',
-                            padding: '8px',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            color: paymentFilter === 'paid' ? 'var(--accent)' : 'var(--ink-muted)',
-                            cursor: 'pointer',
-                            boxShadow: paymentFilter === 'paid' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          납부 ({paidCount})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentFilter('unpaid')}
-                          style={{
-                            flex: 1,
-                            border: 'none',
-                            background: paymentFilter === 'unpaid' ? 'var(--surface)' : 'transparent',
-                            padding: '8px',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            color: paymentFilter === 'unpaid' ? 'var(--accent)' : 'var(--ink-muted)',
-                            cursor: 'pointer',
-                            boxShadow: paymentFilter === 'unpaid' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          미납 ({unpaidCount})
-                        </button>
-                      </div>
-
                       {filteredPayments.length === 0 ? (
-                        <p style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-muted)' }}>
+                        <p style={{ textAlign: 'center', padding: '32px 0', color: 'var(--ink-muted)', fontSize: '13px' }}>
                           {paymentFilter === 'paid'
                             ? '납부 완료된 회원이 없습니다.'
                             : paymentFilter === 'unpaid'
@@ -1454,16 +1750,19 @@ export default function GroupDetail() {
                       <span>✏️ 모임 설정 수정 (정보/계좌 등)</span>
                       <span className="arrow-indicator">〉</span>
                     </Link>
-                    {isPresident && (
-                      <div 
-                        className="info-menu-action-row" 
-                        onClick={handleDissolveGroup}
-                        style={{ cursor: 'pointer', color: '#dc3545', marginTop: '8px', borderTop: '1px solid var(--grey-200)', paddingTop: '8px' }}
-                      >
-                        <span>💥 모임 해체 (삭제)</span>
-                        <span className="arrow-indicator" style={{ color: '#dc3545' }}>〉</span>
-                      </div>
-                    )}
+                  </div>
+                )}
+
+                {/* Dissolve Group Action (President only, bottom right) */}
+                {isPresident && (
+                  <div className="group-dissolve-footer-row">
+                    <button
+                      type="button"
+                      className="btn-dissolve-group"
+                      onClick={handleDissolveGroup}
+                    >
+                      💥 모임 해체하기
+                    </button>
                   </div>
                 )}
               </div>
@@ -1472,8 +1771,8 @@ export default function GroupDetail() {
         </>
       )}
 
-      {/* Floating Action Button (FAB) popover & triggers */}
-      {isOfficer && activeTab === 'posts' && (
+      {/* Floating Action Button (FAB) popover & triggers for ALL approved members */}
+      {membership?.status === 'APPROVED' && activeTab === 'posts' && (
         <div className="fab-menu-container">
           {showWriteMenu && (
             <div className="fab-menu-popover">
@@ -1481,13 +1780,32 @@ export default function GroupDetail() {
                 type="button"
                 className="fab-popover-item"
                 onClick={() => {
+                  setPostType('GENERAL');
+                  setAnnouncementTitle('');
+                  setAnnouncementContent('');
                   setWritingAnnouncement(true);
                   setShowWriteMenu(false);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               >
-                📢 공지글 작성
+                📝 게시글 작성
               </button>
+              {isOfficer && (
+                <button
+                  type="button"
+                  className="fab-popover-item"
+                  onClick={() => {
+                    setPostType('NOTICE');
+                    setAnnouncementTitle('');
+                    setAnnouncementContent('');
+                    setWritingAnnouncement(true);
+                    setShowWriteMenu(false);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  📢 공지글 작성
+                </button>
+              )}
               <Link
                 to={`/groups/${group.id}/events/new`}
                 className="fab-popover-item"
@@ -1519,11 +1837,116 @@ export default function GroupDetail() {
             <input
               type="file"
               accept="image/*,video/*"
+              multiple
               onChange={handleUploadMedia}
               disabled={uploadingMedia}
               style={{ display: 'none' }}
             />
           </label>
+        </div>
+      )}
+
+      {/* In-App Fullscreen Gallery Lightbox Modal */}
+      {selectedMediaIndex !== null && mediaFiles[selectedMediaIndex] && (
+        <div
+          className="media-lightbox-overlay"
+          onClick={() => setSelectedMediaIndex(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="media-lightbox-header" onClick={(e) => e.stopPropagation()}>
+            <div className="media-lightbox-uploader">
+              {mediaFiles[selectedMediaIndex].uploadedBy?.profileImageUrl ? (
+                <img
+                  src={mediaFiles[selectedMediaIndex].uploadedBy.profileImageUrl}
+                  alt=""
+                  className="media-lightbox-uploader-avatar"
+                />
+              ) : (
+                <div className="media-lightbox-uploader-fallback">
+                  {mediaFiles[selectedMediaIndex].uploadedBy?.displayName?.[0] || 'U'}
+                </div>
+              )}
+              <div className="media-lightbox-uploader-info">
+                <span className="media-lightbox-uploader-name">
+                  {mediaFiles[selectedMediaIndex].uploadedBy?.displayName}
+                </span>
+                <span className="media-lightbox-index-badge">
+                  {selectedMediaIndex + 1} / {mediaFiles.length}
+                </span>
+              </div>
+            </div>
+            <div className="media-lightbox-header-actions">
+              {(isOfficer ||
+                mediaFiles[selectedMediaIndex].uploadedById === user?.id ||
+                mediaFiles[selectedMediaIndex].uploadedBy?.id === user?.id) && (
+                <button
+                  type="button"
+                  className="media-lightbox-delete-btn"
+                  onClick={() => handleDeleteMedia(mediaFiles[selectedMediaIndex].id)}
+                  title="사진 삭제"
+                >
+                  🗑️ 삭제
+                </button>
+              )}
+              <button
+                type="button"
+                className="media-lightbox-close-btn"
+                onClick={() => setSelectedMediaIndex(null)}
+                title="닫기"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="media-lightbox-content" onClick={(e) => e.stopPropagation()}>
+            {mediaFiles[selectedMediaIndex].fileType === 'VIDEO' ? (
+              <video
+                src={mediaFiles[selectedMediaIndex].url}
+                controls
+                autoPlay
+                className="media-lightbox-media-elem"
+              />
+            ) : (
+              <img
+                src={mediaFiles[selectedMediaIndex].url}
+                alt="확대 사진"
+                className="media-lightbox-media-elem"
+              />
+            )}
+
+            {mediaFiles.length > 1 && (
+              <>
+                {selectedMediaIndex > 0 && (
+                  <button
+                    type="button"
+                    className="media-lightbox-nav-btn media-lightbox-prev"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedMediaIndex(selectedMediaIndex - 1);
+                    }}
+                    title="이전 사진"
+                  >
+                    ‹
+                  </button>
+                )}
+                {selectedMediaIndex < mediaFiles.length - 1 && (
+                  <button
+                    type="button"
+                    className="media-lightbox-nav-btn media-lightbox-next"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedMediaIndex(selectedMediaIndex + 1);
+                    }}
+                    title="다음 사진"
+                  >
+                    ›
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

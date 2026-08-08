@@ -229,10 +229,30 @@ export const api = {
     }
     return res.json() as Promise<{ url: string; filename: string; fileType: 'IMAGE' | 'VIDEO' }>;
   },
+  uploadMultipleGalleryFiles: async (files: File[]) => {
+    const token = getToken();
+    const form = new FormData();
+    for (const file of files) {
+      form.append('files', file);
+    }
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/uploads/gallery/multiple`, {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? `업로드 실패 (${res.status})`);
+    }
+    return res.json() as Promise<Array<{ url: string; filename: string; fileType: 'IMAGE' | 'VIDEO' }>>;
+  },
   joinGroup: (id: string) =>
     request('/groups/' + id + '/join', { method: 'POST' }),
   cancelJoinGroup: (id: string) =>
     request(`/groups/${id}/join/cancel`, { method: 'POST' }),
+  getGroupByInviteCode: (code: string) => request(`/groups/preview/${code}`),
   joinByInvite: (code: string) => request(`/groups/join/${code}`),
   leaveGroup: (id: string) =>
     request(`/groups/${id}/leave`, { method: 'POST' }),
@@ -325,6 +345,10 @@ export const api = {
     request<any>(`/groups/${groupId}/media`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  deleteGroupMedia: (groupId: string, mediaId: string) =>
+    request<{ ok: boolean }>(`/groups/${groupId}/media/${mediaId}`, {
+      method: 'DELETE',
     }),
 
   getComments: (eventId: string) =>
@@ -578,7 +602,7 @@ export interface NotificationItem {
   sentAt: string;
   readAt: string | null;
   event?: { id: string; title: string; date: string; startTime: string } | null;
-  group?: { id: string; name: string } | null;
+  group?: { id: string; name: string; profileImageUrl?: string | null } | null;
   actor?: {
     id: string;
     displayName: string;
@@ -613,11 +637,11 @@ export function notificationIcon(type: string): string {
 
 export const VOTE_LABELS: Record<VoteChoice, string> = {
   ATTEND: '참석',
-  ABSENT: '불참',
   LATE: '늦참',
+  ABSENT: '불참',
 };
 
-export const VOTE_CHOICES: VoteChoice[] = ['ATTEND', 'ABSENT', 'LATE'];
+export const VOTE_CHOICES: VoteChoice[] = ['ATTEND', 'LATE', 'ABSENT'];
 
 export function groupVotesByChoice(votes: VoteResults['votes']) {
   return VOTE_CHOICES.map((choice) => ({

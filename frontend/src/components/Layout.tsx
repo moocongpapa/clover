@@ -51,9 +51,6 @@ export default function Layout() {
               <NavLink to="/" end className={navClass}>
                 홈
               </NavLink>
-              <NavLink to="/chat" className={navClass}>
-                채팅
-              </NavLink>
             </nav>
           )}
 
@@ -134,10 +131,6 @@ export default function Layout() {
           <NavLink to="/calendar" className={tabClass} aria-label="일정" title="일정">
             <span className="tab-bar__icon">📅</span>
             <span className="tab-bar__label">일정</span>
-          </NavLink>
-          <NavLink to="/chat" className={tabClass} aria-label="채팅" title="채팅">
-            <span className="tab-bar__icon">💬</span>
-            <span className="tab-bar__label">채팅</span>
           </NavLink>
         </nav>
       )}

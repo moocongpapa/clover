@@ -27,6 +27,13 @@ export default function EventDetailPage() {
   const [commentText, setCommentText] = useState('');
   const [addingComment, setAddingComment] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
   const [voting, setVoting] = useState(false);
   const [splitting, setSplitting] = useState(false);
   const [teamCount, setTeamCount] = useState<number>(2);
@@ -233,16 +240,20 @@ export default function EventDetailPage() {
             <div className="event-detail-header__actions">
               <Link
                 to={`/events/${event.id}/edit`}
-                className="btn-secondary event-detail-header__edit"
+                className="icon-action-btn icon-action-btn--edit"
+                title="일정 수정"
+                aria-label="일정 수정"
               >
-                일정 수정
+                ✏️
               </Link>
               <button
                 type="button"
-                className="btn-danger event-detail-header__delete"
+                className="icon-action-btn icon-action-btn--delete"
                 onClick={handleCancel}
+                title="일정 삭제"
+                aria-label="일정 삭제"
               >
-                일정 삭제
+                🗑️
               </button>
             </div>
           )}

@@ -50,4 +50,15 @@ export class NotificationsController {
     await this.notificationsService.sendTestFcm(user.id);
     return { ok: true };
   }
+
+  /** 개발용: 실시간 카카오톡 테스트 알림 전송 */
+  @Post('dev/test-kakao')
+  @UseGuards(JwtAuthGuard)
+  async testKakao(@CurrentUser() user: AuthUser) {
+    if (this.config.get<string>('DEV_LOGIN_ENABLED') !== 'true') {
+      throw new ForbiddenException('개발 모드에서만 사용할 수 있습니다.');
+    }
+    const res = await this.notificationsService.sendTestKakao(user.id);
+    return { ok: true, result: res };
+  }
 }

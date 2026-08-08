@@ -16,8 +16,8 @@ import {
 
 const CHOICE_LABELS: Record<string, string> = {
   ATTEND: '참석',
-  ABSENT: '불참',
   LATE: '늦참',
+  ABSENT: '불참',
 };
 
 @Injectable()
@@ -84,8 +84,8 @@ export class VotesService {
 
     const counts = {
       ATTEND: votes.filter((v) => v.choice === 'ATTEND').length,
-      ABSENT: votes.filter((v) => v.choice === 'ABSENT').length,
       LATE: votes.filter((v) => v.choice === 'LATE').length,
+      ABSENT: votes.filter((v) => v.choice === 'ABSENT').length,
     };
 
     const myVote = votes.find((v) => v.userId === userId) ?? null;

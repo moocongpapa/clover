@@ -51,7 +51,7 @@
       "label": "Clover: Simple Browser 열기",
       "type": "vscode",
       "command": "simpleBrowser.show",
-      "args": ["http://localhost:5173"]
+      "args": ["http://localhost:5174"]
     },
     {
       "label": "Clover: 서버 시작 + 미리보기",

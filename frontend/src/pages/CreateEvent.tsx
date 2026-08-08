@@ -258,8 +258,37 @@ export default function CreateEvent() {
 
         {error && <p className="form-error">{error}</p>}
         
-        <div className="form-actions-centered">
-          <button type="submit" className="btn-primary btn-submit-centered" disabled={loading}>
+        <div className="form-actions-centered" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => navigate(-1)}
+            style={{
+              flex: 1,
+              padding: '12px 18px',
+              borderRadius: '12px',
+              fontSize: '15px',
+              fontWeight: 700,
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              color: 'var(--ink-muted)',
+              cursor: 'pointer'
+            }}
+          >
+            취소
+          </button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={loading}
+            style={{
+              flex: 1,
+              padding: '12px 18px',
+              borderRadius: '12px',
+              fontSize: '15px',
+              fontWeight: 700
+            }}
+          >
             {loading ? '등록 중…' : '등록'}
           </button>
         </div>

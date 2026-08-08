@@ -295,14 +295,22 @@ export class NotificationsService {
   }
 
   async listForUser(userId: string) {
-    return this.prisma.notificationLog.findMany({
+    const logs = await this.prisma.notificationLog.findMany({
       where: { userId },
       include: {
         event: {
-          select: { id: true, title: true, date: true, startTime: true },
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            startTime: true,
+            group: {
+              select: { id: true, name: true, profileImageUrl: true },
+            },
+          },
         },
         group: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, profileImageUrl: true },
         },
         actor: {
           select: { id: true, displayName: true, profileImageUrl: true },
@@ -311,6 +319,11 @@ export class NotificationsService {
       orderBy: { sentAt: 'desc' },
       take: 50,
     });
+
+    return logs.map((log) => ({
+      ...log,
+      group: log.group || log.event?.group || null,
+    }));
   }
 
   async getUnreadCount(userId: string) {
@@ -332,9 +345,19 @@ export class NotificationsService {
     eventId: string,
     type: EventNotifyType,
     message: string,
+    groupId?: string,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
+
+    let targetGroupId = groupId;
+    if (!targetGroupId) {
+      const ev = await this.prisma.event.findUnique({
+        where: { id: eventId },
+        select: { groupId: true },
+      });
+      targetGroupId = ev?.groupId;
+    }
 
     await this.sendExternalIfConfigured(user, message);
     await this.createInAppNotification({
@@ -342,6 +365,7 @@ export class NotificationsService {
       type: type as NotificationType,
       message,
       eventId,
+      groupId: targetGroupId,
     });
   }
 
@@ -471,5 +495,41 @@ export class NotificationsService {
 
     const message = `[FCM 테스트] 안녕하세요, ${targetUser.displayName}님! Clover 실시간 FCM 알림 테스트 메시지입니다.`;
     await this.sendExternalIfConfigured(targetUser, message);
+  }
+
+  async sendTestKakao(userId?: string) {
+    const channelToken = this.config.get<string>('KAKAO_CHANNEL_ACCESS_TOKEN');
+    if (!channelToken) {
+      throw new Error('KAKAO_CHANNEL_ACCESS_TOKEN이 설정되지 않았습니다.');
+    }
+
+    const message = `[Clover 알림 테스트] 카카오톡 실시간 메시지 연동이 성공적으로 완료되었습니다! 🍀\n\n모임 일정, 투표 마감, 공지사항 알림이 카카오톡으로 실시간 전달됩니다.`;
+
+    const params = new URLSearchParams();
+    params.append(
+      'template_object',
+      JSON.stringify({
+        object_type: 'text',
+        text: message,
+        link: {
+          web_url: this.config.get<string>('FRONTEND_URL') || 'http://localhost:5174',
+          mobile_web_url: this.config.get<string>('FRONTEND_URL') || 'http://localhost:5174',
+        },
+      }),
+    );
+
+    const response = await axios.post(
+      'https://kapi.kakao.com/v2/api/talk/memo/default/send',
+      params.toString(),
+      {
+        headers: {
+          Authorization: `Bearer ${channelToken}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      },
+    );
+
+    this.logger.log(`카카오톡 테스트 메시지 발송 결과: ${JSON.stringify(response.data)}`);
+    return response.data;
   }
 }

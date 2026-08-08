@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type NotificationItem, notificationLink, notificationIcon } from '../api';
+import GroupAvatar from '../components/GroupAvatar';
 import './Notifications.css';
 
 export default function Notifications() {
@@ -115,10 +116,18 @@ export default function Notifications() {
                 className={`notification-item ${isUnread ? 'is-unread' : ''}`}
               >
                 <div className="notification-avatar-container">
-                  {item.actor?.profileImageUrl ? (
+                  {item.group ? (
+                    <GroupAvatar
+                      src={item.group.profileImageUrl}
+                      name={item.group.name}
+                      size={44}
+                      radius={12}
+                      className="notification-avatar"
+                    />
+                  ) : item.actor?.profileImageUrl ? (
                     <img
                       src={item.actor.profileImageUrl}
-                      alt=""
+                      alt={item.actor.displayName}
                       className="notification-avatar"
                     />
                   ) : (

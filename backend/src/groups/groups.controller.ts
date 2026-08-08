@@ -63,6 +63,15 @@ export class GroupsController {
     return this.groupsService.update(id, user.id, dto);
   }
 
+  @Get('preview/:inviteCode')
+  @UseGuards(OptionalJwtAuthGuard)
+  getPreviewByInviteCode(
+    @Param('inviteCode') inviteCode: string,
+    @OptionalUser() user: AuthUser | null,
+  ) {
+    return this.groupsService.getGroupByInviteCode(inviteCode, user?.id);
+  }
+
   @Get('join/:inviteCode')
   @UseGuards(JwtAuthGuard)
   joinByInvite(
@@ -186,6 +195,16 @@ export class GroupsController {
     @Body() dto: CreateGroupMediaDto,
   ) {
     return this.groupsService.createGroupMedia(id, user.id, dto);
+  }
+
+  @Delete(':id/media/:mediaId')
+  @UseGuards(JwtAuthGuard)
+  deleteGroupMedia(
+    @Param('id') groupId: string,
+    @Param('mediaId') mediaId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.groupsService.deleteGroupMedia(groupId, mediaId, user.id);
   }
 
   @Delete(':id')

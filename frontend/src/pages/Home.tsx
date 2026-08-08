@@ -12,7 +12,6 @@ import {
 } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
-import SegmentedControl from '../components/SegmentedControl';
 import './Home.css';
 
 function formatEventDate(
@@ -396,9 +395,7 @@ function HomeDashboard() {
         <div className="home-groups-header">
           <h2 className="home-section__title">내 모임</h2>
           <div className="home-groups-header-actions">
-            <Link to="/groups/new" className="home-groups-action-link">모임 만들기</Link>
-            <span className="home-groups-action-space" />
-            <Link to="/groups" className="home-groups-action-link">전체보기</Link>
+            <Link to="/groups" className="home-groups-action-link">모임 찾기</Link>
           </div>
         </div>
         <div className="home-groups-grid">
@@ -423,51 +420,47 @@ function HomeDashboard() {
         </div>
       </section>
 
-      {/* View Toggle Bar */}
-      <div className="home-view-toggle-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 4px 16px 4px' }}>
-        <h2 className="home-section__title" style={{ margin: 0 }}>일정</h2>
-        <div className="view-toggle-buttons" style={{ display: 'flex', gap: '4px', background: 'var(--grey-100)', padding: '4px', borderRadius: '10px' }}>
+      {/* Unified Single-Row Schedule Control Bar */}
+      <div className="home-schedule-bar">
+        {viewMode === 'list' ? (
+          <div className="home-schedule-subtabs">
+            <button
+              type="button"
+              className={`home-schedule-tab-btn ${tab === 'upcoming' ? 'is-active' : ''}`}
+              onClick={() => setTab('upcoming')}
+            >
+              진행 중 일정
+            </button>
+            <button
+              type="button"
+              className={`home-schedule-tab-btn ${tab === 'past' ? 'is-active' : ''}`}
+              onClick={() => setTab('past')}
+            >
+              지난 일정{allPastEvents.length > 0 ? ` (${allPastEvents.length})` : ''}
+            </button>
+          </div>
+        ) : (
+          <div className="home-schedule-subtabs">
+            <h2 className="home-section__title" style={{ margin: 0, fontSize: '14px', color: 'var(--ink-dark)' }}>
+              일정 캘린더
+            </h2>
+          </div>
+        )}
+
+        <div className="home-view-toggle-group">
           <button
             type="button"
-            className={`view-toggle-btn${viewMode === 'list' ? ' is-active' : ''}`}
+            className={`home-view-toggle-item ${viewMode === 'list' ? 'is-active' : ''}`}
             onClick={() => setViewMode('list')}
-            style={{
-              border: 'none',
-              background: viewMode === 'list' ? 'var(--surface)' : 'transparent',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: 700,
-              color: viewMode === 'list' ? 'var(--accent)' : 'var(--ink-muted)',
-              boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              transition: 'all 0.15s ease'
-            }}
+            title="리스트 보기"
           >
             📋 리스트
           </button>
           <button
             type="button"
-            className={`view-toggle-btn${viewMode === 'calendar' ? ' is-active' : ''}`}
+            className={`home-view-toggle-item ${viewMode === 'calendar' ? 'is-active' : ''}`}
             onClick={() => setViewMode('calendar')}
-            style={{
-              border: 'none',
-              background: viewMode === 'calendar' ? 'var(--surface)' : 'transparent',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: 700,
-              color: viewMode === 'calendar' ? 'var(--accent)' : 'var(--ink-muted)',
-              boxShadow: viewMode === 'calendar' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              transition: 'all 0.15s ease'
-            }}
+            title="캘린더 보기"
           >
             📅 캘린더
           </button>
@@ -533,17 +526,8 @@ function HomeDashboard() {
       ) : (
         /* Card List View Mode */
         <>
-          <div className="home-tabs">
-            <SegmentedControl<HomeTab>
-              name="홈 일정 보기"
-              options={[
-                { value: 'upcoming', label: '진행 중 일정' },
-                { value: 'past', label: `지난 일정${allPastEvents.length ? ` (${allPastEvents.length})` : ''}` },
-              ]}
-              value={tab}
-              onChange={setTab}
-            />
-          </div>
+          {/* Schedule List Content */}
+
 
           {loading ? (
             <p className="loading-text">불러오는 중…</p>

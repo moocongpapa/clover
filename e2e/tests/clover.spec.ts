@@ -15,6 +15,7 @@ import {
   tomorrow,
   triggerReminders,
   updateEvent,
+  yesterday,
 } from '../helpers/api';
 import { loginViaUI, loginWithToken } from '../helpers/auth';
 
@@ -88,11 +89,8 @@ test.describe('Clover 전체 기능 E2E', () => {
   // ── 5. 홈에서 투표 필요 표시 & 빠른 투표 ──
   const member1Ctx = await browser.newContext();
   const member1Page = await member1Ctx.newPage();
-  await loginWithToken(member1Page, sessions[0].accessToken, sessions[0].user);
-
-  await member1Page.goto('/');
-  await expect(member1Page.getByText('투표가 필요해요')).toBeVisible();
-  await expect(member1Page.locator('.home-event-card').getByText('이번 주 독서 토론').first()).toBeVisible();
+  await loginViaUI(member1Page, sessions[0].user.displayName);
+  await expect(member1Page.locator('.home-event-card', { hasText: '이번 주 독서 토론' }).first()).toBeVisible();
 
   const eventCard = member1Page.locator('.home-event-card', { hasText: '이번 주 독서 토론' }).first();
   await eventCard.getByRole('button', { name: '참석' }).click();
@@ -147,18 +145,18 @@ test.describe('Clover 전체 기능 E2E', () => {
   // ── 10. 시작된 이벤트 투표 마감 ──
   const pastEvent = await createEvent(president.accessToken, bookClubId, {
     title: '이미 시작된 모임',
-    date: today(),
-    startTime: pastStartTime(),
+    date: yesterday(),
+    startTime: '10:00',
     location: '온라인',
     description: '마감 테스트',
   });
 
   const lockedPage = await browser.newContext().then((ctx) => ctx.newPage());
-  await loginWithToken(lockedPage, sessions[5].accessToken, sessions[5].user);
+  await loginViaUI(lockedPage, sessions[5].user.displayName);
   await lockedPage.goto(`/events/${pastEvent.id}`);
-
+  await expect(lockedPage.getByRole('heading', { name: '이미 시작된 모임' })).toBeVisible();
   await expect(lockedPage.getByText('모임 시작 후에는 투표할 수 없습니다')).toBeVisible();
-  await expect(lockedPage.getByRole('button', { name: '참석' })).toHaveCount(0);
+  await expect(lockedPage.getByRole('button', { name: '참석' })).toBeDisabled();
 
   let voteBlocked = false;
   try {

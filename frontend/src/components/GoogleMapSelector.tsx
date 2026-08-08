@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 declare global {
   interface Window {
@@ -10,6 +12,8 @@ declare global {
 export interface Arena {
   placeName: string;
   address: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface GoogleMapSelectorProps {
@@ -48,6 +52,7 @@ function normalizeSido(sido: string): string {
 }
 
 export function parseKoreanAddress(address: string) {
+  if (!address) return null;
   let cleanAddress = address.trim();
   if (cleanAddress.startsWith('대한민국')) {
     cleanAddress = cleanAddress.substring(4).trim();
@@ -81,27 +86,61 @@ export function parseKoreanAddress(address: string) {
   };
 }
 
-const MOCK_PLACES = [
-  { placeName: '용산 아이파크몰 풋살장', address: '서울특별시 용산구 한강대로23길 55' },
-  { placeName: '올림픽공원 테니스코트', address: '서울특별시 송파구 올림픽로 424' },
-  { placeName: '서초종합체육관', address: '서울특별시 서초구 양재대로12길 74' },
-  { placeName: '여의도공원 농구장', address: '서울특별시 영등포구 여의공원로 68' },
-  { placeName: '반포종합운동장 축구장', address: '서울특별시 서초구 신반포로15길 40' },
-  { placeName: '하남 스타필드 스포츠몬스터', address: '경기도 하남시 미사대로 750' },
-  { placeName: '분당구미 체육공원 풋살장', address: '경기도 성남시 분당구 구미동 23' },
-  { placeName: '수원종합운동장 인조잔디구장', address: '경기도 수원시 장안구 경수대로 893' },
-  { placeName: '송파 탄천합수부 축구장', address: '서울특별시 송파구 잠실동 30' },
-  { placeName: '일산 호수공원 농구코트', address: '경기도 고양시 일산동구 호수로 731' },
-  { placeName: '부천체육관 배드민턴장', address: '경기도 부천시 원미구 석천로 293' },
-  { placeName: '인천아시아드 주경기장', address: '인천광역시 서구 봉수대로 806' },
-  { placeName: '대전월드컵경기장 풋살구장', address: '대전광역시 유성구 월드컵대로 32' },
-  { placeName: '대구 두류공원 야구장', address: '대구광역시 달서구 공원순환로 201' },
-  { placeName: '부산 삼락생태공원 테니스장', address: '부산광역시 사상구 삼락동 29-4' },
-  { placeName: '광주 상무시민공원 축구장', address: '광주광역시 서구 상무공원로 101' },
-  { placeName: '울산 문수축구경기장 풋살장', address: '울산광역시 남구 문수로 44' },
-  { placeName: '세종시 중앙공원 체육시설', address: '세종특별자치시 중앙공원서로 60' },
-  { placeName: '제주 종합경기장 애향운동장', address: '제주특별자치도 제주시 서광로2길 24' },
-  { placeName: '펜타시티 풋살장', address: '경상북도 포항시 북구 흥해읍 삼도리 102' }
+// Distance Calculation (Haversine formula in KM)
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function formatDistance(distKm: number): string {
+  if (distKm < 1) {
+    return `${Math.round(distKm * 1000)}m`;
+  }
+  return `${distKm.toFixed(1)}km`;
+}
+
+// Curated comprehensive Korean sports facilities
+const POPULAR_SPORTS_VENUES: Array<{ placeName: string; address: string; lat: number; lng: number }> = [
+  { placeName: '올림픽공원 테니스경기장', address: '서울특별시 송파구 올림픽로 424', lat: 37.5195, lng: 127.1235 },
+  { placeName: '올림픽공원 평화의광장', address: '서울특별시 송파구 올림픽로 424', lat: 37.5188, lng: 127.1147 },
+  { placeName: '잠실종합운동장 보조경기장', address: '서울특별시 송파구 올림픽로 25', lat: 37.5152, lng: 127.0728 },
+  { placeName: '용산 아이파크몰 아디다스 풋살파크', address: '서울특별시 용산구 한강대로23길 55', lat: 37.5298, lng: 126.9647 },
+  { placeName: '서초종합체육관', address: '서울특별시 서초구 양재대로12길 74', lat: 37.4612, lng: 127.0392 },
+  { placeName: '반포종합운동장 축구장', address: '서울특별시 서초구 신반포로15길 40', lat: 37.5054, lng: 126.9934 },
+  { placeName: '여의도공원 농구장', address: '서울특별시 영등포구 여의공원로 68', lat: 37.5255, lng: 126.9248 },
+  { placeName: '목동종합운동장 주경기장', address: '서울특별시 양천구 안양천로 939', lat: 37.5303, lng: 126.8797 },
+  { placeName: '송파 탄천유수지 축구장', address: '서울특별시 송파구 가락동 78-21', lat: 37.4938, lng: 127.1132 },
+  { placeName: '마포구민체육센터 체육관', address: '서울특별시 마포구 월드컵로25길 190', lat: 37.5552, lng: 126.8974 },
+  { placeName: '월드컵공원 풋살구장', address: '서울특별시 마포구 하늘공원로 86', lat: 37.5684, lng: 126.8927 },
+  { placeName: '노원마들스타디움 축구장', address: '서울특별시 노원구 덕릉로 450', lat: 37.6432, lng: 127.0655 },
+  { placeName: '분당구미 체육공원 풋살장', address: '경기도 성남시 분당구 구미동 23', lat: 37.3411, lng: 127.1119 },
+  { placeName: '탄천종합운동장', address: '경기도 성남시 분당구 탄천로 215', lat: 37.4095, lng: 127.1265 },
+  { placeName: '수원종합운동장 인조잔디구장', address: '경기도 수원시 장안구 경수대로 893', lat: 37.2977, lng: 127.0112 },
+  { placeName: '수원월드컵경기장 스포츠센터', address: '경기도 수원시 팔달구 월드컵로 310', lat: 37.2865, lng: 127.0368 },
+  { placeName: '하남 스타필드 스포츠몬스터', address: '경기도 하남시 미사대로 750', lat: 37.5456, lng: 127.2238 },
+  { placeName: '고양종합운동장 체육관', address: '경기도 고양시 일산서구 중앙로 1601', lat: 37.6766, lng: 126.7483 },
+  { placeName: '일산 호수공원 농구코트', address: '경기도 고양시 일산동구 호수로 731', lat: 37.6582, lng: 126.7645 },
+  { placeName: '부천종합운동장 인조잔디구장', address: '경기도 부천시 원미구 소사로 482', lat: 37.5028, lng: 126.7972 },
+  { placeName: '인천아시아드 주경기장', address: '인천광역시 서구 봉수대로 806', lat: 37.5483, lng: 126.6669 },
+  { placeName: '인천 문학경기장 주경기장', address: '인천광역시 미추홀구 매소홀로 618', lat: 37.4348, lng: 126.6917 },
+  { placeName: '대전월드컵경기장 풋살구장', address: '대전광역시 유성구 월드컵대로 32', lat: 36.3551, lng: 127.3235 },
+  { placeName: '대구 두류공원 야구장', address: '대구광역시 달서구 공원순환로 201', lat: 35.8524, lng: 128.5602 },
+  { placeName: '부산 삼락생태공원 테니스장', address: '부산광역시 사상구 삼락동 29-4', lat: 35.1764, lng: 128.9745 },
+  { placeName: '부산 아시아드주경기장', address: '부산광역시 연제구 월드컵대로 344', lat: 35.1901, lng: 129.0594 },
+  { placeName: '광주 상무시민공원 축구장', address: '광주광역시 서구 상무공원로 101', lat: 35.1528, lng: 126.8489 },
+  { placeName: '울산 문수축구경기장 풋살장', address: '울산광역시 남구 문수로 44', lat: 35.5348, lng: 129.2595 },
+  { placeName: '세종시 중앙공원 체육시설', address: '세종특별자치시 중앙공원서로 60', lat: 36.4952, lng: 127.2704 },
+  { placeName: '제주 종합경기장 애향운동장', address: '제주특별자치도 제주시 서광로2길 24', lat: 33.4996, lng: 126.5165 },
+  { placeName: '포항 양덕 한마음체육관', address: '경상북도 포항시 북구 장량로 253', lat: 36.0825, lng: 129.3871 },
 ];
 
 export default function GoogleMapSelector({
@@ -109,199 +148,327 @@ export default function GoogleMapSelector({
   onChange,
   primaryIndex,
   onPrimaryChange,
-  onAddressSelect
+  onAddressSelect,
 }: GoogleMapSelectorProps) {
   const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
-  const [isAuthFailure, setIsAuthFailure] = useState(false);
   const [searchTriggered, setSearchTriggered] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsLocating, setGpsLocating] = useState(false);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const leafletMapRef = useRef<L.Map | null>(null);
+  const leafletMarkersRef = useRef<L.Marker[]>([]);
+  const userLocationMarkerRef = useRef<L.Marker | null>(null);
 
-  // Monitor Google Maps auth failure
+  // Initialize Interactive Leaflet Map with OpenStreetMap CartoDB Tiles
   useEffect(() => {
-    window.gm_authFailure = () => {
-      console.warn('Google Maps Authentication failed. Switching to interactive mock map.');
-      setIsAuthFailure(true);
-    };
-    return () => {
-      delete (window as any).gm_authFailure;
-    };
-  }, []);
+    if (!mapContainerRef.current) return;
 
-  // Dynamically load Google Maps script
-  useEffect(() => {
-    const loadScript = () => {
-      if (window.google && window.google.maps) {
-        setGoogleMapsLoaded(true);
-        return;
-      }
-
-      const scriptId = 'google-maps-api-script';
-      let script = document.getElementById(scriptId) as HTMLScriptElement;
-
-      if (!script) {
-        script = document.createElement('script');
-        script.id = scriptId;
-        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-        const keyParam = apiKey ? `&key=${apiKey}` : '';
-        script.src = `https://maps.googleapis.com/maps/api/js?libraries=places&language=ko&region=KR${keyParam}`;
-        script.async = true;
-        script.defer = true;
-        script.onload = () => setGoogleMapsLoaded(true);
-        script.onerror = () => {
-          console.warn('Failed to load Google Maps script. Using fallback.');
-          setIsAuthFailure(true);
-        };
-        document.head.appendChild(script);
-      } else {
-        script.addEventListener('load', () => setGoogleMapsLoaded(true));
-      }
-    };
-
-    loadScript();
-  }, []);
-
-  // Initialize Map
-  useEffect(() => {
-    if (!googleMapsLoaded || isAuthFailure || !mapContainerRef.current) return;
-
-    try {
-      const defaultCenter = { lat: 37.5665, lng: 126.9780 }; // Seoul City Hall
-      const map = new window.google.maps.Map(mapContainerRef.current, {
+    if (!leafletMapRef.current) {
+      const defaultCenter: [number, number] = [37.5665, 126.9780]; // Seoul City Hall
+      const map = L.map(mapContainerRef.current, {
         center: defaultCenter,
         zoom: 12,
-        mapTypeControl: false,
-        fullscreenControl: false,
-        streetViewControl: false
+        zoomControl: true,
+        attributionControl: false,
       });
 
-      mapRef.current = map;
+      // High quality, fast tile layer for Korea
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+      }).addTo(map);
 
-      // Click listener on map to drop custom pin and geocode
-      map.addListener('click', (e: any) => {
-        const lat = e.latLng.lat();
-        const lng = e.latLng.lng();
-        
-        const geocoder = new window.google.maps.Geocoder();
-        geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
-          if (status === 'OK' && results && results[0]) {
-            const address = results[0].formatted_address;
-            const placeName = '선택한 지도 위치';
-            
-            // Add a mock search result representing clicked point
-            const clickedPlace = {
-              place_name: placeName,
-              address_name: address,
-              geometry: { location: { lat: () => lat, lng: () => lng } }
-            };
-            setResults([clickedPlace]);
-            setKeyword('');
-            setSearchTriggered(true);
+      // Handle map click to place custom pin and reverse geocode
+      map.on('click', async (e: L.LeafletMouseEvent) => {
+        const { lat, lng } = e.latlng;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ko`,
+            { headers: { 'User-Agent': 'Clover-App/1.0' } }
+          );
+          const data = await res.json();
+          let addr = data?.display_name || '';
+          if (addr.startsWith('대한민국, ')) addr = addr.replace('대한민국, ', '');
+          if (addr.includes(', 대한민국')) addr = addr.replace(', 대한민국', '');
 
-            // Parse and notify Sido/Sigungu/Eupmyeondong immediately
-            const parsed = parseKoreanAddress(address);
-            if (parsed) {
-              onAddressSelect(parsed);
-            }
-          }
-        });
-      });
-    } catch (err) {
-      console.warn('Error initializing Google Map, falling back to mock map.', err);
-      setIsAuthFailure(true);
-    }
-  }, [googleMapsLoaded, isAuthFailure]);
-
-  // Update map markers when selectedArenas change (Real Google Maps)
-  useEffect(() => {
-    if (!mapRef.current || !window.google || isAuthFailure) return;
-
-    // Clear old markers
-    markersRef.current.forEach(m => m.setMap(null));
-    markersRef.current = [];
-
-    const bounds = new window.google.maps.LatLngBounds();
-    const geocoder = new window.google.maps.Geocoder();
-
-    selectedArenas.forEach((arena, idx) => {
-      geocoder.geocode({ address: arena.address }, (results: any, status: any) => {
-        if (status === 'OK' && results && results[0]) {
-          const location = results[0].geometry.location;
-          const marker = new window.google.maps.Marker({
-            position: location,
-            map: mapRef.current,
-            label: `${idx + 1}`,
-            title: arena.placeName
-          });
-
-          markersRef.current.push(marker);
-          bounds.extend(location);
-          mapRef.current.fitBounds(bounds);
-          if (mapRef.current.getZoom() > 16) {
-            mapRef.current.setZoom(16);
-          }
+          const clickedPlace = {
+            place_name: data?.name || '지도에서 선택한 위치',
+            address_name: addr || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+            lat,
+            lng,
+          };
+          setResults([clickedPlace]);
+          setSearchTriggered(true);
+        } catch {
+          const clickedPlace = {
+            place_name: '선택한 위치',
+            address_name: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+            lat,
+            lng,
+          };
+          setResults([clickedPlace]);
+          setSearchTriggered(true);
         }
       });
-    });
-  }, [selectedArenas, isAuthFailure]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!keyword.trim()) return;
+      leafletMapRef.current = map;
+
+      // Auto-locate GPS on boot
+      requestGpsLocation(map, selectedArenas.length === 0);
+    }
+  }, []);
+
+  // Request GPS Location from Browser
+  const requestGpsLocation = (mapInstance?: L.Map | null, autoCenter = false) => {
+    if (!('geolocation' in navigator)) return;
+
+    setGpsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGpsLocating(false);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setUserLocation({ lat, lng });
+
+        const map = mapInstance || leafletMapRef.current;
+        if (map) {
+          if (autoCenter) {
+            map.setView([lat, lng], 14, { animate: true });
+          }
+
+          // Update user GPS marker
+          if (userLocationMarkerRef.current) {
+            userLocationMarkerRef.current.remove();
+          }
+
+          const myLocIcon = L.divIcon({
+            className: 'clover-gps-marker',
+            html: `
+              <div style="
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: #2563EB;
+                border: 3px solid #ffffff;
+                box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.4), 0 2px 8px rgba(0,0,0,0.3);
+              "></div>
+            `,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+          });
+
+          const userMarker = L.marker([lat, lng], { icon: myLocIcon }).addTo(map);
+          userMarker.bindPopup('<strong style="font-size:12.5px; color:#1e40af;">📍 내 현재 위치</strong>');
+          userLocationMarkerRef.current = userMarker;
+        }
+      },
+      (err) => {
+        setGpsLocating(false);
+        console.warn('GPS Geolocation unavailable:', err.message);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  };
+
+  const handleRecenterUser = () => {
+    if (userLocation && leafletMapRef.current) {
+      leafletMapRef.current.setView([userLocation.lat, userLocation.lng], 14, { animate: true });
+    } else {
+      requestGpsLocation(leafletMapRef.current, true);
+    }
+  };
+
+  // Update Leaflet Map Markers when selectedArenas change
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+
+    // Clear old markers
+    leafletMarkersRef.current.forEach((m) => m.remove());
+    leafletMarkersRef.current = [];
+
+    if (selectedArenas.length === 0) return;
+
+    const bounds = L.latLngBounds([]);
+
+    selectedArenas.forEach((arena, idx) => {
+      let lat = arena.lat;
+      let lng = arena.lng;
+
+      // Match with known popular venues if coords not stored
+      if (!lat || !lng) {
+        const found = POPULAR_SPORTS_VENUES.find(
+          (p) => p.placeName === arena.placeName || p.address === arena.address
+        );
+        if (found) {
+          lat = found.lat;
+          lng = found.lng;
+        } else {
+          // Default nearby offset around user or center
+          const baseLat = userLocation?.lat || 37.5665;
+          const baseLng = userLocation?.lng || 126.9780;
+          lat = baseLat + (idx - 1) * 0.02;
+          lng = baseLng + (idx - 1) * 0.02;
+        }
+      }
+
+      const isPrimary = idx === primaryIndex;
+      const markerColor = isPrimary ? '#10B981' : '#3B82F6';
+
+      const customHtml = `
+        <div style="
+          background: ${markerColor};
+          color: #ffffff;
+          font-weight: 800;
+          font-size: 12px;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          border: 2.5px solid #ffffff;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+          transform: translate(-50%, -50%);
+        ">
+          ${idx + 1}
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        className: 'clover-custom-marker',
+        html: customHtml,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      });
+
+      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+      marker.bindPopup(`
+        <div style="font-family: inherit; padding: 2px;">
+          <strong style="font-size: 13px; color: #111827;">${idx + 1}. ${arena.placeName}</strong>
+          ${isPrimary ? '<span style="color: #10B981; font-weight:700; font-size:11px; margin-left:4px;">(★ 주요 구장)</span>' : ''}
+          <div style="font-size: 11.5px; color: #6B7280; margin-top: 2px;">${arena.address}</div>
+        </div>
+      `);
+
+      leafletMarkersRef.current.push(marker);
+      bounds.extend([lat, lng]);
+    });
+
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+    }
+  }, [selectedArenas, primaryIndex, userLocation]);
+
+  // Venue & Address Search
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const query = keyword.trim();
+    if (!query) return;
 
     setLoading(true);
     setSearchTriggered(true);
 
-    if (googleMapsLoaded && !isAuthFailure && window.google && window.google.maps) {
-      try {
-        const service = new window.google.maps.places.AutocompleteService();
-        service.getPlacePredictions(
-          { input: keyword, types: ['establishment', 'geocode'], componentRestrictions: { country: 'kr' } },
-          (predictions: any, status: any) => {
-            setLoading(false);
-            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-              const formattedResults = predictions.map((p: any) => ({
-                place_name: p.structured_formatting.main_text,
-                address_name: p.structured_formatting.secondary_text || '',
-                place_id: p.place_id
-              }));
-              setResults(formattedResults);
-            } else {
-              setResults([]);
-            }
-          }
-        );
-      } catch (err) {
-        setLoading(false);
-        setResults([]);
-        console.error(err);
-      }
-    } else {
-      // Mock Search Fallback
-      setTimeout(() => {
-        setLoading(false);
-        const filtered = MOCK_PLACES.filter(
-          p => p.placeName.includes(keyword) || p.address.includes(keyword)
-        );
-        const formatted = filtered.map(p => ({
+    try {
+      // 1. First search in rich local sports facilities database
+      let localMatches = POPULAR_SPORTS_VENUES.filter(
+        (p) =>
+          p.placeName.toLowerCase().includes(query.toLowerCase()) ||
+          p.address.toLowerCase().includes(query.toLowerCase())
+      ).map((p) => {
+        const dist = userLocation
+          ? calculateDistanceKm(userLocation.lat, userLocation.lng, p.lat, p.lng)
+          : undefined;
+        return {
           place_name: p.placeName,
-          address_name: p.address
-        }));
+          address_name: p.address,
+          lat: p.lat,
+          lng: p.lng,
+          distance: dist,
+        };
+      });
 
-        // If no results, offer to add custom place
-        if (formatted.length === 0) {
-          formatted.push({
-            place_name: keyword,
-            address_name: '서울특별시 종로구 혜화동 123'
+      // Sort local matches by GPS distance if available
+      if (userLocation) {
+        localMatches.sort((a, b) => (a.distance ?? 9999) - (b.distance ?? 9999));
+      }
+
+      // 2. Fetch live OpenStreetMap Nominatim Geocoding
+      let osmMatches: any[] = [];
+      try {
+        const osmRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            query
+          )}&countrycodes=kr&accept-language=ko&limit=8`,
+          { headers: { 'User-Agent': 'Clover-App/1.0' } }
+        );
+        const osmData = await osmRes.json();
+        if (Array.isArray(osmData)) {
+          osmMatches = osmData.map((item: any) => {
+            let addr = item.display_name || '';
+            if (addr.startsWith('대한민국, ')) addr = addr.replace('대한민국, ', '');
+            if (addr.includes(', 대한민국')) addr = addr.replace(', 대한민국', '');
+            const lat = parseFloat(item.lat);
+            const lng = parseFloat(item.lon);
+            const dist = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, lat, lng) : undefined;
+            return {
+              place_name: item.name || query,
+              address_name: addr,
+              lat,
+              lng,
+              distance: dist,
+            };
           });
         }
-        setResults(formatted);
-      }, 300);
+      } catch (err) {
+        console.warn('OSM Geocoding fallback active', err);
+      }
+
+      // Combine & Deduplicate Results
+      const combined: Array<{
+        place_name: string;
+        address_name: string;
+        lat?: number;
+        lng?: number;
+        distance?: number;
+        isCustom?: boolean;
+      }> = [...localMatches];
+
+      osmMatches.forEach((osm) => {
+        if (!combined.some((c) => c.place_name === osm.place_name || c.address_name === osm.address_name)) {
+          combined.push(osm);
+        }
+      });
+
+      // Sort all combined results by GPS distance if user location is available
+      if (userLocation) {
+        combined.sort((a, b) => (a.distance ?? 9999) - (b.distance ?? 9999));
+      }
+
+      // If no exact match found, provide custom place registration option
+      if (combined.length === 0) {
+        combined.push({
+          place_name: query,
+          address_name: '서울특별시 ' + query,
+          isCustom: true,
+        });
+      }
+
+      setResults(combined);
+    } catch (err) {
+      console.error('Search error:', err);
+      setResults([
+        {
+          place_name: query,
+          address_name: query,
+          isCustom: true,
+        },
+      ]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -310,50 +477,31 @@ export default function GoogleMapSelector({
       alert('활동 구장은 최대 3개까지 등록할 수 있습니다.');
       return;
     }
-    if (selectedArenas.some(a => a.placeName === place.place_name)) return;
+    if (selectedArenas.some((a) => a.placeName === place.place_name)) {
+      alert('이미 등록된 구장입니다.');
+      return;
+    }
 
-    if (place.place_id && window.google) {
-      // Fetch exact address and geometry for Google Places result
-      const mapDiv = document.createElement('div');
-      const service = new window.google.maps.places.PlacesService(mapDiv);
-      service.getDetails({ placeId: place.place_id }, (details: any, status: any) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && details) {
-          const cleanAddress = details.formatted_address || place.address_name;
-          const newArena = {
-            placeName: place.place_name,
-            address: cleanAddress.replace('대한민국 ', '')
-          };
-          const updated = [...selectedArenas, newArena];
-          onChange(updated);
+    const newArena: Arena = {
+      placeName: place.place_name,
+      address: place.address_name,
+      lat: place.lat,
+      lng: place.lng,
+    };
 
-          // If this is the first registered arena, automatically set as primary and notify parent
-          if (updated.length === 1) {
-            onPrimaryChange(0);
-            const parsed = parseKoreanAddress(newArena.address);
-            if (parsed) onAddressSelect(parsed);
-          }
+    const updated = [...selectedArenas, newArena];
+    onChange(updated);
 
-          // Center map on this location
-          if (mapRef.current && details.geometry && details.geometry.location) {
-            mapRef.current.setCenter(details.geometry.location);
-            mapRef.current.setZoom(16);
-          }
-        }
-      });
-    } else {
-      const newArena = {
-        placeName: place.place_name,
-        address: place.address_name
-      };
-      const updated = [...selectedArenas, newArena];
-      onChange(updated);
+    // If first arena, set as primary and auto-fill region
+    if (updated.length === 1) {
+      onPrimaryChange(0);
+      const parsed = parseKoreanAddress(newArena.address);
+      if (parsed) onAddressSelect(parsed);
+    }
 
-      // If this is the first registered arena, automatically set as primary and notify parent
-      if (updated.length === 1) {
-        onPrimaryChange(0);
-        const parsed = parseKoreanAddress(newArena.address);
-        if (parsed) onAddressSelect(parsed);
-      }
+    // Move map to added arena
+    if (leafletMapRef.current && place.lat && place.lng) {
+      leafletMapRef.current.setView([place.lat, place.lng], 15, { animate: true });
     }
 
     setKeyword('');
@@ -366,7 +514,6 @@ export default function GoogleMapSelector({
     onChange(updated);
 
     if (primaryIndex === idx) {
-      // Reset primary index
       if (updated.length > 0) {
         onPrimaryChange(0);
         const parsed = parseKoreanAddress(updated[0].address);
@@ -390,119 +537,157 @@ export default function GoogleMapSelector({
 
   return (
     <div className="google-map-selector" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <label style={{ fontWeight: 700, fontSize: '14px' }}>활동 구장 등록 (최대 3개)</label>
-
-      {/* Real Map or Mock Map View */}
-      <div 
-        style={{ 
-          position: 'relative',
-          width: '100%', 
-          height: '220px', 
-          background: 'var(--grey-100)', 
-          border: '1px solid var(--border)', 
-          borderRadius: '12px',
-          overflow: 'hidden'
-        }}
-      >
-        {!isAuthFailure ? (
-          <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
-        ) : (
-          /* Mock Interactive Map Visualization */
-          <div 
-            style={{ 
-              width: '100%', 
-              height: '100%', 
-              display: 'flex', 
-              flexDirection: 'column',
-              justifyContent: 'center', 
-              alignItems: 'center',
-              backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)',
-              backgroundSize: '16px 16px',
-              padding: '20px',
-              textAlign: 'center',
-              userSelect: 'none'
-            }}
-          >
-            <span style={{ fontSize: '32px', marginBottom: '8px' }}>🗺️</span>
-            <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--ink)' }}>
-              구글 지도 서비스 (개발 모드 시뮬레이터)
-            </div>
-            <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: 'var(--ink-muted)' }}>
-              원하는 구장을 검색하여 추가하면 주요 활동 지역 정보가 자동으로 매핑됩니다.
-            </p>
-            {/* Visual Markers inside mock map */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-              {selectedArenas.map((arena, i) => (
-                <span 
-                  key={i} 
-                  style={{ 
-                    background: i === primaryIndex ? 'var(--blue-500)' : 'var(--grey-500)', 
-                    color: 'white', 
-                    padding: '4px 8px', 
-                    borderRadius: '20px', 
-                    fontSize: '11px',
-                    fontWeight: 700
-                  }}
-                >
-                  📍 {i + 1}. {arena.placeName} {i === primaryIndex && '(주요)'}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <label style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--ink-dark)' }}>
+          활동 구장 등록 (최대 3개)
+        </label>
+        <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
+          {selectedArenas.length}/3개 등록됨
+        </span>
       </div>
 
-      {/* Selected Arenas List with Primary Region Selector */}
+      {/* Real Interactive Leaflet Map with GPS Floating Button */}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '240px',
+          background: 'var(--grey-100)',
+          border: '1px solid var(--border)',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+          zIndex: 1,
+        }}
+      >
+        <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+
+        {/* GPS Re-center Floating Action Button */}
+        <button
+          type="button"
+          onClick={handleRecenterUser}
+          title="내 현재 위치로 지도 이동"
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            background: 'var(--surface, #ffffff)',
+            border: '1px solid rgba(0,0,0,0.12)',
+            borderRadius: '10px',
+            padding: '6px 12px',
+            fontSize: '12px',
+            fontWeight: 700,
+            color: 'var(--ink-dark)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            zIndex: 1000,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          {gpsLocating ? '📡 위치 찾는 중…' : '📍 내 위치'}
+        </button>
+
+        {/* Map Click Hint Pill */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '10px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(6px)',
+            border: '1px solid rgba(0,0,0,0.08)',
+            borderRadius: '20px',
+            padding: '4px 12px',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: 'var(--ink-muted)',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+            pointerEvents: 'none',
+            zIndex: 1000,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          💡 지도를 클릭하여 원하는 위치를 직접 지정할 수도 있어요
+        </div>
+      </div>
+
+      {/* Registered Arenas List */}
       {selectedArenas.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink-muted)' }}>
-            등록된 구장 중 모임의 주요 활동 구장(지역 기준)을 하나 선택해 주세요.
+            주요 활동 구장을 선택하면 대표 활동 지역이 자동 설정됩니다.
           </span>
           {selectedArenas.map((arena, idx) => {
             const isPrimary = idx === primaryIndex;
             return (
-              <div 
-                key={idx} 
-                style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  padding: '10px 14px', 
-                  background: isPrimary ? 'var(--blue-50)' : 'var(--surface)', 
-                  border: isPrimary ? '2px solid var(--blue-500)' : '1px solid var(--border)', 
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 14px',
+                  background: isPrimary ? '#ecfdf5' : 'var(--surface)',
+                  border: isPrimary ? '1.5px solid var(--accent)' : '1px solid var(--border)',
                   borderRadius: '12px',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                   <input
                     type="radio"
                     name="primary_arena"
                     checked={isPrimary}
                     onChange={() => handleSetPrimary(idx)}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent)' }}
                     id={`primary_arena_${idx}`}
                   />
-                  <label htmlFor={`primary_arena_${idx}`} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontWeight: 700, fontSize: '13px' }}>
-                      {arena.placeName} {isPrimary && <span style={{ color: 'var(--blue-500)', marginLeft: '4px', fontSize: '11px' }}>(★ 주요 활동 지역)</span>}
+                  <label
+                    htmlFor={`primary_arena_${idx}`}
+                    style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', minWidth: 0 }}
+                  >
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--ink-dark)' }}>
+                      📍 {idx + 1}. {arena.placeName}
+                      {isPrimary && (
+                        <span style={{ color: 'var(--accent)', marginLeft: '6px', fontSize: '11px', fontWeight: 800 }}>
+                          (★ 주요 활동 구장)
+                        </span>
+                      )}
                     </span>
-                    <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>{arena.address}</span>
+                    <span
+                      style={{
+                        fontSize: '11.5px',
+                        color: 'var(--ink-muted)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {arena.address}
+                    </span>
                   </label>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleRemove(idx)}
-                  style={{ 
-                    border: 'none', 
-                    background: 'none', 
-                    color: 'var(--red-500)', 
-                    fontWeight: 700, 
+                  style={{
+                    border: 'none',
+                    background: '#fee2e2',
+                    color: '#ef4444',
+                    fontWeight: 700,
                     cursor: 'pointer',
-                    fontSize: '13px'
+                    fontSize: '12px',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    marginLeft: '8px',
+                    flexShrink: 0,
                   }}
                 >
-                  제거
+                  삭제
                 </button>
               </div>
             );
@@ -512,66 +697,136 @@ export default function GoogleMapSelector({
 
       {/* Place Search Field */}
       {selectedArenas.length < 3 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <input
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="구장명 또는 주소 검색 (예: 올림픽공원 테니스)"
-              style={{ 
-                flex: 1, 
-                padding: '10px 14px', 
-                border: '1px solid var(--border)', 
-                borderRadius: '10px', 
-                fontSize: '13px' 
+              placeholder="구장명 또는 주소 검색 (예: 올림픽공원 테니스, 잠실종합운동장)"
+              style={{
+                flex: 1,
+                padding: '10px 14px',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                fontSize: '13.5px',
+                background: 'var(--surface)',
+                color: 'var(--ink-dark)',
               }}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(e); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearch(e);
+                }
+              }}
             />
-            <button 
-              type="button" 
-              onClick={handleSearch} 
-              className="btn-outline" 
-              style={{ padding: '0 16px', borderRadius: '10px', fontSize: '13px' }}
+            <button
+              type="button"
+              onClick={handleSearch}
+              className="btn-primary"
+              style={{
+                padding: '0 18px',
+                borderRadius: '12px',
+                fontSize: '13.5px',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
             >
-              검색
+              {loading ? '검색 중…' : '검색'}
             </button>
           </div>
 
           {results.length > 0 && (
-            <ul 
-              style={{ 
-                listStyle: 'none', 
-                padding: '0', 
-                margin: '4px 0 0 0', 
-                border: '1px solid var(--border)', 
-                borderRadius: '10px', 
-                maxHeight: '160px', 
-                overflowY: 'auto', 
-                background: 'var(--surface)', 
+            <ul
+              style={{
+                listStyle: 'none',
+                padding: '4px 0',
+                margin: '0',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                background: 'var(--surface)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
                 zIndex: 10,
-                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
               }}
             >
               {results.map((r, i) => (
-                <li 
-                  key={i} 
-                  style={{ 
-                    padding: '8px 12px', 
-                    borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none', 
-                    cursor: 'pointer' 
-                  }} 
+                <li
+                  key={i}
+                  style={{
+                    padding: '10px 14px',
+                    borderBottom: i < results.length - 1 ? '1px solid var(--border-soft)' : 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    transition: 'background 0.15s ease',
+                  }}
                   onClick={() => handleAdd(r)}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--grey-50)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <div style={{ fontWeight: 700, fontSize: '13px' }}>{r.place_name}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>{r.address_name}</div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--ink-dark)' }}>
+                      📍 {r.place_name}
+                      {r.distance !== undefined && (
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            color: '#2563EB',
+                            background: '#eff6ff',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            marginLeft: '6px',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {formatDistance(r.distance)}
+                        </span>
+                      )}
+                      {r.isCustom && (
+                        <span style={{ fontSize: '11px', color: 'var(--accent)', marginLeft: '6px', fontWeight: 600 }}>
+                          [직접 등록]
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: 'var(--ink-muted)', marginTop: '2px' }}>
+                      {r.address_name}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    style={{
+                      border: 'none',
+                      background: '#ecfdf5',
+                      color: 'var(--accent)',
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      marginLeft: '8px',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  >
+                    + 추가
+                  </button>
                 </li>
               ))}
             </ul>
           )}
-          {loading && <p style={{ fontSize: '12px', color: 'var(--ink-muted)', margin: '4px 0 0 0' }}>검색 중…</p>}
+
+          {loading && (
+            <p style={{ fontSize: '12px', color: 'var(--accent)', margin: '2px 0 0 0', fontWeight: 600 }}>
+              🔍 구장 및 주소 정보를 검색하고 있습니다...
+            </p>
+          )}
+
           {searchTriggered && results.length === 0 && !loading && (
-            <p style={{ fontSize: '12px', color: 'var(--ink-muted)', margin: '4px 0 0 0' }}>검색 결과가 없습니다.</p>
+            <p style={{ fontSize: '12px', color: 'var(--ink-muted)', margin: '2px 0 0 0' }}>
+              검색 결과가 없습니다. 구장명을 직접 입력하여 검색해 보세요.
+            </p>
           )}
         </div>
       )}

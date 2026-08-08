@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import { api, type User } from '../api';
 import { useAuth } from '../context/AuthContext';
 import './EditProfile.css';
@@ -98,6 +99,13 @@ export default function EditProfile() {
   const [profile, setProfile] = useState<User | null>(null);
   const [bio, setBio] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -264,8 +272,8 @@ export default function EditProfile() {
     <div className="edit-profile-page">
       {/* Native Band-style Header */}
       <div className="edit-profile-header">
-        <div className="header-left" onClick={() => navigate(-1)}>
-          <span className="back-arrow">〈</span>
+        <div className="header-left">
+          <BackButton onClick={() => navigate(-1)} />
           <span className="header-title">내 프로필</span>
         </div>
         <button type="button" className="confirm-btn" onClick={() => handleSubmit()} disabled={loading}>

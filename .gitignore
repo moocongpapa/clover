@@ -9,6 +9,8 @@ backend/prisma/dev.db
 backend/prisma/e2e.db
 .DS_Store
 *.log
+*.stdout
+*.stderr
 e2e/playwright-report/
 e2e/test-results/
 backend/uploads/

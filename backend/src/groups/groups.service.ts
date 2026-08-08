@@ -354,6 +354,48 @@ export class GroupsService {
     return this.requestJoin(groupId, userId);
   }
 
+  async getGroupByInviteCode(inviteCode: string, userId?: string) {
+    const group = await this.prisma.group.findUnique({
+      where: { inviteCode },
+      include: {
+        members: {
+          where: { status: MemberStatus.APPROVED },
+          include: {
+            user: {
+              select: {
+                id: true,
+                displayName: true,
+                profileImageUrl: true,
+                birthYear: true,
+                gender: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('유효하지 않거나 만료된 초대 링크입니다.');
+    }
+
+    let myMembership = null;
+    if (userId) {
+      myMembership = await this.prisma.groupMember.findUnique({
+        where: { userId_groupId: { userId, groupId: group.id } },
+      });
+    }
+
+    const president = group.members.find((m) => m.role === 'PRESIDENT');
+
+    return {
+      ...group,
+      myMembership,
+      memberCount: group.members.length,
+      presidentUser: president ? president.user : null,
+    };
+  }
+
   async joinByInviteCode(inviteCode: string, userId: string) {
     const group = await this.prisma.group.findUnique({ where: { inviteCode } });
     if (!group) {
@@ -766,6 +808,28 @@ export class GroupsService {
         },
       },
     });
+  }
+
+  async deleteGroupMedia(groupId: string, mediaId: string, userId: string) {
+    const membership = await this.requireApprovedMember(groupId, userId);
+    const media = await this.prisma.groupMedia.findUnique({
+      where: { id: mediaId },
+    });
+
+    if (!media || media.groupId !== groupId) {
+      throw new NotFoundException('미디어를 찾을 수 없습니다.');
+    }
+
+    const canDelete = isOfficer(membership.role) || media.uploadedById === userId;
+    if (!canDelete) {
+      throw new ForbiddenException('사진을 삭제할 권한이 없습니다.');
+    }
+
+    await this.prisma.groupMedia.delete({
+      where: { id: mediaId },
+    });
+
+    return { ok: true };
   }
 
   async linkProfileCard(groupId: string, userId: string, profileCardId: string | null) {

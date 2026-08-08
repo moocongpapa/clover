@@ -50,22 +50,16 @@ export class AnnouncementsService {
     });
 
     if (dto.groupId) {
-      // Check if user is an officer of this group
+      // Check if user is an approved member of this group
       const membership = await this.prisma.groupMember.findUnique({
         where: { userId_groupId: { userId, groupId: dto.groupId } },
       });
-      const isStaff = membership?.role && (
-        membership.role === 'PRESIDENT' ||
-        membership.role === 'VICE_PRESIDENT' ||
-        membership.role === 'SECRETARY' ||
-        membership.role === 'OFFICER'
-      );
-      if (!isStaff) {
-        throw new ForbiddenException('운영진만 공지사항을 작성할 수 있습니다.');
+      if (!membership || membership.status !== 'APPROVED') {
+        throw new ForbiddenException('모임 회원만 게시글을 작성할 수 있습니다.');
       }
     } else {
       if (!user || user.role !== 'ADMIN') {
-        throw new ForbiddenException('운영자만 공지사항을 작성할 수 있습니다.');
+        throw new ForbiddenException('운영자만 전체 공지사항을 작성할 수 있습니다.');
       }
     }
 

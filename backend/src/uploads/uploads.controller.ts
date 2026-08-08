@@ -3,10 +3,11 @@ import {
   Controller,
   Post,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -108,6 +109,34 @@ function galleryUploadInterceptor(uploadDir: string) {
   });
 }
 
+function galleryMultipleUploadInterceptor(uploadDir: string) {
+  return FilesInterceptor('files', 20, {
+    storage: diskStorage({
+      destination: (_req, _file, cb) => {
+        ensureUploadDir(uploadDir);
+        cb(null, uploadDir);
+      },
+      filename: (_req, file, cb) => {
+        const ext = extname(file.originalname).toLowerCase();
+        cb(null, `${nanoid(12)}${ext}`);
+      },
+    }),
+    limits: { fileSize: MAX_GALLERY_SIZE },
+    fileFilter: (_req, file, cb) => {
+      if (!ALLOWED_GALLERY_MIME.has(file.mimetype)) {
+        cb(
+          new BadRequestException(
+            '이미지(JPEG, PNG, WebP, GIF) 또는 동영상(MP4, MOV, WebM) 파일만 업로드할 수 있습니다.',
+          ),
+          false,
+        );
+        return;
+      }
+      cb(null, true);
+    },
+  });
+}
+
 function buildPublicUploadUrl(
   config: ConfigService,
   folder: 'groups' | 'profiles' | 'gallery',
@@ -166,5 +195,20 @@ export class UploadsController {
       filename: file.filename,
       fileType,
     };
+  }
+
+  @Post('gallery/multiple')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(galleryMultipleUploadInterceptor(UPLOAD_DIR_GALLERY))
+  uploadMultipleGalleryFiles(@UploadedFiles() files: Express.Multer.File[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('업로드할 파일을 선택해 주세요.');
+    }
+
+    return files.map((file) => ({
+      url: buildPublicUploadUrl(this.config, 'gallery', file.filename),
+      filename: file.filename,
+      fileType: file.mimetype.startsWith('video/') ? 'VIDEO' : 'IMAGE',
+    }));
   }
 }

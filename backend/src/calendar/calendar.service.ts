@@ -63,7 +63,7 @@ export class CalendarService {
       Record<VoteChoice, number>
     >();
     for (const id of eventIds) {
-      countsByEvent.set(id, { ATTEND: 0, ABSENT: 0, LATE: 0 });
+      countsByEvent.set(id, { ATTEND: 0, LATE: 0, ABSENT: 0 });
     }
     for (const row of aggregates) {
       const counts = countsByEvent.get(row.eventId);

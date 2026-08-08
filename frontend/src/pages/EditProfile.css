@@ -1,10 +1,8 @@
 .edit-profile-page {
-  max-width: 800px;
+  max-width: 1000px;
   width: 100%;
   margin: 0 auto;
-  padding: 16px;
-  background: var(--background);
-  min-height: 100vh;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;

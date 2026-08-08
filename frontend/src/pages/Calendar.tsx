@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, formatEventTimeRange, VOTE_LABELS, type CalendarEvent } from '../api';
-import SegmentedControl from '../components/SegmentedControl';
 import './Calendar.css';
 
 type ViewMode = 'list' | 'month';
@@ -77,17 +76,32 @@ export default function Calendar() {
     return map;
   }, [events]);
 
-  const upcoming = events
-    .filter(isUpcoming)
-    .sort(
-      (a, b) => eventEndAt(a).getTime() - eventEndAt(b).getTime(),
-    );
+  const threeMonthsAgo = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 3);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
-  const past = events
-    .filter((e) => !isUpcoming(e))
-    .sort(
-      (a, b) => eventEndAt(b).getTime() - eventEndAt(a).getTime(),
-    );
+  const upcoming = useMemo(
+    () =>
+      events
+        .filter(isUpcoming)
+        .sort((a, b) => eventEndAt(a).getTime() - eventEndAt(b).getTime()),
+    [events],
+  );
+
+  const past = useMemo(
+    () =>
+      events
+        .filter((e) => {
+          if (isUpcoming(e)) return false;
+          const eventDate = new Date(e.date);
+          return eventDate.getTime() >= threeMonthsAgo.getTime();
+        })
+        .sort((a, b) => eventEndAt(b).getTime() - eventEndAt(a).getTime()),
+    [events, threeMonthsAgo],
+  );
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -157,7 +171,31 @@ export default function Calendar() {
 
   return (
     <div className="calendar-page">
-      <div className="calendar-page__toolbar">
+      {/* Compact Unified Header Row: Sub Tabs + View Toggles */}
+      <div className="cal-header-compact-row">
+        {viewMode === 'list' ? (
+          <div className="cal-compact-tabs">
+            <button
+              type="button"
+              className={`cal-compact-tab-btn ${listTab === 'upcoming' ? 'is-active' : ''}`}
+              onClick={() => setListTab('upcoming')}
+            >
+              예정 / 진행 <span className="cal-tab-count">({upcoming.length})</span>
+            </button>
+            <button
+              type="button"
+              className={`cal-compact-tab-btn ${listTab === 'past' ? 'is-active' : ''}`}
+              onClick={() => setListTab('past')}
+            >
+              지난 일정 <span className="cal-tab-count">({past.length})</span>
+            </button>
+          </div>
+        ) : (
+          <div className="cal-compact-month-title">
+            <span>{currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월</span>
+          </div>
+        )}
+
         <div className="cal-view-toggle" role="group" aria-label="캘린더 보기 방식">
           <button
             type="button"
@@ -191,21 +229,6 @@ export default function Calendar() {
         </div>
       ) : viewMode === 'list' ? (
         <>
-          <div className="cal-list-tabs">
-            <SegmentedControl<ListTab>
-              name="일정 구분"
-              options={[
-                { value: 'upcoming', label: '예정 / 진행' },
-                {
-                  value: 'past',
-                  label: `지난 일정${past.length ? ` (${past.length})` : ''}`,
-                },
-              ]}
-              value={listTab}
-              onChange={setListTab}
-            />
-          </div>
-
           {listTab === 'upcoming' ? (
             <section className="cal-section">
               <div className="cal-list">
@@ -231,7 +254,7 @@ export default function Calendar() {
             <section className="cal-section">
               <div className="cal-list">
                 {past.length === 0 ? (
-                  <p className="empty-inline">지난 일정이 없어요.</p>
+                  <p className="empty-inline">최근 3개월 내 지난 일정이 없어요.</p>
                 ) : (
                   past.map(renderListItem)
                 )}

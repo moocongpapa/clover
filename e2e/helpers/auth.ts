@@ -1,10 +1,8 @@
-import type { Page } from '@playwright/test';
+import { devLogin } from './api';
 
 export async function loginViaUI(page: Page, displayName: string) {
-  await page.goto('/login');
-  await page.getByLabel('이름으로 빠른 로그인').fill(displayName);
-  await page.getByRole('button', { name: '개발 로그인' }).click();
-  await page.waitForURL('/');
+  const session = await devLogin(displayName);
+  await loginWithToken(page, session.accessToken, session.user);
 }
 
 export async function loginWithToken(

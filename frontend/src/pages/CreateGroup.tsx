@@ -112,13 +112,72 @@ export default function CreateGroup() {
   return (
     <div>
       <form className="form-card" onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="name">모임 이름 *</label>
-          <input id="name" name="name" required />
-        </div>
-        <div className="form-group">
-          <label htmlFor="description">소개 *</label>
-          <textarea id="description" name="description" required />
+        {/* Top Header Card: Left Tactile Photo Picker + Right Group Name & Description */}
+        <div className="group-profile-header-card">
+          <div className="group-avatar-picker-wrap">
+            {previewUrl ? (
+              <div className="group-avatar-preview-box">
+                <img src={previewUrl} alt="모임 대표 이미지" className="group-avatar-preview-img" />
+                <div className="group-avatar-overlay-actions">
+                  <label className="avatar-mini-btn" htmlFor="profileImage" title="사진 변경">
+                    📷
+                  </label>
+                  <button
+                    type="button"
+                    className="avatar-mini-btn avatar-mini-btn--delete"
+                    onClick={clearImage}
+                    title="사진 삭제"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className="group-avatar-empty-picker" htmlFor="profileImage" title="모임 대표 사진 등록">
+                <div className="empty-picker-icon-badge">
+                  <span className="empty-picker-camera">📷</span>
+                  <span className="empty-picker-plus">+</span>
+                </div>
+                <span className="empty-picker-label">사진 등록</span>
+              </label>
+            )}
+            <input
+              ref={fileInputRef}
+              id="profileImage"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              style={{ display: 'none' }}
+              onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+            />
+          </div>
+
+          <div className="group-profile-fields-wrap">
+            <div className="profile-field-group">
+              <label htmlFor="name" className="profile-field-label">
+                모임 이름 <span className="req-star">*</span>
+              </label>
+              <input
+                id="name"
+                name="name"
+                required
+                placeholder="모임 이름을 입력하세요"
+                className="profile-field-input"
+              />
+            </div>
+            <div className="profile-field-group">
+              <label htmlFor="description" className="profile-field-label">
+                소개 <span className="req-star">*</span>
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                required
+                rows={2}
+                placeholder="모임 소개글을 입력하세요"
+                className="profile-field-textarea"
+              />
+            </div>
+          </div>
         </div>
 
         {/* 1. Google map search arenas */}
@@ -223,39 +282,7 @@ export default function CreateGroup() {
           <label htmlFor="officerFeeExempt">운영진 회비 면제 적용</label>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="profileImage">대표 이미지</label>
-          <div className="image-upload">
-            {previewUrl ? (
-              <div className="image-upload__preview">
-                <img src={previewUrl} alt="대표 이미지 미리보기" />
-                <button
-                  type="button"
-                  className="btn-sm btn-ghost"
-                  onClick={clearImage}
-                >
-                  제거
-                </button>
-              </div>
-            ) : (
-              <label className="image-upload__picker" htmlFor="profileImage">
-                <span className="image-upload__icon">+</span>
-                <span>이미지 선택</span>
-                <span className="image-upload__hint">JPEG, PNG, WebP, GIF · 최대 5MB</span>
-              </label>
-            )}
-            <input
-              ref={fileInputRef}
-              id="profileImage"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="image-upload__input"
-              onChange={(e) =>
-                handleImageChange(e.target.files?.[0] ?? null)
-              }
-            />
-          </div>
-        </div>
+
 
         <div className="form-group checkbox-row">
           <input id="isPublic" name="isPublic" type="checkbox" defaultChecked />

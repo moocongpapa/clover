@@ -15,7 +15,7 @@ async function bootstrap() {
 
   const frontendUrl = config.get<string>(
     'FRONTEND_URL',
-    'http://localhost:5173',
+    'http://localhost:5174',
   );
   const allowedOrigins = frontendUrl.split(',').map((o) => o.trim());
   app.enableCors({

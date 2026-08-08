@@ -20,7 +20,7 @@ export async function requestFcmToken(): Promise<string | null> {
   const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
   if (!vapidKey) {
-    console.warn('VITE_FIREBASE_VAPID_KEY is not defined. FCM token registration skipped.');
+    // Graceful fallback when FCM Web Push VAPID key is not configured
     return null;
   }
 
@@ -28,12 +28,10 @@ export async function requestFcmToken(): Promise<string | null> {
     const currentToken = await getToken(messaging, { vapidKey });
     if (currentToken) {
       return currentToken;
-    } else {
-      console.warn('No registration token available. Request permission to generate one.');
-      return null;
     }
+    return null;
   } catch (err) {
-    console.error('An error occurred while retrieving token: ', err);
+    console.debug('FCM token registration unavailable:', err);
     return null;
   }
 }

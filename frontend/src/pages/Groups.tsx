@@ -21,6 +21,13 @@ function GroupCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const status = group.myMembership?.status;
   const isPresident = group.myMembership?.role === 'PRESIDENT';
 

@@ -9,6 +9,7 @@ export default function ProfileDetail() {
   const [profile, setProfile] = useState<User | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showFullPhoto, setShowFullPhoto] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -24,6 +25,17 @@ export default function ProfileDetail() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!showFullPhoto) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowFullPhoto(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showFullPhoto]);
 
   if (loading) {
     return <p className="loading-text">불러오는 중…</p>;
@@ -52,11 +64,18 @@ export default function ProfileDetail() {
       <div className="profile-card">
         <div className="profile-header">
           {profile.profileImageUrl ? (
-            <img
-              src={profile.profileImageUrl}
-              alt=""
-              className="profile-avatar"
-            />
+            <div
+              className="profile-avatar-wrap is-clickable"
+              onClick={() => setShowFullPhoto(true)}
+              title="사진 크게 보기"
+            >
+              <img
+                src={profile.profileImageUrl}
+                alt={profile.displayName}
+                className="profile-avatar"
+              />
+              <span className="profile-avatar-zoom-badge">🔍</span>
+            </div>
           ) : (
             <span className="profile-avatar-fallback" aria-hidden>
               {avatarFallback}
@@ -95,6 +114,38 @@ export default function ProfileDetail() {
           </button>
         </div>
       </div>
+
+      {/* Fullscreen Photo Lightbox Modal */}
+      {showFullPhoto && profile.profileImageUrl && (
+        <div
+          className="profile-photo-lightbox-overlay"
+          onClick={() => setShowFullPhoto(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="profile-photo-lightbox-header" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-photo-lightbox-user">
+              <span className="profile-photo-lightbox-name">{profile.displayName}</span>
+              <span className="profile-photo-lightbox-sub">프로필 사진</span>
+            </div>
+            <button
+              type="button"
+              className="profile-photo-lightbox-close"
+              onClick={() => setShowFullPhoto(false)}
+              title="닫기"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="profile-photo-lightbox-body" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={profile.profileImageUrl}
+              alt={profile.displayName}
+              className="profile-photo-lightbox-img"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -19,7 +19,6 @@ import ProfileDetail from './pages/ProfileDetail';
 import Announcements from './pages/Announcements';
 import CreateAnnouncement from './pages/CreateAnnouncement';
 import Settings from './pages/Settings';
-import Chat from './pages/Chat';
 import Notifications from './pages/Notifications';
 
 // Load saved settings immediately on boot
@@ -118,14 +117,6 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Notifications />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="chat"
-              element={
-                <ProtectedRoute>
-                  <Chat />
                 </ProtectedRoute>
               }
             />
