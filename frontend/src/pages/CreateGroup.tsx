@@ -10,6 +10,8 @@ import GoogleMapSelector from '../components/GoogleMapSelector';
 import { api, CATEGORY_OPTIONS } from '../api';
 import '../pages/Groups.css';
 
+import BackButton from '../components/BackButton';
+
 export default function CreateGroup() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,7 +112,13 @@ export default function CreateGroup() {
   };
 
   return (
-    <div>
+    <div style={{ maxWidth: '640px', margin: '0 auto', padding: '12px 16px 40px' }}>
+      {/* Top Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+        <BackButton />
+        <h1 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--ink-dark)' }}>새 모임 개설</h1>
+      </div>
+
       <form className="form-card" onSubmit={handleSubmit}>
         {/* Top Header Card: Left Tactile Photo Picker + Right Group Name & Description */}
         <div className="group-profile-header-card">
@@ -292,9 +300,46 @@ export default function CreateGroup() {
         <BankAccountFields />
 
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? '생성 중…' : '모임 만들기'}
-        </button>
+        
+        <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            style={{
+              flex: 1,
+              height: '52px',
+              background: 'var(--surface)',
+              border: '1.5px solid var(--border)',
+              borderRadius: '14px',
+              fontSize: '16px',
+              fontWeight: '700',
+              color: 'var(--ink-muted)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            취소
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              flex: 2,
+              height: '52px',
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '14px',
+              fontSize: '17px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {loading ? '생성 중…' : '모임 만들기 🍀'}
+          </button>
+        </div>
       </form>
     </div>
   );

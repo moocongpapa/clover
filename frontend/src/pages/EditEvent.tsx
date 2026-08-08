@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import { api, formatEventDate } from '../api';
+import { useNavigate, useParams } from 'react-router-dom';
+import { api } from '../api';
+import BackButton from '../components/BackButton';
 import '../pages/Groups.css';
 
 export default function EditEvent() {
@@ -21,7 +22,7 @@ export default function EditEvent() {
 
   const offsetOptions = [
     { label: '48시간 전', value: 48 },
-    { label: '24시간 전', value: 24 },
+    { label: '24시간 전 (추천)', value: 24 },
     { label: '12시간 전', value: 12 },
     { label: '6시간 전', value: 6 },
     { label: '3시간 전', value: 3 },
@@ -40,7 +41,12 @@ export default function EditEvent() {
       .getEvent(id)
       .then((ev) => {
         setTitle(ev.title);
-        setDate(formatEventDate(ev.date));
+        // format ISO date string to YYYY-MM-DD for input[type="date"]
+        const d = new Date(ev.date);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        setDate(`${y}-${m}-${day}`);
         setStartTime(ev.startTime);
         setEndTime(ev.endTime || '');
         setEventLocation(ev.location);
@@ -65,6 +71,11 @@ export default function EditEvent() {
     e.preventDefault();
     if (!id) return;
 
+    if (!title.trim()) {
+      setError('제목을 입력해주세요.');
+      return;
+    }
+
     if (!date) {
       setError('날짜를 입력해주세요.');
       return;
@@ -79,12 +90,12 @@ export default function EditEvent() {
     setError('');
     try {
       await api.updateEvent(id, {
-        title,
+        title: title.trim(),
         date,
         startTime,
         ...(endTime ? { endTime } : {}),
-        location: eventLocation,
-        description,
+        location: eventLocation.trim() || '미정',
+        description: description.trim(),
         reminderOffsets: selectedOffsets.join(','),
       });
       navigate(`/events/${id}`);
@@ -100,134 +111,303 @@ export default function EditEvent() {
   }
 
   return (
-    <div>
-      <div className="event-detail-group-nav" style={{ marginBottom: '16px' }}>
-        <Link to={`/events/${id}`} className="group-nav-link">
-          <span className="group-nav-arrow">‹</span>
-          <span className="group-nav-name">일정 상세로 돌아가기</span>
-        </Link>
+    <div style={{ maxWidth: '640px', margin: '0 auto', padding: '12px 16px 40px' }}>
+      {/* Top Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+        <BackButton />
+        <h1 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--ink-dark)' }}>일정 수정</h1>
       </div>
 
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px' }}>
-          일정 수정
-        </h2>
-
-        <div className="form-group">
-          <label htmlFor="title">제목 *</label>
-          <input
-            id="title"
-            name="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="예: 풋살, 독서 토론, React 스터디"
-            required
-            autoComplete="off"
-          />
-        </div>
-
-        <div className="form-row form-row--triple">
-          <div className="form-group form-group--date">
-            <label htmlFor="date">시작 날짜 *</label>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Card 1: Title & Date & Time */}
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '18px',
+          padding: '20px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+        }}>
+          {/* Title */}
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
+              일정 제목 <span style={{ color: '#ef4444' }}>*</span>
+            </label>
             <input
-              id="date"
-              name="date"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="예: 이번 주 정기 풋살 매치"
+              required
+              style={{
+                width: '100%',
+                height: '46px',
+                padding: '0 14px',
+                background: 'var(--grey-50)',
+                border: '1.5px solid var(--border)',
+                borderRadius: '12px',
+                fontSize: '15px',
+                fontWeight: '600',
+                color: 'var(--ink-dark)',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <div style={{ height: '1px', background: 'var(--border-subtle, #f1f5f9)' }} />
+
+          {/* Date */}
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
+              날짜 <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
+              style={{
+                width: '100%',
+                height: '46px',
+                padding: '0 14px',
+                background: 'var(--grey-50)',
+                border: '1.5px solid var(--border)',
+                borderRadius: '12px',
+                fontSize: '15px',
+                fontWeight: '600',
+                color: 'var(--ink-dark)',
+                outline: 'none'
+              }}
             />
           </div>
-          <div className="form-group form-group--time">
-            <label htmlFor="startTime">시작 시간 *</label>
+
+          <div style={{ height: '1px', background: 'var(--border-subtle, #f1f5f9)' }} />
+
+          {/* Time (Start & End) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
+                시작 시간 <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  height: '46px',
+                  padding: '0 10px',
+                  background: 'var(--grey-50)',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  color: 'var(--ink-dark)',
+                  outline: 'none'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
+                종료 시간
+              </label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '46px',
+                  padding: '0 10px',
+                  background: 'var(--grey-50)',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  color: 'var(--ink-dark)',
+                  outline: 'none'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Location & Description */}
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '18px',
+          padding: '20px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+        }}>
+          {/* Location */}
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
+              장소 <span style={{ color: '#ef4444' }}>*</span>
+            </label>
             <input
-              id="startTime"
-              name="startTime"
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
+              type="text"
+              value={eventLocation}
+              onChange={(e) => setEventLocation(e.target.value)}
+              placeholder="예: 펜타시티 풋살파크 A구장"
               required
+              style={{
+                width: '100%',
+                height: '46px',
+                padding: '0 14px',
+                background: 'var(--grey-50)',
+                border: '1.5px solid var(--border)',
+                borderRadius: '12px',
+                fontSize: '15px',
+                fontWeight: '600',
+                color: 'var(--ink-dark)',
+                outline: 'none'
+              }}
             />
           </div>
-          <div className="form-group form-group--time">
-            <label htmlFor="endTime">끝나는 시간</label>
-            <input
-              id="endTime"
-              name="endTime"
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
+
+          <div style={{ height: '1px', background: 'var(--border-subtle, #f1f5f9)' }} />
+
+          {/* Description */}
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
+              상세 설명 및 준비물
+            </label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="준비물, 회비, 주차 안내 등 전달할 내용을 적어주세요."
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                background: 'var(--grey-50)',
+                border: '1.5px solid var(--border)',
+                borderRadius: '12px',
+                fontSize: '14px',
+                color: 'var(--ink-dark)',
+                outline: 'none',
+                resize: 'vertical',
+                minHeight: '80px',
+                lineHeight: '1.5',
+                fontFamily: 'inherit'
+              }}
             />
           </div>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="location">장소 *</label>
-          <input
-            id="location"
-            name="location"
-            value={eventLocation}
-            onChange={(e) => setEventLocation(e.target.value)}
-            required
-          />
-        </div>
+        {/* Card 3: Kakao Reminder Settings */}
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '18px',
+          padding: '20px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '800', color: 'var(--ink-dark)' }}>
+              <span>💬</span>
+              <span>카카오톡 투표 독려 리마인더</span>
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--ink-muted)', margin: '4px 0 0 0' }}>
+              미투표 회원에게만 선택한 시간에 자동으로 카카오톡 알림을 발송합니다.
+            </p>
+          </div>
 
-        <div className="form-group">
-          <label htmlFor="description">설명 *</label>
-          <textarea
-            id="description"
-            name="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>카카오톡 투표 독려 리마인더 시간 설정</label>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '8px',
-              marginTop: '6px',
-            }}
-          >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '4px' }}>
             {offsetOptions.map((opt) => {
-              const checked = selectedOffsets.includes(opt.value);
+              const active = selectedOffsets.includes(opt.value);
               return (
-                <label
+                <button
                   key={opt.value}
+                  type="button"
+                  onClick={() => handleOffsetToggle(opt.value)}
                   style={{
+                    height: '42px',
+                    padding: '0 8px',
+                    background: active ? 'rgba(16, 185, 129, 0.12)' : 'var(--grey-50)',
+                    border: `1.5px solid ${active ? '#10b981' : 'var(--border)'}`,
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: active ? '800' : '600',
+                    color: active ? '#10b981' : 'var(--ink-muted)',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => handleOffsetToggle(opt.value)}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                  />
+                  {active && <span>✓</span>}
                   <span>{opt.label}</span>
-                </label>
+                </button>
               );
             })}
           </div>
         </div>
 
-        {error && <p className="form-error">{error}</p>}
+        {error && (
+          <div style={{
+            padding: '12px 14px',
+            background: '#fee2e2',
+            border: '1px solid #ef4444',
+            borderRadius: '12px',
+            color: '#b91c1c',
+            fontSize: '13px',
+            fontWeight: '700'
+          }}>
+            ⚠️ {error}
+          </div>
+        )}
 
-        <div className="form-actions-centered">
+        {/* Bottom Actions */}
+        <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            style={{
+              flex: 1,
+              height: '52px',
+              background: 'var(--surface)',
+              border: '1.5px solid var(--border)',
+              borderRadius: '14px',
+              fontSize: '16px',
+              fontWeight: '700',
+              color: 'var(--ink-muted)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            취소
+          </button>
           <button
             type="submit"
-            className="btn-primary btn-submit-centered"
             disabled={loading}
+            style={{
+              flex: 2,
+              height: '52px',
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '14px',
+              fontSize: '17px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+              transition: 'all 0.15s ease'
+            }}
           >
-            {loading ? '수정 중…' : '일정 수정 저장'}
+            {loading ? '저장 중…' : '수정 완료 ✓'}
           </button>
         </div>
       </form>
