@@ -16,7 +16,7 @@ export class AuthController {
 
   @Post('kakao/callback')
   kakaoCallback(@Body() dto: KakaoCallbackDto) {
-    return this.authService.kakaoCallback(dto.code);
+    return this.authService.kakaoCallback(dto.code, dto.redirectUri);
   }
 
   @Post('dev-login')

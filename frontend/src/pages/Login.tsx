@@ -40,13 +40,18 @@ export default function Login() {
     api.getKakaoUrl().then((r) => setKakaoUrl(r.url));
   }, []);
 
-  const handleKakaoStart = (e: React.MouseEvent) => {
+  const handleKakaoStart = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (kakaoUrl) {
       window.location.href = kakaoUrl;
-    } else {
-      setShowKakaoModal(true);
+      return;
     }
+    // Direct Official Kakao OAuth URL
+    const restApiKey = '48b4025d5f4f3087b3435862d6d67491';
+    const redirectUri = `${window.location.origin}/login`;
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?client_id=${restApiKey}&redirect_uri=${encodeURIComponent(
+      redirectUri,
+    )}&response_type=code`;
   };
 
   const handleKakaoModalSubmit = async (e: FormEvent) => {

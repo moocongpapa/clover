@@ -58,9 +58,9 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async kakaoCallback(code: string) {
+  async kakaoCallback(code: string, customRedirectUri?: string) {
     const restApiKey = this.config.get<string>('KAKAO_REST_API_KEY');
-    const redirectUri = this.config.get<string>('KAKAO_REDIRECT_URI') || 'http://localhost:5174/login';
+    const redirectUri = customRedirectUri || this.config.get<string>('KAKAO_REDIRECT_URI') || 'http://localhost:5174/login';
 
     if (!restApiKey || code.startsWith('mock_kakao_code')) {
       const parts = code.split(':');

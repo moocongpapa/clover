@@ -5,6 +5,10 @@ export class KakaoCallbackDto {
   @IsString()
   @IsNotEmpty()
   code!: string;
+
+  @IsOptional()
+  @IsString()
+  redirectUri?: string;
 }
 
 export class DevLoginDto {

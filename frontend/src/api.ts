@@ -106,10 +106,13 @@ async function request<T>(
 
 export const api = {
   getKakaoUrl: () => request<{ url: string | null }>('/auth/kakao/url'),
-  kakaoCallback: (code: string) =>
+  kakaoCallback: (code: string, redirectUri?: string) =>
     request<AuthResponse>('/auth/kakao/callback', {
       method: 'POST',
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({
+        code,
+        redirectUri: redirectUri || (typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined),
+      }),
     }),
   devLogin: (displayName: string) =>
     request<AuthResponse>('/auth/dev-login', {
