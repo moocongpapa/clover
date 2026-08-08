@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
-import { api, clearToken, isProfileComplete, type User } from '../api';
+import { api, clearToken, isProfileComplete, safeImageUrl, type User } from '../api';
 import { useAuth } from '../context/AuthContext';
 import './EditProfile.css';
 import './Groups.css';
@@ -51,7 +51,7 @@ export default function EditProfile() {
         setDisplayNameVal(me.displayName || '');
         setBio(me.bio ?? '');
         if (me.profileImageUrl) {
-          setPreviewUrl(me.profileImageUrl);
+          setPreviewUrl(safeImageUrl(me.profileImageUrl));
         }
         setPhoneNumberVal(me.phoneNumber ?? '');
         setGenderVal(me.gender ?? '');

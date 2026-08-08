@@ -37,6 +37,11 @@ export function isProfileComplete(user?: User | null): boolean {
   return hasName && hasBirth && hasGender && hasPhone;
 }
 
+export function safeImageUrl(url?: string | null): string | null {
+  if (!url) return null;
+  return url.replace(/^http:\/\//i, 'https://');
+}
+
 export interface UserProfileCard {
   id: string;
   userId: string;

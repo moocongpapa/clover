@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api, formatPhoneNumber, type User } from '../api';
+import { api, formatPhoneNumber, safeImageUrl, type User } from '../api';
 import './ProfileDetail.css';
 
 export default function ProfileDetail() {
@@ -110,7 +110,7 @@ export default function ProfileDetail() {
               title="사진 크게 보기"
             >
               <img
-                src={profile.profileImageUrl}
+                src={safeImageUrl(profile.profileImageUrl) || ''}
                 alt={profile.displayName}
                 className="profile-avatar"
               />

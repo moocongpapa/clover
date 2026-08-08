@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { safeImageUrl } from '../api';
 import CloverLogo from './CloverLogo';
 import NotificationBell from './NotificationBell';
 import './Layout.css';
@@ -110,8 +111,8 @@ export default function Layout() {
                     aria-expanded={dropdownOpen}
                     aria-label="사용자 메뉴"
                   >
-                    {user.profileImageUrl ? (
-                      <img src={user.profileImageUrl} alt="" />
+                    {safeImageUrl(user.profileImageUrl) ? (
+                      <img src={safeImageUrl(user.profileImageUrl)!} alt="" />
                     ) : (
                       <span className="avatar-fallback">
                         {user.displayName[0]}
