@@ -450,8 +450,8 @@ export class NotificationsService {
             object_type: 'text',
             text: message,
             link: {
-              web_url: this.config.get<string>('FRONTEND_URL'),
-              mobile_web_url: this.config.get<string>('FRONTEND_URL'),
+              web_url: this.config.get<string>('FRONTEND_URL') || 'https://clover-gilt.vercel.app',
+              mobile_web_url: this.config.get<string>('FRONTEND_URL') || 'https://clover-gilt.vercel.app',
             },
           }),
         );
@@ -512,8 +512,8 @@ export class NotificationsService {
         object_type: 'text',
         text: message,
         link: {
-          web_url: this.config.get<string>('FRONTEND_URL') || 'http://localhost:5174',
-          mobile_web_url: this.config.get<string>('FRONTEND_URL') || 'http://localhost:5174',
+          web_url: this.config.get<string>('FRONTEND_URL') || 'https://clover-gilt.vercel.app',
+          mobile_web_url: this.config.get<string>('FRONTEND_URL') || 'https://clover-gilt.vercel.app',
         },
       }),
     );

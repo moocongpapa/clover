@@ -144,7 +144,7 @@ function buildPublicUploadUrl(
 ) {
   const port = config.get<number>('PORT', 3000);
   const publicBase =
-    config.get<string>('API_PUBLIC_URL') ?? `http://localhost:${port}`;
+    config.get<string>('API_PUBLIC_URL') ?? (process.env.NODE_ENV === 'production' || process.env.RENDER ? 'https://clover-backend-vm9k.onrender.com' : `http://localhost:${port}`);
   return `${publicBase}/uploads/${folder}/${filename}`;
 }
 

@@ -2,9 +2,12 @@ function resolveApiBase(): string {
   const fromEnv = import.meta.env.VITE_API_URL;
   if (fromEnv) return fromEnv;
   if (typeof window !== 'undefined') {
+    if (window.location.hostname.endsWith('vercel.app')) {
+      return 'https://clover-backend-vm9k.onrender.com';
+    }
     return `${window.location.protocol}//${window.location.hostname}:3000`;
   }
-  return 'http://localhost:3000';
+  return 'https://clover-backend-vm9k.onrender.com';
 }
 
 export const API_BASE = resolveApiBase();

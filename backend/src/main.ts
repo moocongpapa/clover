@@ -15,7 +15,7 @@ async function bootstrap() {
 
   const frontendUrl = config.get<string>(
     'FRONTEND_URL',
-    'http://localhost:5174',
+    'https://clover-gilt.vercel.app,http://localhost:5174',
   );
   const allowedOrigins = frontendUrl.split(',').map((o) => o.trim());
   app.enableCors({

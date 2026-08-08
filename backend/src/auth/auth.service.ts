@@ -60,7 +60,7 @@ export class AuthService {
 
   async kakaoCallback(code: string, customRedirectUri?: string) {
     const restApiKey = this.config.get<string>('KAKAO_REST_API_KEY');
-    const redirectUri = customRedirectUri || this.config.get<string>('KAKAO_REDIRECT_URI') || 'http://localhost:5174/login';
+    const redirectUri = customRedirectUri || this.config.get<string>('KAKAO_REDIRECT_URI') || 'https://clover-gilt.vercel.app/login';
 
     if (!restApiKey || code.startsWith('mock_kakao_code')) {
       const parts = code.split(':');
@@ -337,7 +337,7 @@ export class AuthService {
 
   getKakaoLoginUrl() {
     const restApiKey = this.config.get<string>('KAKAO_REST_API_KEY');
-    const redirectUri = this.config.get<string>('KAKAO_REDIRECT_URI') || 'http://localhost:5174/login';
+    const redirectUri = this.config.get<string>('KAKAO_REDIRECT_URI') || 'https://clover-gilt.vercel.app/login';
 
     if (!restApiKey) {
       return null;
