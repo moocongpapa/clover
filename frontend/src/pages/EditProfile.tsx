@@ -6,97 +6,13 @@ import { useAuth } from '../context/AuthContext';
 import './EditProfile.css';
 import './Groups.css';
 
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 100 }, (_, i) => CURRENT_YEAR - i);
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-
-const getDaysInMonth = (year: number | '', month: number | '') => {
-  if (!year || !month) return Array.from({ length: 31 }, (_, i) => i + 1);
-  const numDays = new Date(Number(year), Number(month), 0).getDate();
-  return Array.from({ length: numDays }, (_, i) => i + 1);
-};
-
-interface ScrollPickerProps<T> {
-  options: T[];
-  value: T;
-  onChange: (val: T) => void;
-  formatter: (val: T) => string;
-}
-
-function ScrollPicker<T extends string | number>({ options, value, onChange, formatter }: ScrollPickerProps<T>) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const index = options.indexOf(value);
-    if (index !== -1) {
-      containerRef.current.scrollTop = index * 40;
-    }
-  }, [value, options]);
-
-  const handleScroll = () => {
-    if (!containerRef.current) return;
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    
-    timeoutRef.current = setTimeout(() => {
-      if (!containerRef.current) return;
-      const scrollTop = containerRef.current.scrollTop;
-      const index = Math.round(scrollTop / 40);
-      if (index >= 0 && index < options.length) {
-        const selectedValue = options[index];
-        if (selectedValue !== value) {
-          onChange(selectedValue);
-        }
-      }
-    }, 100);
-  };
-
-  return (
-    <div 
-      className="scroll-picker-col" 
-      ref={containerRef}
-      onScroll={handleScroll}
-      style={{
-        height: '160px',
-        overflowY: 'scroll',
-        scrollSnapType: 'y mandatory',
-        scrollbarWidth: 'none',
-        position: 'relative',
-        padding: '60px 0',
-        width: '100%',
-        textAlign: 'center',
-      }}
-    >
-      {options.map((opt) => (
-        <div
-          key={opt}
-          className={`scroll-picker-item ${opt === value ? 'is-selected' : ''}`}
-          onClick={() => onChange(opt)}
-          style={{
-            height: '40px',
-            lineHeight: '40px',
-            fontSize: opt === value ? '19px' : '15px',
-            fontWeight: opt === value ? '800' : '500',
-            color: opt === value ? 'var(--ink-dark)' : 'var(--ink-muted)',
-            scrollSnapAlign: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          {formatter(opt)}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function EditProfile() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { updateUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const phoneInputRef = useRef<HTMLInputElement>(null);
+  const datePickerRef = useRef<HTMLInputElement>(null);
+
   const [profile, setProfile] = useState<User | null>(null);
   const [bio, setBio] = useState('');
   const [error, setError] = useState('');
@@ -116,19 +32,14 @@ export default function EditProfile() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [displayNameVal, setDisplayNameVal] = useState('');
 
-  // Profile data states (defaults to 1995-01-01 if empty)
-  const [birthYearVal, setBirthYearVal] = useState<number | ''>(1995);
-  const [birthMonthVal, setBirthMonthVal] = useState<number | ''>(1);
-  const [birthDayVal, setBirthDayVal] = useState<number | ''>(1);
+  // Profile data states
+  const [birthRawInput, setBirthRawInput] = useState(''); // e.g. "19911004"
+  const [birthYearVal, setBirthYearVal] = useState<number | null>(null);
+  const [birthMonthVal, setBirthMonthVal] = useState<number | null>(null);
+  const [birthDayVal, setBirthDayVal] = useState<number | null>(null);
   const [phoneNumberVal, setPhoneNumberVal] = useState('');
   const [genderVal, setGenderVal] = useState<'MALE' | 'FEMALE' | ''>('');
   const [isEarlyYearVal, setIsEarlyYearVal] = useState(false);
-
-  // Inline accordion states
-  const [isBirthExpanded, setIsBirthExpanded] = useState(false);
-  const [isGenderExpanded, setIsGenderExpanded] = useState(false);
-  const [isPhoneExpanded, setIsPhoneExpanded] = useState(false);
-  const [tempPhone, setTempPhone] = useState('');
 
   const isFirstOnboarding = searchParams.get('required') === 'true' || (profile !== null && !isProfileComplete(profile));
 
@@ -143,26 +54,26 @@ export default function EditProfile() {
           setPreviewUrl(me.profileImageUrl);
         }
         setPhoneNumberVal(me.phoneNumber ?? '');
-        if (me.phoneNumber) {
-          setTempPhone(me.phoneNumber.replace(/\D/g, '').slice(-8));
-        }
         setGenderVal(me.gender ?? '');
         setIsEarlyYearVal(me.isEarlyYear ?? false);
 
         // Parse birthDate / birthYear
         if (me.birthDate) {
           const bDate = new Date(me.birthDate);
-          setBirthYearVal(bDate.getUTCFullYear() || bDate.getFullYear());
-          setBirthMonthVal(bDate.getUTCMonth() + 1 || bDate.getMonth() + 1);
-          setBirthDayVal(bDate.getUTCDate() || bDate.getDate());
+          const y = bDate.getUTCFullYear() || bDate.getFullYear();
+          const m = bDate.getUTCMonth() + 1 || bDate.getMonth() + 1;
+          const d = bDate.getUTCDate() || bDate.getDate();
+          setBirthYearVal(y);
+          setBirthMonthVal(m);
+          setBirthDayVal(d);
+          const mStr = String(m).padStart(2, '0');
+          const dStr = String(d).padStart(2, '0');
+          setBirthRawInput(`${y}${mStr}${dStr}`);
         } else if (me.birthYear) {
           setBirthYearVal(me.birthYear);
           setBirthMonthVal(1);
           setBirthDayVal(1);
-        } else {
-          setBirthYearVal(1995);
-          setBirthMonthVal(1);
-          setBirthDayVal(1);
+          setBirthRawInput(`${me.birthYear}0101`);
         }
       })
       .catch((e) => {
@@ -181,7 +92,7 @@ export default function EditProfile() {
     if (!profile) return;
 
     const trimmedName = overrides?.displayName !== undefined ? overrides.displayName : displayNameVal.trim();
-    const by = overrides?.birthYear !== undefined ? overrides.birthYear : (birthYearVal ? Number(birthYearVal) : null);
+    const by = overrides?.birthYear !== undefined ? overrides.birthYear : birthYearVal;
     const early = overrides?.isEarlyYear !== undefined ? overrides.isEarlyYear : isEarlyYearVal;
     const g = overrides?.gender !== undefined ? overrides.gender : (genderVal || null);
     const phone = overrides?.phoneNumber !== undefined ? overrides.phoneNumber : phoneNumberVal.trim();
@@ -261,33 +172,80 @@ export default function EditProfile() {
     }, 600);
   };
 
-  const handleDateChange = (newY: number, newM: number, newD: number, newEarly = isEarlyYearVal) => {
-    setBirthYearVal(newY);
-    setBirthMonthVal(newM);
-    setBirthDayVal(newD);
-    setIsEarlyYearVal(newEarly);
-    const iso = new Date(Date.UTC(newY, newM - 1, newD, 12, 0, 0)).toISOString();
-    autoSave({ birthYear: newY, birthDate: iso, isEarlyYear: newEarly });
+  // Smart Birth Date Input (supports YYYYMMDD e.g. 19911004 or 1991-10-04)
+  const handleBirthInputChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    setBirthRawInput(digits);
+
+    if (digits.length === 8) {
+      const y = parseInt(digits.slice(0, 4), 10);
+      const m = parseInt(digits.slice(4, 6), 10);
+      const d = parseInt(digits.slice(6, 8), 10);
+
+      const currentYear = new Date().getFullYear();
+      if (y >= 1920 && y <= currentYear && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        setBirthYearVal(y);
+        setBirthMonthVal(m);
+        setBirthDayVal(d);
+        const iso = new Date(Date.UTC(y, m - 1, d, 12, 0, 0)).toISOString();
+        autoSave({ birthYear: y, birthDate: iso });
+      }
+    } else if (digits.length === 0) {
+      setBirthYearVal(null);
+      setBirthMonthVal(null);
+      setBirthDayVal(null);
+      autoSave({ birthYear: null, birthDate: null });
+    }
   };
 
-  const handleGenderChange = (val: 'MALE' | 'FEMALE') => {
+  const handleNativeDatePick = (dateStr: string) => {
+    if (!dateStr) return;
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      setBirthYearVal(y);
+      setBirthMonthVal(m);
+      setBirthDayVal(d);
+      setBirthRawInput(`${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`);
+      const iso = new Date(Date.UTC(y, m - 1, d, 12, 0, 0)).toISOString();
+      autoSave({ birthYear: y, birthDate: iso });
+    }
+  };
+
+  const formatBirthFormatted = (digits: string) => {
+    if (!digits) return '';
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 4)}.${digits.slice(4)}`;
+    return `${digits.slice(0, 4)}.${digits.slice(4, 6)}.${digits.slice(6, 8)}`;
+  };
+
+  // One-touch Gender Segmented Control
+  const handleGenderSelect = (val: 'MALE' | 'FEMALE') => {
     setGenderVal(val);
     autoSave({ gender: val });
   };
 
-  const handlePhoneInputChange = (val: string) => {
-    let digits = val.replace(/\D/g, '');
+  // Inline 8-digit Phone Input
+  const handlePhoneInputChange = (raw: string) => {
+    let digits = raw.replace(/\D/g, '');
     if (digits.startsWith('010')) {
       digits = digits.slice(3);
     }
-    if (digits.length <= 8) {
-      setTempPhone(digits);
+    digits = digits.slice(0, 8);
+
+    if (digits.length === 0) {
+      setPhoneNumberVal('');
+      autoSave({ phoneNumber: null });
+    } else {
+      let formatted = `010-${digits}`;
+      if (digits.length > 4) {
+        formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
+      }
+      setPhoneNumberVal(formatted);
       if (digits.length === 8) {
-        const formatted = `010-${digits.slice(0, 4)}-${digits.slice(4)}`;
-        setPhoneNumberVal(formatted);
         autoSave({ phoneNumber: formatted });
-      } else {
-        setPhoneNumberVal('');
       }
     }
   };
@@ -304,22 +262,18 @@ export default function EditProfile() {
     }
 
     if (!birthYearVal || !birthMonthVal || !birthDayVal) {
-      setIsBirthExpanded(true);
-      setError('생년월일을 선택해 주세요.');
+      setError('생년월일 8자리를 올바르게 입력해 주세요. (예: 19950101)');
       return;
     }
 
     if (!genderVal) {
-      setIsGenderExpanded(true);
-      setGenderVal('MALE');
       setError('성별을 선택해 주세요.');
       return;
     }
 
     const cleanPhone = phoneNumberVal.replace(/\D/g, '');
     if (!cleanPhone || cleanPhone.length < 8) {
-      setIsPhoneExpanded(true);
-      setError('휴대폰 번호 8자리를 입력해 주세요.');
+      setError('휴대폰 번호를 올바르게 입력해 주세요.');
       return;
     }
 
@@ -334,35 +288,6 @@ export default function EditProfile() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatBirthDisplay = () => {
-    if (birthYearVal && birthMonthVal && birthDayVal) {
-      return `${isEarlyYearVal ? '빠른 ' : ''}${birthYearVal}년 ${birthMonthVal}월 ${birthDayVal}일`;
-    }
-    if (birthYearVal) {
-      return `${isEarlyYearVal ? '빠른 ' : ''}${birthYearVal}년 1월 1일`;
-    }
-    return '선택해 주세요';
-  };
-
-  const handleToggleBirth = () => {
-    if (!isBirthExpanded) {
-      if (!birthYearVal) setBirthYearVal(1995);
-      if (!birthMonthVal) setBirthMonthVal(1);
-      if (!birthDayVal) setBirthDayVal(1);
-      handleDateChange(Number(birthYearVal) || 1995, Number(birthMonthVal) || 1, Number(birthDayVal) || 1);
-    }
-    setIsBirthExpanded(!isBirthExpanded);
-  };
-
-  const formatInputPhone = (rawDigits: string) => {
-    const clean = rawDigits.replace(/\D/g, '');
-    if (clean.length === 0) return '';
-    if (clean.length <= 4) {
-      return `010-${clean}`;
-    }
-    return `010-${clean.slice(0, 4)}-${clean.slice(4)}`;
   };
 
   if (error && !profile) {
@@ -405,7 +330,7 @@ export default function EditProfile() {
 
   const handleBackClick = () => {
     if (isFirstOnboarding) {
-      setError('서비스 이용을 위해 필수 정보(이름, 생년월일, 성별, 휴대폰 번호)를 입력하고 [확인]을 눌러주세요.');
+      setError('서비스 이용을 위해 필수 정보(이름, 생년월일, 성별, 휴대폰 번호)를 입력하고 [완료]를 눌러주세요.');
       return;
     }
     navigate(-1);
@@ -415,7 +340,7 @@ export default function EditProfile() {
 
   return (
     <div className="edit-profile-page">
-      {/* Native Band-style Header with real-time status */}
+      {/* Top Header */}
       <div className="edit-profile-header">
         <div className="header-left">
           {!isFirstOnboarding ? (
@@ -428,31 +353,22 @@ export default function EditProfile() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {saveStatus === 'saving' && (
-            <span style={{ fontSize: '12px', color: 'var(--ink-muted)', fontWeight: '500' }}>저장 중…</span>
+            <span style={{ fontSize: '12px', color: 'var(--ink-muted)', fontWeight: '600' }}>저장 중…</span>
           )}
           {saveStatus === 'saved' && (
-            <span style={{ fontSize: '12px', color: 'var(--brand-primary)', fontWeight: '700' }}>저장됨 ✓</span>
+            <span style={{ fontSize: '12px', color: 'var(--brand-primary)', fontWeight: '800' }}>저장됨 ✓</span>
           )}
         </div>
       </div>
 
       {isFirstOnboarding && (
-        <div style={{
-          margin: '12px 16px 0',
-          padding: '14px 16px',
-          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(16, 185, 129, 0.08))',
-          border: '1.5px solid var(--brand-primary)',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <span style={{ fontSize: '24px' }}>🍀</span>
+        <div className="onboarding-welcome-banner">
+          <span className="onboarding-welcome-icon">🍀</span>
           <div>
-            <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--brand-primary)', marginBottom: '2px' }}>
+            <div className="onboarding-welcome-title">
               환영합니다! 필수 회원 정보 입력
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--ink-muted)', lineHeight: '1.4' }}>
+            <div className="onboarding-welcome-desc">
               원활한 모임 활동 및 알림 수신을 위해 <strong>이름, 생년월일, 성별, 휴대폰 번호</strong>를 입력해 주세요.
             </div>
           </div>
@@ -460,207 +376,144 @@ export default function EditProfile() {
       )}
 
       {error && (
-        <div style={{
-          margin: '12px 16px 0',
-          padding: '10px 14px',
-          background: '#fee2e2',
-          border: '1px solid #ef4444',
-          borderRadius: '8px',
-          color: '#b91c1c',
-          fontSize: '13px',
-          fontWeight: '600'
-        }}>
+        <div className="profile-error-alert">
           ⚠️ {error}
         </div>
       )}
 
       <form className="edit-profile-body" onSubmit={(e) => e.preventDefault()}>
-        {/* Section 2: 내 정보 */}
+        {/* Section: 내 필수 정보 (Modern Clean Form Card) */}
         <div className="profile-section-title">내 정보</div>
         
-        <div className="info-list-container">
-          {/* 이름 */}
-          <div className="info-list-item no-arrow" style={{ cursor: 'default' }}>
-            <div className="info-item-label">
-              이름 <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
-            </div>
-            <div className="info-item-value-wrap" style={{ flex: 1, maxWidth: '200px' }}>
+        <div className="profile-modern-card">
+          {/* 1. 이름 */}
+          <div className="profile-input-group">
+            <label className="profile-input-label">
+              이름 <span className="req-star">*</span>
+            </label>
+            <div className="profile-input-field-wrap">
               <input
                 type="text"
+                className="profile-text-input"
                 value={displayNameVal}
                 onChange={(e) => handleNameChange(e.target.value)}
                 onBlur={() => displayNameVal.trim() && autoSave({ displayName: displayNameVal.trim() })}
-                placeholder="이름을 입력하세요"
-                style={{
-                  width: '100%',
-                  border: '1px solid var(--border-soft)',
-                  borderRadius: '8px',
-                  padding: '6px 10px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: 'var(--ink-dark)',
-                  textAlign: 'right',
-                  outline: 'none',
-                  background: 'var(--surface)',
-                }}
+                placeholder="이름(닉네임)을 입력하세요"
+              />
+              {displayNameVal && (
+                <button
+                  type="button"
+                  className="profile-input-clear-btn"
+                  onClick={() => handleNameChange('')}
+                  title="지우기"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="profile-divider" />
+
+          {/* 2. 생년월일 */}
+          <div className="profile-input-group">
+            <div className="profile-input-label-row">
+              <label className="profile-input-label">
+                생년월일 <span className="req-star">*</span>
+              </label>
+              <label className="early-year-toggle-pill">
+                <span>⚡ 빠른 년생</span>
+                <input
+                  type="checkbox"
+                  checked={isEarlyYearVal}
+                  onChange={(e) => {
+                    const early = e.target.checked;
+                    setIsEarlyYearVal(early);
+                    autoSave({ isEarlyYear: early });
+                  }}
+                />
+                <span className="early-slider"></span>
+              </label>
+            </div>
+
+            <div className="profile-input-field-wrap">
+              <input
+                type="tel"
+                inputMode="numeric"
+                className="profile-text-input"
+                value={formatBirthFormatted(birthRawInput)}
+                onChange={(e) => handleBirthInputChange(e.target.value)}
+                placeholder="예: 1995.01.01 (8자리 입력)"
+                maxLength={10}
+              />
+              <button
+                type="button"
+                className="profile-calendar-btn"
+                onClick={() => datePickerRef.current?.showPicker?.()}
+                title="달력으로 선택"
+              >
+                📅
+              </button>
+              <input
+                ref={datePickerRef}
+                type="date"
+                className="sr-only"
+                onChange={(e) => handleNativeDatePick(e.target.value)}
               />
             </div>
           </div>
 
-          {/* 생일 */}
-          <div className="info-list-item-group">
-            <div className="info-list-item" onClick={handleToggleBirth}>
-              <div className="info-item-label">
-                생일 <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
-              </div>
-              <div className="info-item-value-wrap">
-                <span className="info-item-value" style={{ color: birthYearVal ? 'var(--ink-dark)' : 'var(--ink-muted)', fontWeight: birthYearVal ? '600' : 'normal' }}>
-                  {formatBirthDisplay()}
-                </span>
-                <span className="chevron" style={{ transform: isBirthExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>〉</span>
-              </div>
-            </div>
-            {isBirthExpanded && (
-              <div className="inline-picker-container" style={{ padding: '0 16px 16px 16px', background: 'var(--surface)' }}>
-                {/* Lunar calendar & Early Year Toggle Row */}
-                <div style={{ display: 'flex', gap: '24px', paddingBottom: '12px', borderBottom: '1px solid var(--border-soft)', width: '100%' }}>
-                  <div className="lunar-toggle-row" style={{ borderBottom: 'none', padding: 0, flex: 1 }}>
-                    <span className="lunar-label">빠른 년생</span>
-                    <label className="toggle-switch-label">
-                      <input
-                        type="checkbox"
-                        checked={isEarlyYearVal}
-                        onChange={(e) => {
-                          const early = e.target.checked;
-                          setIsEarlyYearVal(early);
-                          handleDateChange(Number(birthYearVal) || 1995, Number(birthMonthVal) || 1, Number(birthDayVal) || 1, early);
-                        }}
-                      />
-                      <span className="toggle-switch-slider"></span>
-                    </label>
-                  </div>
-                </div>
+          <div className="profile-divider" />
 
-                {/* Three Columns Scroll Row */}
-                <div className="picker-scroll-container">
-                  <div className="picker-scroll-highlight"></div>
-                  <ScrollPicker
-                    options={YEARS}
-                    value={Number(birthYearVal) || 1995}
-                    onChange={(val) => {
-                      handleDateChange(val, Number(birthMonthVal) || 1, Number(birthDayVal) || 1);
-                    }}
-                    formatter={(val) => `${val}년`}
-                  />
-                  <ScrollPicker
-                    options={MONTHS}
-                    value={Number(birthMonthVal) || 1}
-                    onChange={(val) => {
-                      handleDateChange(Number(birthYearVal) || 1995, val, Number(birthDayVal) || 1);
-                    }}
-                    formatter={(val) => `${val}월`}
-                  />
-                  <ScrollPicker
-                    options={getDaysInMonth(Number(birthYearVal) || 1995, Number(birthMonthVal) || 1)}
-                    value={Number(birthDayVal) || 1}
-                    onChange={(val) => {
-                      handleDateChange(Number(birthYearVal) || 1995, Number(birthMonthVal) || 1, val);
-                    }}
-                    formatter={(val) => `${val}일`}
-                  />
-                </div>
-              </div>
-            )}
+          {/* 3. 성별 (One-Touch Segmented Buttons) */}
+          <div className="profile-input-group">
+            <label className="profile-input-label">
+              성별 <span className="req-star">*</span>
+            </label>
+            <div className="gender-segmented-control">
+              <button
+                type="button"
+                className={`gender-segment-btn ${genderVal === 'MALE' ? 'is-active' : ''}`}
+                onClick={() => handleGenderSelect('MALE')}
+              >
+                <span className="gender-btn-icon">🙋‍♂️</span>
+                <span>남성</span>
+              </button>
+              <button
+                type="button"
+                className={`gender-segment-btn ${genderVal === 'FEMALE' ? 'is-active' : ''}`}
+                onClick={() => handleGenderSelect('FEMALE')}
+              >
+                <span className="gender-btn-icon">🙋‍♀️</span>
+                <span>여성</span>
+              </button>
+            </div>
           </div>
 
-          {/* 성별 */}
-          <div className="info-list-item-group">
-            <div className="info-list-item" onClick={() => setIsGenderExpanded(!isGenderExpanded)}>
-              <div className="info-item-label">
-                성별 <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
-              </div>
-              <div className="info-item-value-wrap">
-                <span className="info-item-value" style={{ color: genderVal ? 'var(--ink-dark)' : 'var(--ink-muted)', fontWeight: genderVal ? '600' : 'normal' }}>
-                  {genderVal === 'MALE' ? '남성' : genderVal === 'FEMALE' ? '여성' : '선택해 주세요'}
-                </span>
-                <span className="chevron" style={{ transform: isGenderExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>〉</span>
-              </div>
-            </div>
-            {isGenderExpanded && (
-              <div className="inline-picker-container" style={{ padding: '0 16px 16px 16px', background: 'var(--surface)' }}>
-                <div className="picker-scroll-container">
-                  <div className="picker-scroll-highlight"></div>
-                  <ScrollPicker
-                    options={['MALE', 'FEMALE']}
-                    value={genderVal || 'MALE'}
-                    onChange={(val) => handleGenderChange(val as 'MALE' | 'FEMALE')}
-                    formatter={(val) => val === 'MALE' ? '남성' : '여성'}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+          <div className="profile-divider" />
 
-          {/* 휴대폰 번호 */}
-          <div className="info-list-item-group">
-            <div className="info-list-item" onClick={() => {
-              if (!isPhoneExpanded) {
-                const last8 = phoneNumberVal ? phoneNumberVal.replace(/\D/g, '').slice(-8) : '';
-                setTempPhone(last8);
-              }
-              setIsPhoneExpanded(!isPhoneExpanded);
-            }}>
-              <div className="info-item-label">
-                휴대폰 번호 <span style={{ color: '#ef4444', fontWeight: 'bold' }}>*</span>
-              </div>
-              <div className="info-item-value-wrap">
-                <span className="info-item-value" style={{ color: phoneNumberVal ? 'var(--ink-dark)' : 'var(--ink-muted)', fontWeight: phoneNumberVal ? '600' : 'normal' }}>
-                  {phoneNumberVal ? phoneNumberVal : '010-____-____ 입력'}
-                </span>
-                <span className="chevron" style={{ transform: isPhoneExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>〉</span>
-              </div>
+          {/* 4. 휴대폰 번호 */}
+          <div className="profile-input-group">
+            <label className="profile-input-label">
+              휴대폰 번호 <span className="req-star">*</span>
+            </label>
+            <div className="profile-input-field-wrap">
+              <input
+                type="tel"
+                inputMode="numeric"
+                className="profile-text-input"
+                value={phoneNumberVal}
+                onChange={(e) => handlePhoneInputChange(e.target.value)}
+                placeholder="010-####-#### (8자리 입력)"
+                maxLength={13}
+              />
             </div>
-            {isPhoneExpanded && (
-              <div className="inline-picker-container" style={{ padding: '0 16px 16px 16px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div className="phone-input-wrap" style={{ marginTop: '12px' }}>
-                  <div className="phone-input-value-row">
-                    <input
-                      type="tel"
-                      pattern="[0-9]*"
-                      inputMode="numeric"
-                      ref={phoneInputRef}
-                      autoFocus
-                      className="phone-active-input-editable"
-                      value={formatInputPhone(tempPhone)}
-                      onChange={(e) => handlePhoneInputChange(e.target.value)}
-                      placeholder="010-____-____"
-                      style={{
-                        width: '100%',
-                        padding: '12px 14px',
-                        border: '1px solid var(--border-soft)',
-                        borderRadius: '10px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        outline: 'none',
-                        textAlign: 'center',
-                        color: 'var(--ink-dark)',
-                        background: 'var(--grey-50)',
-                        letterSpacing: '0.5px'
-                      }}
-                    />
-                  </div>
-                </div>
-                <p className="phone-disclaimer-text" style={{ fontSize: '11px', color: 'var(--ink-muted)', marginTop: '4px', textAlign: 'center', margin: 0 }}>
-                  앞의 '010'을 제외하고 숫자 8자리만 입력해 주세요. (예: 12345678)
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Global User Photo and Bio Settings */}
+        {/* Section: 기본 상세 정보 (Photo & Bio) */}
         <div className="profile-section-title">기본 상세 정보</div>
-        <div className="global-profile-editor-card">
+        <div className="profile-modern-card profile-bio-card">
           <div className="profile-pic-center-wrap">
             <div className="profile-pic-container">
               <label htmlFor="profileImage" className="profile-pic-avatar-wrap">
@@ -696,56 +549,29 @@ export default function EditProfile() {
             )}
           </div>
 
-          <div className="profile-bio-container form-group">
-            <label htmlFor="bio">자기소개</label>
+          <div className="profile-input-group" style={{ marginTop: '16px' }}>
+            <label className="profile-input-label">자기소개</label>
             <textarea
-              id="bio"
-              name="bio"
+              className="profile-textarea"
               rows={3}
               maxLength={500}
               placeholder="간단한 자기소개를 입력해 주세요"
               value={bio}
               onChange={(e) => handleBioChange(e.target.value)}
             />
-            <p className="form-hint">{bio.length}/500</p>
+            <div className="profile-textarea-counter">{bio.length}/500</div>
           </div>
         </div>
 
-        {/* Bottom Center Complete Button */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: '24px 16px 48px 16px',
-          width: '100%',
-        }}>
+        {/* Bottom Center Vivid Green Complete Button */}
+        <div className="profile-bottom-cta-wrap">
           <button
             type="button"
+            className="profile-complete-btn"
             onClick={() => handleComplete()}
             disabled={loading}
-            style={{
-              width: '100%',
-              maxWidth: '360px',
-              height: '52px',
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '14px',
-              fontSize: '17px',
-              fontWeight: '800',
-              letterSpacing: '-0.02em',
-              cursor: 'pointer',
-              boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'all 0.15s ease',
-            }}
           >
-            <span style={{ color: '#ffffff', fontWeight: '800', fontSize: '17px' }}>
-              {loading ? '저장 중…' : '완료'}
-            </span>
+            {loading ? '저장 중…' : '완료'}
           </button>
         </div>
       </form>
