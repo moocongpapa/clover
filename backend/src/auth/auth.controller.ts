@@ -73,6 +73,6 @@ export class AuthController {
   @Get('users/:id')
   @UseGuards(JwtAuthGuard)
   getUser(@Param('id') id: string) {
-    return this.authService.getMe(id);
+    return this.authService.getUser(id);
   }
 }

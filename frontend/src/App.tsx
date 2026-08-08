@@ -129,6 +129,14 @@ export default function App() {
               }
             />
             <Route
+              path="profile/edit"
+              element={
+                <ProtectedRoute>
+                  <EditProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="profile/manage"
               element={
                 <ProtectedRoute>

@@ -4,6 +4,7 @@ import {
   Logger,
   UnauthorizedException,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -242,6 +243,17 @@ export class AuthService {
       });
     }
     
+    return user;
+  }
+
+  async getUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: USER_PROFILE_SELECT,
+    });
+    if (!user) {
+      throw new NotFoundException('존재하지 않는 회원입니다.');
+    }
     return user;
   }
 
