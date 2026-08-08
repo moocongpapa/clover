@@ -7,7 +7,7 @@ import BankAccountFields, {
   readBankAccountFromForm,
 } from '../components/BankAccountFields';
 import GoogleMapSelector from '../components/GoogleMapSelector';
-import { api, CATEGORY_OPTIONS, isStaffRole } from '../api';
+import { api, CATEGORY_OPTIONS, isStaffRole, normalizeCategory } from '../api';
 import '../pages/Groups.css';
 
 export default function EditGroup() {
@@ -50,8 +50,13 @@ export default function EditGroup() {
           return;
         }
         setGroup(g);
-        setCategory(g.category);
-        setCustomSportName(g.customSportName || '');
+        const normCat = normalizeCategory(g.category);
+        setCategory(normCat);
+        if (normCat === '기타' && !g.customSportName && g.category && g.category !== '기타') {
+          setCustomSportName(g.category);
+        } else {
+          setCustomSportName(g.customSportName || '');
+        }
         setSelectedArenas(g.arenas || []);
         setPrimaryArenaIndex(g.arenas && g.arenas.length > 0 ? 0 : -1);
         setMaxMembers(g.maxMembers || 50);

@@ -837,11 +837,26 @@ const LEGACY_CATEGORY_MAP: Record<string, string> = {
   골프: '골프',
 };
 
-export function normalizeCategory(category: string): string {
-  if (CATEGORIES.includes(category as (typeof CATEGORIES)[number])) {
-    return category;
+export function normalizeCategory(category?: string | null): string {
+  if (!category) return '풋살/축구';
+  const trimmed = category.trim();
+  if (CATEGORIES.includes(trimmed as (typeof CATEGORIES)[number])) {
+    return trimmed;
   }
-  return LEGACY_CATEGORY_MAP[category] ?? '기타';
+  if (LEGACY_CATEGORY_MAP[trimmed]) {
+    return LEGACY_CATEGORY_MAP[trimmed];
+  }
+  const lower = trimmed.toLowerCase();
+  if (lower.includes('풋살') || lower.includes('축구') || lower.includes('futsal') || lower.includes('soccer')) return '풋살/축구';
+  if (lower.includes('농구') || lower.includes('basket')) return '농구';
+  if (lower.includes('야구') || lower.includes('base')) return '야구';
+  if (lower.includes('러닝') || lower.includes('달리기') || lower.includes('run')) return '러닝';
+  if (lower.includes('테니스') || lower.includes('tennis')) return '테니스';
+  if (lower.includes('탁구') || lower.includes('ping') || lower.includes('table')) return '탁구';
+  if (lower.includes('배드민턴') || lower.includes('badminton')) return '배드민턴';
+  if (lower.includes('볼링') || lower.includes('bowl')) return '볼링';
+  if (lower.includes('골프') || lower.includes('golf')) return '골프';
+  return '기타';
 }
 
 export function formatCategoryEmoji(category: string): string {
