@@ -189,27 +189,142 @@ function HomeEventCard({
 }
 
 function GuestLanding() {
+  const [demoVote, setDemoVote] = useState<'ATTEND' | 'LATE' | 'ABSENT' | null>('ATTEND');
+
+  const attendCount = 14 + (demoVote === 'ATTEND' ? 1 : 0);
+  const lateCount = 2 + (demoVote === 'LATE' ? 1 : 0);
+  const absentCount = 1 + (demoVote === 'ABSENT' ? 1 : 0);
+
   return (
     <div className="home-guest">
-      <section className="hero">
-        <p className="hero-eyebrow">Clover</p>
-        <h1>
-          모임 일정은 모이고,
-          <br />
-          <em>참석 여부는 자동으로</em> 알려줘요
+      {/* Background ambient light */}
+      <div className="landing-ambient-glow" />
+
+      {/* Main Hero Section */}
+      <section className="landing-hero">
+        <div className="landing-badge-pill">
+          <span className="landing-badge-icon">🍀</span>
+          <span>모임 일정 & 실시간 참석 투표</span>
+        </div>
+
+        <h1 className="landing-hero-title">
+          모임 일정은 <span className="landing-highlight">한눈에,</span><br />
+          참석 투표는 <span className="landing-highlight landing-highlight--green">자동으로</span>
         </h1>
-        <p className="hero-desc">
-          이벤트를 등록하면 회원 전체에 알림이 가고, 하루 전에는 미투표자에게만
-          카카오로 리마인더가 전송돼요.
+
+        <p className="landing-hero-subtitle">
+          번거로운 단톡방 투표와 참석 확인은 이제 그만.<br className="mobile-break" />
+          일정 등록부터 카카오톡 자동 리마인더, 조 편성, 회비 정산까지 한번에 해결하세요.
         </p>
-        <div className="hero-actions">
-          <Link to="/login" className="btn-primary">
-            시작하기
+
+        <div className="landing-hero-actions">
+          <Link to="/login" className="landing-btn-kakao">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#000000">
+              <path d="M12 3C6.477 3 2 6.477 2 10.772c0 2.766 1.848 5.19 4.646 6.57-.205.77-.754 2.802-.865 3.235-.138.544.198.536.417.391.172-.114 2.748-1.874 3.864-2.637.625.092 1.272.141 1.938.141 5.523 0 10-3.477 10-7.7c0-4.295-4.477-7.772-10-7.772z"/>
+            </svg>
+            <span>카카오로 1초 만에 시작하기</span>
           </Link>
-          <Link to="/groups" className="btn-outline">
-            모임 둘러보기
+          <Link to="/groups" className="landing-btn-explore">
+            <span>모임 둘러보기</span>
+            <span className="landing-arrow">→</span>
           </Link>
         </div>
+      </section>
+
+      {/* Interactive Live Demo Card (Signature Element) */}
+      <section className="landing-demo-section">
+        <div className="landing-demo-header">
+          <span className="demo-live-dot" />
+          <span className="demo-caption">실제 Clover 모임 카드 체험 (직접 눌러보세요!)</span>
+        </div>
+
+        <div className="landing-demo-card">
+          <div className="demo-card-top">
+            <div className="demo-group-info">
+              <div className="demo-avatar">⚽</div>
+              <div>
+                <div className="demo-group-name">FC 클로버 (풋살/축구 정기모임)</div>
+                <div className="demo-event-title">5월 정기 매치 & 회식</div>
+              </div>
+            </div>
+            <span className="demo-status-badge">투표 진행 중</span>
+          </div>
+
+          <div className="demo-event-details">
+            <div className="demo-detail-item">
+              <span className="demo-icon">📅</span>
+              <span>이번 주 토요일 오후 4:00 ~ 6:00</span>
+            </div>
+            <div className="demo-detail-item">
+              <span className="demo-icon">📍</span>
+              <span>펜타시티 풋살파크 A구장</span>
+            </div>
+          </div>
+
+          {/* Interactive Vote Row */}
+          <div className="demo-vote-row">
+            <button
+              type="button"
+              className={`demo-vote-btn demo-vote-btn--attend ${demoVote === 'ATTEND' ? 'is-active' : ''}`}
+              onClick={() => setDemoVote(demoVote === 'ATTEND' ? null : 'ATTEND')}
+            >
+              <span className="demo-vote-label">참석</span>
+              <span className="demo-vote-count">{attendCount}명</span>
+            </button>
+            <button
+              type="button"
+              className={`demo-vote-btn demo-vote-btn--late ${demoVote === 'LATE' ? 'is-active' : ''}`}
+              onClick={() => setDemoVote(demoVote === 'LATE' ? null : 'LATE')}
+            >
+              <span className="demo-vote-label">늦참</span>
+              <span className="demo-vote-count">{lateCount}명</span>
+            </button>
+            <button
+              type="button"
+              className={`demo-vote-btn demo-vote-btn--absent ${demoVote === 'ABSENT' ? 'is-active' : ''}`}
+              onClick={() => setDemoVote(demoVote === 'ABSENT' ? null : 'ABSENT')}
+            >
+              <span className="demo-vote-label">불참</span>
+              <span className="demo-vote-count">{absentCount}명</span>
+            </button>
+          </div>
+
+          {/* Kakao Reminder Live Toast Simulation */}
+          <div className="demo-kakao-alert">
+            <div className="demo-kakao-icon">💬</div>
+            <div className="demo-kakao-text">
+              <strong>카카오톡 자동 알림:</strong> 투표 마감 24시간 전 미투표 회원 3명에게 리마인더가 발송되었습니다.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3 Key Feature Cards */}
+      <section className="landing-features-grid">
+        <div className="landing-feature-card">
+          <div className="feature-icon-wrap" style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#16a34a' }}>⚡</div>
+          <h3>원터치 투표 & 실시간 집계</h3>
+          <p>카톡방 투표를 일일이 세지 마세요. 참석/늦참/불참 인원과 명단이 실시간으로 자동 정리됩니다.</p>
+        </div>
+        <div className="landing-feature-card">
+          <div className="feature-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706' }}>💬</div>
+          <h3>미투표자 카톡 핀포인트 알림</h3>
+          <p>전체 단톡방 도배 없이, 마감 전 미투표한 회원에게만 카카오톡으로 친절하게 리마인더를 보냅니다.</p>
+        </div>
+        <div className="landing-feature-card">
+          <div className="feature-icon-wrap" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' }}>⚽</div>
+          <h3>자동 조 편성 & 투명한 회비</h3>
+          <p>참석 인원 기반 공정한 팀 자동 분배, 모임 사진첩과 월별 회비 정산 이력을 한곳에서 관리하세요.</p>
+        </div>
+      </section>
+
+      {/* Bottom CTA Banner */}
+      <section className="landing-bottom-cta">
+        <h2>지금 바로 모임의 일정을 더 스마트하게.</h2>
+        <p>복잡한 가입 절차 없이 카카오 계정으로 1초 만에 시작하세요.</p>
+        <Link to="/login" className="landing-btn-kakao" style={{ margin: '0 auto', maxWidth: '320px' }}>
+          <span>🍀 무료로 모임 시작하기</span>
+        </Link>
       </section>
     </div>
   );
