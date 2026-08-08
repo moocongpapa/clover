@@ -218,10 +218,13 @@ export class AuthService {
   }
 
   async getMe(userId: string) {
-    const user = await this.prisma.user.findUniqueOrThrow({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: USER_PROFILE_SELECT,
     });
+    if (!user) {
+      throw new UnauthorizedException('사용자를 찾을 수 없습니다. 다시 로그인해 주세요.');
+    }
     
     // Check if the user has any profile cards
     const cardsCount = await this.prisma.userProfileCard.count({

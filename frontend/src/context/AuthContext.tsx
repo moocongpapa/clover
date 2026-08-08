@@ -51,23 +51,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const syncFcmToken = async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (typeof window === 'undefined') return;
+    // Skip push notification prompt in Kakao in-app browser or unsupported webviews
+    const isKakao = /KAKAOTALK/i.test(navigator.userAgent);
+    if (isKakao) return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     
     try {
-      if (Notification.permission === 'default') {
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') return;
-      }
-      
       if (Notification.permission === 'granted') {
         const token = await requestFcmToken();
         if (token) {
           await api.updateFcmToken(token);
-          console.log('FCM token synchronized successfully.');
         }
       }
     } catch (err) {
-      console.warn('FCM token synchronization failed: ', err);
+      console.debug('FCM sync skipped on this mobile environment:', err);
     }
   };
 
