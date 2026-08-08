@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import CloverLogo from './CloverLogo';
 
 type GroupAvatarProps = {
@@ -15,6 +16,7 @@ export default function GroupAvatar({
   size = 44,
   radius,
 }: GroupAvatarProps) {
+  const [hasError, setHasError] = useState(false);
   const classes = ['group-avatar', className].filter(Boolean).join(' ');
   const style = {
     width: `${size}px`,
@@ -24,8 +26,16 @@ export default function GroupAvatar({
 
   const secureSrc = src ? src.replace(/^http:\/\//i, 'https://') : null;
 
-  if (secureSrc) {
-    return <img src={secureSrc} alt={`${name} 대표 이미지`} className={classes} style={style} />;
+  if (secureSrc && !hasError) {
+    return (
+      <img
+        src={secureSrc}
+        alt={`${name} 대표 이미지`}
+        className={classes}
+        style={style}
+        onError={() => setHasError(true)}
+      />
+    );
   }
 
   return (
