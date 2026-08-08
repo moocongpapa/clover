@@ -99,8 +99,12 @@ export default function EditEvent() {
 
   const handleStartTimeChange = (newStart: string) => {
     setStartTime(newStart);
-    const [h, m] = newStart.split(':').map(Number);
-    const endH = (h + 2) % 24;
+  };
+
+  const handleAddHours = (hoursToAdd: number) => {
+    if (!startTime) return;
+    const [h, m] = startTime.split(':').map(Number);
+    const endH = (h + hoursToAdd) % 24;
     setEndTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
   };
 
@@ -359,6 +363,30 @@ export default function EditEvent() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Quick Duration Add Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--ink-muted)', fontWeight: '600' }}>빠른 종료시간 설정:</span>
+              {[1, 2, 3, 4].map((hours) => (
+                <button
+                  key={hours}
+                  type="button"
+                  onClick={() => handleAddHours(hours)}
+                  style={{
+                    padding: '3px 8px',
+                    background: 'var(--grey-100)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    color: 'var(--ink-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  +{hours}시간
+                </button>
+              ))}
             </div>
           </div>
         </div>
