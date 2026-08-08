@@ -68,6 +68,12 @@ export interface Announcement {
   updatedAt: string;
   authorId: string;
   author: User;
+  groupId?: string | null;
+  group?: {
+    id: string;
+    name: string;
+    profileImageUrl: string | null;
+  } | null;
 }
 
 function getToken(): string | null {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type Announcement } from '../api';
 import { useAuth } from '../context/AuthContext';
+import GroupAvatar from '../components/GroupAvatar';
 import './Announcements.css';
 
 export default function Announcements() {
@@ -47,18 +48,31 @@ export default function Announcements() {
               className={`announcement-card ${expandedId === item.id ? 'is-expanded' : ''}`}
               onClick={() => toggleExpand(item.id)}
             >
-              <div className="announcement-card__header">
-                <div className="announcement-card__meta">
-                  <span className="announcement-author">{item.author.displayName}</span>
-                  <span className="announcement-date">
-                    {new Date(item.createdAt).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </span>
+              <div className="announcement-card__top">
+                <GroupAvatar
+                  src={item.group?.profileImageUrl}
+                  name={item.group?.name || '모임 공지'}
+                  size={42}
+                  radius={12}
+                />
+                <div className="announcement-card__header">
+                  <div className="announcement-card__meta">
+                    {item.group?.name && (
+                      <span className="announcement-group-name">
+                        {item.group.name}
+                      </span>
+                    )}
+                    <span className="announcement-author">{item.author.displayName}</span>
+                    <span className="announcement-date">
+                      {new Date(item.createdAt).toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <h3 className="announcement-title">{item.title}</h3>
                 </div>
-                <h3 className="announcement-title">{item.title}</h3>
                 <span className="expand-indicator">{expandedId === item.id ? '▲' : '▼'}</span>
               </div>
               

@@ -18,6 +18,13 @@ export class AnnouncementsService {
             role: true,
           },
         },
+        group: {
+          select: {
+            id: true,
+            name: true,
+            profileImageUrl: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -33,6 +40,13 @@ export class AnnouncementsService {
             displayName: true,
             profileImageUrl: true,
             role: true,
+          },
+        },
+        group: {
+          select: {
+            id: true,
+            name: true,
+            profileImageUrl: true,
           },
         },
       },
