@@ -73,6 +73,18 @@ export default function Layout() {
               <NavLink to="/" end className={navClass}>
                 홈
               </NavLink>
+              <NavLink to="/groups" className={navClass}>
+                모임 찾기
+              </NavLink>
+              <NavLink to="/calendar" className={navClass}>
+                일정
+              </NavLink>
+              <NavLink to="/notifications" className={navClass}>
+                새소식
+              </NavLink>
+              <NavLink to="/my" className={navClass}>
+                MY
+              </NavLink>
             </nav>
           )}
 
