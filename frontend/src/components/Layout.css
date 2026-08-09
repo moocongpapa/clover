@@ -330,7 +330,7 @@
 
 /* ── Tablet / desktop enhancements ── */
 
-@media (min-width: 768px) {
+@media (min-width: 600px) {
   .site-header {
     padding: 8px 0;
   }
@@ -344,7 +344,7 @@
 
   .site-nav--desktop {
     display: flex;
-    gap: 6px;
+    gap: 4px;
   }
 
   .tab-bar {
