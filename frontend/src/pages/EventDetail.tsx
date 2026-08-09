@@ -222,7 +222,7 @@ export default function EventDetailPage() {
   const votesByChoice = groupVotesByChoice(votes.votes);
 
   return (
-    <div>
+    <div className="event-detail-page">
       <div className="event-detail-group-nav">
         <Link to={`/groups/${event.group.id}`} className="group-nav-link">
           <GroupAvatar

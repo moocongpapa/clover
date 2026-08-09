@@ -254,13 +254,13 @@
   width: 100%;
   max-width: 680px;
   margin: 0 auto;
-  padding: 12px 16px 40px;
-  padding-bottom: calc(var(--tab-bar-height) + 40px + env(safe-area-inset-bottom));
+  padding: 0;
+  padding-bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
 .app-shell:not(:has(.tab-bar)) .site-main {
-  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* ── Bottom tab bar (mobile) ── */
