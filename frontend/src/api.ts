@@ -1,3 +1,5 @@
+import { uploadToFirebaseStorage } from './firebase';
+
 function resolveApiBase(): string {
   const fromEnv = import.meta.env.VITE_API_URL;
   if (fromEnv) return fromEnv;
@@ -208,6 +210,13 @@ export const api = {
       body: JSON.stringify(data),
     }),
   uploadGroupImage: async (file: File) => {
+    // 1. Try Firebase Storage for permanent cloud CDN URL (prevents ephemeral file loss)
+    const cloudUrl = await uploadToFirebaseStorage(file, 'groups');
+    if (cloudUrl) {
+      return { url: cloudUrl, filename: file.name };
+    }
+
+    // 2. Fallback to server local upload if offline/mock
     const token = getToken();
     const form = new FormData();
     form.append('image', file);
@@ -225,6 +234,13 @@ export const api = {
     return res.json() as Promise<{ url: string; filename: string }>;
   },
   uploadProfileImage: async (file: File) => {
+    // 1. Try Firebase Storage for permanent cloud CDN URL (prevents ephemeral file loss)
+    const cloudUrl = await uploadToFirebaseStorage(file, 'profiles');
+    if (cloudUrl) {
+      return { url: cloudUrl, filename: file.name };
+    }
+
+    // 2. Fallback to server local upload if offline/mock
     const token = getToken();
     const form = new FormData();
     form.append('image', file);
@@ -242,6 +258,14 @@ export const api = {
     return res.json() as Promise<{ url: string; filename: string }>;
   },
   uploadGalleryFile: async (file: File) => {
+    // 1. Try Firebase Storage for permanent cloud CDN URL
+    const isVideo = file.type.startsWith('video/');
+    const cloudUrl = await uploadToFirebaseStorage(file, 'gallery');
+    if (cloudUrl) {
+      return { url: cloudUrl, filename: file.name, fileType: isVideo ? 'VIDEO' : 'IMAGE' };
+    }
+
+    // 2. Fallback to server local upload if offline/mock
     const token = getToken();
     const form = new FormData();
     form.append('file', file);
