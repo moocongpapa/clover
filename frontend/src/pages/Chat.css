@@ -6,7 +6,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 768px;
+  max-width: 680px;
   display: flex;
   flex-direction: column;
   background: var(--grey-50);

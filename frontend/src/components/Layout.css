@@ -252,15 +252,15 @@
 .site-main {
   flex: 1;
   width: 100%;
-  max-width: 1000px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: var(--page-padding);
-  padding-bottom: calc(var(--tab-bar-height) + var(--page-padding) + env(safe-area-inset-bottom));
+  padding: 12px 16px 40px;
+  padding-bottom: calc(var(--tab-bar-height) + 40px + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
 .app-shell:not(:has(.tab-bar)) .site-main {
-  padding-bottom: calc(var(--page-padding) + env(safe-area-inset-bottom));
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
 }
 
 /* ── Bottom tab bar (mobile) ── */
@@ -273,12 +273,11 @@
   z-index: 100;
   display: flex;
   justify-content: space-around;
-  align-items: stretch;
-  min-height: var(--tab-bar-height);
-  padding-bottom: env(safe-area-inset-bottom);
+  align-items: center;
+  height: var(--tab-bar-height);
   background: var(--surface);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -2px 12px rgba(25, 31, 40, 0.06);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .tab-bar__item {
@@ -287,39 +286,26 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  padding: 6px 2px;
+  gap: 2px;
+  height: 100%;
+  color: var(--ink-muted);
   text-decoration: none;
-  color: var(--ink-tertiary);
+  font-size: 11px;
+  font-weight: 500;
   transition: color var(--dur-base) var(--ease);
-  -webkit-tap-highlight-color: transparent;
 }
 
-.tab-bar__item.is-active {
+.tab-bar__item.active {
   color: var(--accent);
-  position: relative;
-}
-
-.tab-bar__item.is-active::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 20%;
-  right: 20%;
-  height: 2.5px;
-  background: var(--accent);
-  border-radius: 0 0 2px 2px;
-}
-
-.tab-bar__item:active {
-  background: var(--grey-100);
+  font-weight: 700;
 }
 
 .tab-bar__icon {
   font-size: 20px;
   line-height: 1;
-  opacity: 0.6;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab-bar__label {
