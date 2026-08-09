@@ -20,6 +20,7 @@ import Announcements from './pages/Announcements';
 import CreateAnnouncement from './pages/CreateAnnouncement';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
+import MyPage from './pages/MyPage';
 
 // Load saved settings immediately on boot
 const savedFont = localStorage.getItem('clover_font_family');
@@ -121,10 +122,18 @@ export default function App() {
               }
             />
             <Route
+              path="my"
+              element={
+                <ProtectedRoute>
+                  <MyPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="profile"
               element={
                 <ProtectedRoute>
-                  <EditProfile />
+                  <MyPage />
                 </ProtectedRoute>
               }
             />

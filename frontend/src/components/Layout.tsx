@@ -1,40 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { safeImageUrl } from '../api';
 import CloverLogo from './CloverLogo';
 import NotificationBell from './NotificationBell';
 import './Layout.css';
 
 export default function Layout() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { user } = useAuth();
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'site-nav__link is-active' : 'site-nav__link';
 
   const tabClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'tab-bar__item is-active' : 'tab-bar__item';
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  const toggleDropdown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDropdownOpen((prev) => !prev);
-  };
-
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    const handleOutsideClick = () => {
-      setDropdownOpen(false);
-    };
-    window.addEventListener('click', handleOutsideClick);
-    return () => window.removeEventListener('click', handleOutsideClick);
-  }, [dropdownOpen]);
 
   const isKakaoInApp = typeof navigator !== 'undefined' && /KAKAOTALK/i.test(navigator.userAgent);
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -101,55 +78,7 @@ export default function Layout() {
 
           <div className="header-actions">
             {user ? (
-              <>
-                <NotificationBell />
-                <div className="profile-dropdown-container">
-                  <button
-                    type="button"
-                    className="user-chip-btn"
-                    onClick={toggleDropdown}
-                    aria-expanded={dropdownOpen}
-                    aria-label="사용자 메뉴"
-                  >
-                    {safeImageUrl(user.profileImageUrl) ? (
-                      <img src={safeImageUrl(user.profileImageUrl)!} alt="" />
-                    ) : (
-                      <span className="avatar-fallback">
-                        {user.displayName[0]}
-                      </span>
-                    )}
-                    <span className="user-chip__name">{user.displayName}</span>
-                    <span className={`dropdown-arrow ${dropdownOpen ? 'is-open' : ''}`}>▼</span>
-                  </button>
-
-                  {dropdownOpen && (
-                    <div className="profile-dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                      <div className="menu-group">
-                        <Link to="/profile" className="menu-item" onClick={() => setDropdownOpen(false)}>
-                          내 정보
-                        </Link>
-                        <Link to="/settings" className="menu-item" onClick={() => setDropdownOpen(false)}>
-                          설정
-                        </Link>
-                        <Link to="/announcements" className="menu-item" onClick={() => setDropdownOpen(false)}>
-                          공지사항
-                        </Link>
-                      </div>
-                      <div className="menu-divider" />
-                      <button
-                        type="button"
-                        className="menu-item menu-item--logout"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          handleLogout();
-                        }}
-                      >
-                        로그아웃
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
+              <NotificationBell />
             ) : (
               <Link to="/login" className="btn-primary btn-header-cta">
                 시작하기
@@ -169,13 +98,21 @@ export default function Layout() {
             <span className="tab-bar__icon">🏠</span>
             <span className="tab-bar__label">홈</span>
           </NavLink>
-          <NavLink to="/notifications" className={tabClass} aria-label="새소식" title="새소식">
-            <span className="tab-bar__icon">🔔</span>
-            <span className="tab-bar__label">새소식</span>
+          <NavLink to="/my-groups" className={tabClass} aria-label="모임" title="모임">
+            <span className="tab-bar__icon">👥</span>
+            <span className="tab-bar__label">모임</span>
           </NavLink>
           <NavLink to="/calendar" className={tabClass} aria-label="일정" title="일정">
             <span className="tab-bar__icon">📅</span>
             <span className="tab-bar__label">일정</span>
+          </NavLink>
+          <NavLink to="/notifications" className={tabClass} aria-label="새소식" title="새소식">
+            <span className="tab-bar__icon">🔔</span>
+            <span className="tab-bar__label">새소식</span>
+          </NavLink>
+          <NavLink to="/my" className={tabClass} aria-label="MY" title="MY">
+            <span className="tab-bar__icon">👤</span>
+            <span className="tab-bar__label">MY</span>
           </NavLink>
         </nav>
       )}
