@@ -314,7 +314,7 @@ function GuestLanding() {
         <div className="landing-feature-card">
           <div className="feature-icon-wrap" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' }}>⚽</div>
           <h3>자동 조 편성 & 투명한 회비</h3>
-          <p>참석 인원 기반 공정한 팀 자동 분배, 모임 사진첩과 월별 회비 정산 이력을 한곳에서 관리하세요.</p>
+          <p>참석 인원 기반 공정한 팀 자동 분배와 월별 회비 정산 이력을 한곳에서 깔끔하게 관리하세요.</p>
         </div>
       </section>
 

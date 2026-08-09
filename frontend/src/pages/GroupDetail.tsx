@@ -25,6 +25,9 @@ declare global {
   }
 }
 
+// Feature Flag: Hide gallery from public service until officially opened
+const SHOW_GALLERY = false;
+
 type GroupTab = 'posts' | 'events' | 'gallery' | 'members' | 'payments' | 'officers' | 'info';
 
 export default function GroupDetail() {
@@ -792,13 +795,15 @@ export default function GroupDetail() {
             >
               일정
             </button>
-            <button
-              type="button"
-              className={`tab-navigation-btn${activeTab === 'gallery' ? ' is-active' : ''}`}
-              onClick={() => setActiveTab('gallery')}
-            >
-              사진첩
-            </button>
+            {SHOW_GALLERY && (
+              <button
+                type="button"
+                className={`tab-navigation-btn${activeTab === 'gallery' ? ' is-active' : ''}`}
+                onClick={() => setActiveTab('gallery')}
+              >
+                사진첩
+              </button>
+            )}
             <button
               type="button"
               className={`tab-navigation-btn${activeTab === 'members' ? ' is-active' : ''}`}
@@ -1129,8 +1134,8 @@ export default function GroupDetail() {
             </div>
           )}
 
-          {/* 3. 사진첩 탭 (Gallery View) */}
-          {activeTab === 'gallery' && (
+          {/* 3. 사진첩 탭 (Gallery View - Currently hidden via feature flag) */}
+          {SHOW_GALLERY && activeTab === 'gallery' && (
             <div className="tab-content-gallery">
 
               {uploadingMedia && (
