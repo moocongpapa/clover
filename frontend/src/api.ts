@@ -395,6 +395,13 @@ export const api = {
     request<any>(`/groups/${groupId}/payments/${userId}/toggle?year=${year}&month=${month}`, {
       method: 'POST',
     }),
+
+  getMyDuesSummary: () => request<any[]>('/groups/my-dues/summary'),
+
+  remindUnpaidMembers: (groupId: string, year: number, month: number) =>
+    request<{ remindedCount: number }>(`/groups/${groupId}/payments/remind?year=${year}&month=${month}`, {
+      method: 'POST',
+    }),
   getGroupMedia: (groupId: string) =>
     request<any[]>(`/groups/${groupId}/media`),
   createGroupMedia: (groupId: string, data: { url: string; fileType: string }) =>

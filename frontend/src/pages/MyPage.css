@@ -95,6 +95,222 @@
   background: var(--grey-200, #e2e8f0);
 }
 
+/* Dues Section Dashboard */
+.my-dues-section {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 20px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  margin-bottom: 20px;
+}
+
+.my-dues-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.my-dues-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-dark, #191f28);
+  margin: 0;
+}
+
+.unpaid-badge-highlight {
+  font-size: 12px;
+  font-weight: 800;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.paid-badge-highlight {
+  font-size: 12px;
+  font-weight: 800;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.dues-loading-text,
+.dues-empty-text {
+  font-size: 13.5px;
+  color: var(--ink-muted, #64748b);
+  margin: 10px 0;
+  text-align: center;
+}
+
+.dues-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dues-item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--grey-50, #f8fafc);
+  border: 1px solid var(--border-soft, #f1f5f9);
+}
+
+.dues-item-card.is-unpaid {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.dues-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dues-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dues-group-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink-dark, #191f28);
+}
+
+.dues-date-label {
+  font-size: 12px;
+  color: var(--ink-muted, #64748b);
+}
+
+.dues-status-tag--paid {
+  font-size: 12px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.btn-pay-direct {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  background: var(--brand-primary, #10b981);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.btn-pay-direct:hover {
+  transform: scale(1.03);
+}
+
+/* Pay Modal */
+.pay-modal-card {
+  max-width: 420px;
+  gap: 16px;
+}
+
+.pay-group-summary-box {
+  background: var(--grey-50, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+
+.pay-summary-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink-dark, #191f28);
+}
+
+.pay-summary-month {
+  font-size: 13px;
+  color: var(--ink-muted, #64748b);
+}
+
+.pay-account-display {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border, #cbd5e1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-dark, #191f28);
+}
+
+.account-number-text {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--brand-primary, #10b981);
+  letter-spacing: 0.02em;
+}
+
+.account-holder-text {
+  font-size: 12.5px;
+  color: var(--ink-muted, #64748b);
+  font-weight: 600;
+}
+
+.pay-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-toss-pay {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: #3182f6;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(49, 130, 246, 0.3);
+}
+
+.btn-kakao-pay {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: #fee500;
+  color: #191919;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-copy-account {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #cbd5e1);
+  background: var(--surface, #ffffff);
+  color: var(--ink-dark, #191f28);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Menu Container */
 .my-menu-container {
   display: flex;

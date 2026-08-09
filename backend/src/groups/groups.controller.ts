@@ -47,6 +47,12 @@ export class GroupsController {
     return this.groupsService.myGroups(user.id);
   }
 
+  @Get('my-dues/summary')
+  @UseGuards(JwtAuthGuard)
+  getMyDuesSummary(@CurrentUser() user: AuthUser) {
+    return this.groupsService.getMyDuesSummary(user.id);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateGroupDto) {
@@ -166,6 +172,19 @@ export class GroupsController {
     const year = parseInt(yearStr, 10);
     const month = parseInt(monthStr, 10);
     return this.groupsService.togglePayment(id, user.id, targetUserId, year, month);
+  }
+
+  @Post(':id/payments/remind')
+  @UseGuards(JwtAuthGuard)
+  remindUnpaidMembers(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Query('year') yearStr: string,
+    @Query('month') monthStr: string,
+  ) {
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    return this.groupsService.remindUnpaidMembers(id, user.id, year, month);
   }
 
   @Post(':id/transfer-president')

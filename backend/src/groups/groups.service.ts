@@ -670,6 +670,82 @@ export class GroupsService {
     }
   }
 
+  async getMyDuesSummary(userId: string) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const memberships = await this.prisma.groupMember.findMany({
+      where: {
+        userId,
+        status: MemberStatus.APPROVED,
+      },
+      include: {
+        group: true,
+      },
+    });
+
+    const summary = [];
+
+    for (const m of memberships) {
+      const group = m.group;
+      const payments = await this.prisma.feePayment.findMany({
+        where: {
+          groupId: group.id,
+          userId,
+          year,
+          month,
+        },
+      });
+
+      const isExempt = group.officerFeeExempt && isOfficer(m.role);
+      const isPaid = isExempt || payments.length > 0;
+
+      summary.push({
+        groupId: group.id,
+        groupName: group.name,
+        profileImageUrl: group.profileImageUrl,
+        bankName: group.bankName || '',
+        bankAccountNumber: group.bankAccountNumber || '',
+        bankAccountHolder: group.bankAccountHolder || '',
+        dueDay: group.dueDay,
+        isPaid,
+        isExempt,
+        year,
+        month,
+      });
+    }
+
+    return summary;
+  }
+
+  async remindUnpaidMembers(
+    groupId: string,
+    actorUserId: string,
+    year: number,
+    month: number,
+  ) {
+    await this.requireOfficer(groupId, actorUserId);
+    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
+
+    const paymentsData = await this.getPayments(groupId, actorUserId, year, month);
+    const unpaidMembers = paymentsData.payments.filter((p: any) => !p.isPaid);
+
+    const message = `[회비 납부 안내] 「${group.name}」 ${month}월 회비 미납 내역이 있습니다. [MY] 탭에서 토스/카카오페이로 1초 간편 송금해 주세요!`;
+
+    for (const unpaid of unpaidMembers) {
+      await this.notifications.sendEventNotification(
+        unpaid.userId,
+        groupId,
+        'REMINDER',
+        message,
+      );
+    }
+
+    return { remindedCount: unpaidMembers.length };
+  }
+
   private async updateOfficerHistory(
     tx: any,
     groupId: string,

@@ -349,6 +349,17 @@ export default function GroupDetail() {
     }
   };
 
+  const handleRemindUnpaid = async () => {
+    if (!id) return;
+    try {
+      const res = await api.remindUnpaidMembers(id, payYear, payMonth);
+      alert(`총 ${res.remindedCount}명의 미납 회원에게 회비 납부 알림(토스/카카오페이 1초 송금 딥링크)이 발송되었습니다! 📣`);
+    } catch (err) {
+      console.error(err);
+      alert('회비 독촉 알림 발송 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleUpdateMyStatus = async (userStatus: string) => {
     try {
       await api.updateMyStatus(group.id, userStatus);
@@ -1584,6 +1595,27 @@ export default function GroupDetail() {
                       );
                     })()}
                   </div>
+
+                  {isOfficer && (
+                    <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        onClick={handleRemindUnpaid}
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: '#ef4444',
+                          color: '#ffffff',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        📣 미납 회원 1초 독촉 알림 발송
+                      </button>
+                    </div>
+                  )}
 
                   {group.dueDay && (
                     <div className="compact-dues-notice-line">

@@ -1,25 +1,86 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { safeImageUrl, formatPhoneNumber } from '../api';
+import { api, safeImageUrl, formatPhoneNumber } from '../api';
+import GroupAvatar from '../components/GroupAvatar';
 import './MyPage.css';
+
+interface DueSummaryItem {
+  groupId: string;
+  groupName: string;
+  profileImageUrl?: string | null;
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountHolder: string;
+  dueDay?: number | null;
+  isPaid: boolean;
+  isExempt: boolean;
+  year: number;
+  month: number;
+}
 
 export default function MyPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [duesList, setDuesList] = useState<DueSummaryItem[]>([]);
+  const [loadingDues, setLoadingDues] = useState<boolean>(true);
+  const [selectedPayGroup, setSelectedPayGroup] = useState<DueSummaryItem | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    api
+      .getMyDuesSummary()
+      .then((res) => setDuesList(res))
+      .catch((err) => console.error('Failed to load dues summary:', err))
+      .finally(() => setLoadingDues(false));
+  }, [user]);
 
   if (!user) {
     return null;
   }
+
+  const triggerToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => {
+      setToastMsg(null);
+    }, 2000);
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
+  const handleCopyAccount = (item: DueSummaryItem) => {
+    const text = `${item.bankName} ${item.bankAccountNumber} (예금주: ${item.bankAccountHolder})`;
+    navigator.clipboard.writeText(text);
+    triggerToast('📋 계좌 정보가 복사되었습니다!');
+  };
+
+  const handleTossSend = (item: DueSummaryItem) => {
+    const tossUrl = `supertoss://send?bank=${encodeURIComponent(item.bankName)}&accountNo=${item.bankAccountNumber}`;
+    window.location.href = tossUrl;
+    setTimeout(() => {
+      // Fallback if Toss app not installed
+      handleCopyAccount(item);
+    }, 1200);
+  };
+
+  const handleKakaoPaySend = (item: DueSummaryItem) => {
+    const kakaoUrl = `kakaotalk://pay`;
+    window.location.href = kakaoUrl;
+    setTimeout(() => {
+      handleCopyAccount(item);
+    }, 1200);
+  };
+
   const formattedPhone = user.phoneNumber ? formatPhoneNumber(user.phoneNumber) : '연락처 미등록';
   const genderLabel = user.gender === 'MALE' ? '남성' : user.gender === 'FEMALE' ? '여성' : '미설정';
+
+  const unpaidCount = duesList.filter((d) => !d.isPaid).length;
+  const currentMonth = new Date().getMonth() + 1;
 
   return (
     <div className="my-page">
@@ -53,6 +114,59 @@ export default function MyPage() {
         <Link to="/profile/edit" className="btn-edit-profile-chip">
           ✏️ 정보 수정
         </Link>
+      </div>
+
+      {/* Dues Status Dashboard Card */}
+      <div className="my-dues-section">
+        <div className="my-dues-header">
+          <h2 className="my-dues-title">
+            💳 {currentMonth}월 내 회비 납부 현황
+          </h2>
+          {unpaidCount > 0 ? (
+            <span className="unpaid-badge-highlight">미납 {unpaidCount}건</span>
+          ) : (
+            <span className="paid-badge-highlight">완납 ✨</span>
+          )}
+        </div>
+
+        {loadingDues ? (
+          <p className="dues-loading-text">회비 내역을 확인하는 중…</p>
+        ) : duesList.length === 0 ? (
+          <p className="dues-empty-text">가입된 모임이 없습니다.</p>
+        ) : (
+          <div className="dues-list">
+            {duesList.map((item) => (
+              <div key={item.groupId} className={`dues-item-card ${item.isPaid ? 'is-paid' : 'is-unpaid'}`}>
+                <div className="dues-item-left">
+                  <GroupAvatar src={item.profileImageUrl} name={item.groupName} size={36} radius={10} />
+                  <div className="dues-item-info">
+                    <span className="dues-group-name">{item.groupName}</span>
+                    <span className="dues-date-label">
+                      {item.month}월 정기 회비
+                      {item.dueDay ? ` (매월 ${item.dueDay}일 마감)` : ''}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="dues-item-right">
+                  {item.isPaid ? (
+                    <span className="dues-status-tag dues-status-tag--paid">
+                      {item.isExempt ? '임원 면제' : '납부 완료 🟢'}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-pay-direct"
+                      onClick={() => setSelectedPayGroup(item)}
+                    >
+                      💸 1초 간편 송금
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Main Menu Groups */}
@@ -137,6 +251,69 @@ export default function MyPage() {
           </button>
         </div>
       </div>
+
+      {/* 1-Click Pay Modal */}
+      {selectedPayGroup && (
+        <div className="my-modal-backdrop" onClick={() => setSelectedPayGroup(null)}>
+          <div className="my-modal-card pay-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 className="modal-title" style={{ margin: 0 }}>💸 1초 간편 회비 송금</h3>
+              <button
+                type="button"
+                onClick={() => setSelectedPayGroup(null)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="pay-group-summary-box">
+              <span className="pay-summary-name">「{selectedPayGroup.groupName}」</span>
+              <span className="pay-summary-month">{selectedPayGroup.month}월 정기 회비</span>
+              <div className="pay-account-display">
+                <span>🏦 {selectedPayGroup.bankName || '등록된 은행 없음'}</span>
+                <span className="account-number-text">{selectedPayGroup.bankAccountNumber || '계좌 미등록'}</span>
+                {selectedPayGroup.bankAccountHolder && (
+                  <span className="account-holder-text">(예금주: {selectedPayGroup.bankAccountHolder})</span>
+                )}
+              </div>
+            </div>
+
+            <div className="pay-action-buttons">
+              <button
+                type="button"
+                className="btn-toss-pay"
+                onClick={() => handleTossSend(selectedPayGroup)}
+              >
+                🔵 토스(Toss) 앱으로 1초 송금
+              </button>
+
+              <button
+                type="button"
+                className="btn-kakao-pay"
+                onClick={() => handleKakaoPaySend(selectedPayGroup)}
+              >
+                🟡 카카오페이 송금하기
+              </button>
+
+              <button
+                type="button"
+                className="btn-copy-account"
+                onClick={() => handleCopyAccount(selectedPayGroup)}
+              >
+                📋 계좌 정보 1초 복사
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toastMsg && (
+        <div className="settings-toast-popup">
+          {toastMsg}
+        </div>
+      )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
