@@ -51,21 +51,43 @@ function isUpcoming(ev: CalendarEvent) {
   return !ev.isPast;
 }
 
+function HomeVoteProgressBar({ event }: { event: CalendarEvent }) {
+  const total = event.voteCounts.ATTEND + event.voteCounts.LATE + event.voteCounts.ABSENT;
+  if (total === 0) return null;
+
+  const attendPct = (event.voteCounts.ATTEND / total) * 100;
+  const latePct = (event.voteCounts.LATE / total) * 100;
+  const absentPct = (event.voteCounts.ABSENT / total) * 100;
+
+  return (
+    <div className="home-vote-progress-wrap" title={`참석 ${event.voteCounts.ATTEND}명, 늦참 ${event.voteCounts.LATE}명, 불참 ${event.voteCounts.ABSENT}명`}>
+      <div className="home-vote-progress-bar">
+        {attendPct > 0 && <div className="progress-bar-seg seg--attend" style={{ width: `${attendPct}%` }} />}
+        {latePct > 0 && <div className="progress-bar-seg seg--late" style={{ width: `${latePct}%` }} />}
+        {absentPct > 0 && <div className="progress-bar-seg seg--absent" style={{ width: `${absentPct}%` }} />}
+      </div>
+    </div>
+  );
+}
+
 function HomeVoteCounts({ event }: { event: CalendarEvent }) {
   return (
-    <div className="home-vote-row" aria-label="투표 현황">
-      {VOTE_CHOICES.map((c) => (
-        <span
-          key={c}
-          className={`home-vote-btn home-vote-btn--${c.toLowerCase()}${
-            event.myVote === c ? ' is-selected' : ''
-          }`}
-          style={{ cursor: 'default' }}
-        >
-          <span className="home-vote-btn__label">{VOTE_LABELS[c]}</span>
-          <span className="home-vote-btn__count">({event.voteCounts[c]})</span>
-        </span>
-      ))}
+    <div style={{ width: '100%' }}>
+      <HomeVoteProgressBar event={event} />
+      <div className="home-vote-row" aria-label="투표 현황">
+        {VOTE_CHOICES.map((c) => (
+          <span
+            key={c}
+            className={`home-vote-btn home-vote-btn--${c.toLowerCase()}${
+              event.myVote === c ? ' is-selected' : ''
+            }`}
+            style={{ cursor: 'default' }}
+          >
+            <span className="home-vote-btn__label">{VOTE_LABELS[c]}</span>
+            <span className="home-vote-btn__count">({event.voteCounts[c]})</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -166,6 +188,7 @@ function HomeEventCard({
 
       {votable && event.status !== 'CANCELLED' && !event.voteLocked ? (
         <>
+          <HomeVoteProgressBar event={event} />
           <div className="home-vote-row">
             {VOTE_CHOICES.map((c) => (
               <button

@@ -37,7 +37,9 @@ export default defineConfig({
       timeout: 180_000,
       env: {
         ...process.env,
-        DATABASE_URL: 'file:./e2e.db?connection_limit=1',
+        DATABASE_URL:
+          process.env.DATABASE_URL ||
+          'postgresql://postgres.acdcwhbddgwxufhhtrwi:yuha1004%21%40%23@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
         PORT: '3001',
         DEV_LOGIN_ENABLED: 'true',
         FRONTEND_URL: BASE_URL,
