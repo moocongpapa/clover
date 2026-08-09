@@ -7,12 +7,13 @@
 
 ## 🌐 라이브 서비스 배포 주소
 
-| 서비스 | 플랫폼 | 접속 URL |
+| 서비스 | 플랫폼 | 역할 및 엔드포인트 |
 | :--- | :--- | :--- |
-| **Frontend (웹앱 & PWA)** | **Vercel** | [https://clover-gilt.vercel.app](https://clover-gilt.vercel.app) |
-| **Backend (REST API & SSE)** | **Render** | [https://clover-backend-vm9k.onrender.com](https://clover-backend-vm9k.onrender.com) |
+| **Frontend (웹앱 & PWA)** | **Vercel** | [https://clover-gilt.vercel.app](https://clover-gilt.vercel.app) (Edge Global CDN) |
+| **Backend (REST API & SSE)** | **Render** | [https://clover-backend-vm9k.onrender.com](https://clover-backend-vm9k.onrender.com) (NestJS) |
 | **Database (PostgreSQL)** | **Supabase** | `aws-0-ap-southeast-1.pooler.supabase.com` (영구 클라우드 DB) |
-| **Push Notification** | **Firebase** | `clover-e3338` (FCM Web Push) + **KakaoTalk** 알림톡 |
+| **Cloud Storage** | **Firebase** | `clover-e3338.firebasestorage.app` (모임/프로필 사진 영구 CDN 스토리지) |
+| **Push Notification** | **Firebase & Kakao** | `clover-e3338` (FCM Web Push) + **KakaoTalk** 알림톡 리마인더 |
 
 ---
 
@@ -26,6 +27,7 @@ flowchart TD
         VercelApp["https://clover-gilt.vercel.app"]
         PWA["PWA Service Worker (오프라인/앱 설치)"]
         FCMClient["Firebase FCM Client SDK"]
+        FBStorageClient["Firebase Cloud Storage SDK"]
     end
     
     subgraph Backend ["2. Backend (Render)"]
@@ -40,13 +42,18 @@ flowchart TD
         PrismaPooler["Prisma Transaction & Connection Pooling"]
     end
     
-    subgraph PushService ["4. 알림 파이프라인 (Firebase & Kakao)"]
+    subgraph CloudStorage ["4. 영구 미디어 스토리지 (Firebase Storage)"]
+        StorageBucket["Firebase Storage (clover-e3338)"]
+    end
+
+    subgraph PushService ["5. 알림 파이프라인 (Firebase & Kakao)"]
         FirebaseFCM["Firebase Cloud Messaging (FCM)"]
         KakaoAPI["Kakao Developers API (메시지/알림톡)"]
     end
 
     User <-->|HTTPS / PWA| VercelApp
     VercelApp <-->|REST API / Bearer Token| RenderAPI
+    VercelApp -->|영구 사진 업로드| StorageBucket
     RenderAPI <-->|Prisma ORM / SSL| Postgres
     RenderAPI -->|1차 Web Push| FirebaseFCM
     RenderAPI -->|2차 리마인더 / 알림톡| KakaoAPI
@@ -72,11 +79,19 @@ flowchart TD
 - **💡 이전 일정 1초 불러오기**: 매주 반복되는 일정의 제목, 장소, 시간, 리마인더를 탭 한 번에 자동 입력.
 - **시작/종료 시간 완전 독립 분리**: 시작 시간을 변경해도 설정해둔 종료 시간이 임의로 바뀌지 않음.
 
-### 4. 💬 카카오톡 & FCM 핀포인트 알림
+### 4. 📢 스마트 새소식 알림 (유형별 뱃지 & 2단 분리 레이아웃)
+- **명확한 카테고리 뱃지**: `[ 📅 새 일정 ]`, `[ ✏️ 일정 변경 ]`, `[ ⏰ 투표 리마인더 ]`, `[ 🚫 일정 취소 ]`, `[ 👋 가입 신청 ]`, `[ 🎉 가입 승인 ]`으로 알림 성격 즉시 파악.
+- **2단 헤드라인 & 세부 내용 분리**: 알림 핵심 메시지 아래에 일정명/내용을 한 줄 띄워 `📌 이번 주 정기 풋살 매치` 형태의 깔끔한 강조 박스로 렌더링하여 가독성 극대화.
+- **상대 시간 표기**: `방금 전`, `10분 전`, `2시간 전`, `어제` 등으로 직관적 표기.
+
+### 5. 📸 Firebase Cloud Storage 영구 미디어 보존
+- 모임 대표 사진 및 프로필 사진을 **Google Firebase Cloud Storage 영구 CDN 버킷**에 직접 저장하여, 서버 재시작이나 슬립 모드에 영향받지 않고 100% 안전하게 영구 유지.
+
+### 6. 💬 카카오톡 & FCM 핀포인트 알림
 - **미투표자 자동 리마인더**: 단톡방 도배 없이, 마감 전 미투표한 회원에게만 카카오톡으로 친절하게 리마인더 발송.
 - **안전한 배포 링크 바인딩**: 알림톡의 [자세히 보기] 클릭 시 배포 도메인(`https://clover-gilt.vercel.app`)으로 바로 연결.
 
-### 5. 👥 자동 조 편성 & 투명한 회비 정산
+### 7. 👥 자동 조 편성 & 투명한 회비 정산
 - **공정한 팀 밸런스 매칭**: 참석 확정 인원을 2~4개 팀으로 자동 분배.
 - **회비 관리**: 월별 회비 납부 내역 및 전체/납부/미납 필터링 조회.
 
@@ -89,9 +104,10 @@ flowchart TD
 | **Frontend** | React 19, TypeScript, Vite, Vanilla CSS (Design Tokens), Workbox (PWA) |
 | **Backend** | NestJS, Prisma ORM, RxJS, Server-Sent Events (SSE) |
 | **Database** | PostgreSQL (Supabase Cloud) / SQLite (로컬 개발 & E2E) |
+| **스토리지** | Firebase Cloud Storage (Google Cloud CDN) |
 | **인증 (Auth)** | Kakao OAuth2 + JWT (Access Token) + Dev Login Mode |
 | **푸시 알림** | Firebase Cloud Messaging (FCM Web Push) + Kakao Messaging API |
-| **호스팅** | Vercel (Frontend) + Render (Backend) + Supabase (Database) |
+| **호스팅** | Vercel (Frontend) + Render (Backend) + Supabase (Database) + Firebase |
 | **테스트** | Playwright (E2E 격리 테스트) |
 
 ---
@@ -104,13 +120,13 @@ flowchart TD
 | :--- | :--- | :--- |
 | `VITE_API_URL` | 백엔드 API 주소 | `https://clover-backend-vm9k.onrender.com` |
 | `VITE_GOOGLE_MAPS_API_KEY` | 구글 맵 API 키 | `AIzaSy...` |
-| `VITE_FIREBASE_API_KEY` | Firebase API 키 | `AIzaSy...` |
+| `VITE_FIREBASE_API_KEY` | Firebase API 키 | `REDACTED_API_KEY` |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Firebase 인증 도메인 | `clover-e3338.firebaseapp.com` |
 | `VITE_FIREBASE_PROJECT_ID` | Firebase 프로젝트 ID | `clover-e3338` |
 | `VITE_FIREBASE_STORAGE_BUCKET` | Firebase 스토리지 버킷 | `clover-e3338.firebasestorage.app` |
 | `VITE_FIREBASE_MESSAGING_SENDER_ID`| Firebase 발송자 ID | `1085828612485` |
-| `VITE_FIREBASE_APP_ID` | Firebase 앱 ID | `1:1085828612485:web:...` |
-| `VITE_FIREBASE_VAPID_KEY` | Firebase Web Push VAPID 키 | `BGB4iYanv8...` |
+| `VITE_FIREBASE_APP_ID` | Firebase 앱 ID | `1:1085828612485:web:d28568bed15717d44084ec` |
+| `VITE_FIREBASE_VAPID_KEY` | Firebase Web Push VAPID 키 | `BGB4iYanv8gfi03w1owjcQfVLIyMBTuxm1m_6OPjSBz9r_CHP1oUB1Oi2TM3a2KgPUda2ymdlZgidRfM5l40CRg` |
 
 ### 2. 백엔드 환경 변수 (Render)
 
