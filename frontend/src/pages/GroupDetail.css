@@ -2648,7 +2648,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   background: var(--grey-100);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
@@ -2673,12 +2673,8 @@
 }
 
 .feed-reaction-emoji {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1;
-}
-
-.feed-reaction-label {
-  font-size: 12px;
 }
 
 .feed-reaction-count {

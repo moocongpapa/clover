@@ -983,7 +983,7 @@ export default function GroupDetail() {
 
                         {/* Direct 4-Emoji Reaction Bar */}
                         <div className="feed-reaction-bar">
-                          {REACTION_OPTIONS.map(({ type, emoji, label }) => {
+                          {REACTION_OPTIONS.map(({ type, emoji }) => {
                             const itemMap = reactionsMap[item.id] || {
                               LIKE: { count: 0, active: false },
                               BEST: { count: 0, active: false },
@@ -999,7 +999,6 @@ export default function GroupDetail() {
                                 onClick={() => handleToggleReaction(item.id, type)}
                               >
                                 <span className="feed-reaction-emoji">{emoji}</span>
-                                <span className="feed-reaction-label">{label}</span>
                                 {reaction.count > 0 && (
                                   <span className="feed-reaction-count">{reaction.count}</span>
                                 )}
