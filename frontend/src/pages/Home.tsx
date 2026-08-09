@@ -13,6 +13,7 @@ import {
 } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
+import LoadingIndicator from '../components/LoadingIndicator';
 import './Home.css';
 
 function formatEventDate(
@@ -646,7 +647,7 @@ function HomeDashboard() {
 
 
           {loading ? (
-            <p className="loading-text">불러오는 중…</p>
+            <LoadingIndicator message="모임 일정을 불러오는 중입니다…" onRetry={load} />
           ) : filteredEvents.length === 0 ? (
             <div className="home-empty">
               <p>일정이 없어요.</p>
@@ -799,7 +800,7 @@ function HomeDashboard() {
 export default function Home() {
   const { user, loading } = useAuth();
 
-  if (loading) return <p className="loading-text">불러오는 중…</p>;
+  if (loading) return <LoadingIndicator message="사용자 정보를 확인하고 있습니다…" />;
   if (!user) return <GuestLanding />;
   if (!isProfileComplete(user)) {
     return <Navigate to="/profile/edit?required=true" replace />;

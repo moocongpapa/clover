@@ -27,8 +27,10 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(getStoredUser());
-  const [loading, setLoading] = useState(true);
+  const stored = getStoredUser();
+  const [user, setUser] = useState<User | null>(stored);
+  // Do not block cached users from viewing UI immediately
+  const [loading, setLoading] = useState(!stored && Boolean(localStorage.getItem('token')));
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -43,9 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(me);
         setStoredUser(me);
       })
-      .catch(() => {
-        clearToken();
-        setUser(null);
+      .catch((err) => {
+        // Only clear if strictly unauthorized (401), not network timeouts
+        if (err?.message?.includes('401') || err?.message?.includes('인증')) {
+          clearToken();
+          setUser(null);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
