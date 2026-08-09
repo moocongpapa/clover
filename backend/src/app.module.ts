@@ -12,6 +12,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { RegionsModule } from './regions/regions.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { ChatModule } from './chat/chat.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ChatModule } from './chat/chat.module';
     RegionsModule,
     AnnouncementsModule,
     ChatModule,
+    FeedbackModule,
   ],
 })
 export class AppModule {}

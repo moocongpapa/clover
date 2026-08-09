@@ -425,10 +425,12 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ fcmToken }),
     }),
-  testFcm: () =>
-    request<{ ok: boolean }>('/notifications/dev/test-fcm', {
+  sendFeedback: (content: string) =>
+    request<any>('/feedback', {
       method: 'POST',
+      body: JSON.stringify({ content }),
     }),
+  getFeedbacks: () => request<any[]>('/feedback'),
 };
 
 export type VoteChoice = 'ATTEND' | 'ABSENT' | 'LATE';

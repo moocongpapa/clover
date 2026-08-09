@@ -4,6 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import './Settings.css';
 
+interface FeedbackItem {
+  id: string;
+  userName: string;
+  content: string;
+  status: string;
+  createdAt: string;
+}
+
 export default function Settings() {
   const { user, updateUser } = useAuth();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -14,7 +22,10 @@ export default function Settings() {
   );
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
+  const [showListModal, setShowListModal] = useState<boolean>(false);
   const [feedbackText, setFeedbackText] = useState<string>('');
+  const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
+  const [loadingList, setLoadingList] = useState<boolean>(false);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -61,7 +72,6 @@ export default function Settings() {
   };
 
   const handleClearCache = () => {
-    // Clean up temporary localstorage items without clearing token/user
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -79,14 +89,38 @@ export default function Settings() {
     );
   };
 
-  const handleSendFeedback = () => {
+  const handleSendFeedback = async () => {
     if (!feedbackText.trim()) {
       alert('의견이나 문의 내용을 입력해 주세요.');
       return;
     }
-    alert('제안해주신 소중한 의견이 개발팀에 전달되었습니다. 감사합니다! 🍀');
-    setFeedbackText('');
-    setShowFeedbackModal(false);
+    try {
+      await api.sendFeedback(feedbackText.trim());
+      triggerToast('✉️ 제안해주신 소중한 의견이 등록되었습니다!');
+      setFeedbackText('');
+      setShowFeedbackModal(false);
+    } catch (err) {
+      console.error(err);
+      alert('피드백 제출 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleOpenFeedbackList = async () => {
+    setShowListModal(true);
+    setLoadingList(true);
+    try {
+      const list = await api.getFeedbacks();
+      setFeedbackList(list);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
+  const formatDate = (isoStr: string) => {
+    const d = new Date(isoStr);
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
   return (
@@ -202,7 +236,7 @@ export default function Settings() {
         {/* 4. 앱 정보 및 고객 지원 */}
         <section className="settings-section form-card">
           <h2 className="settings-section__title">
-            <span className="section-title-icon">ℹ️</span> 서비스 정보 및 문의
+            <span className="section-title-icon">ℹ️</span> 서비스 정보 및 피드백
           </h2>
 
           <div className="settings-row">
@@ -215,10 +249,18 @@ export default function Settings() {
 
           <div className="settings-action-row" onClick={() => setShowFeedbackModal(true)}>
             <div className="settings-row__info">
-              <span className="settings-row__label">개발팀에 의견 및 개선 제안 보내기</span>
-              <p className="settings-row__desc">서비스 이용 중 불편한 점이나 추가되었으면 하는 기능을 알려주세요.</p>
+              <span className="settings-row__label">개발팀에 의견 및 개선 제안 작성</span>
+              <p className="settings-row__desc">불편한 점이나 추가하고 싶은 의견을 남겨주시면 개발팀이 실시간으로 확인합니다.</p>
             </div>
             <span className="action-row-arrow">✉️</span>
+          </div>
+
+          <div className="settings-action-row" onClick={handleOpenFeedbackList}>
+            <div className="settings-row__info">
+              <span className="settings-row__label">📋 제출된 피드백 & 개선 제안 목록 확인</span>
+              <p className="settings-row__desc">사용자들이 등록한 개선 요청 사항 및 개발팀 검토 현황을 모아봅니다.</p>
+            </div>
+            <span className="action-row-arrow">🔍</span>
           </div>
 
           <div className="settings-action-row" onClick={() => setShowTermsModal(true)}>
@@ -238,12 +280,12 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Feedback Modal */}
+      {/* Send Feedback Modal */}
       {showFeedbackModal && (
         <div className="settings-modal-backdrop" onClick={() => setShowFeedbackModal(false)}>
           <div className="settings-modal-card" onClick={(e) => e.stopPropagation()}>
             <h3 className="modal-title">✉️ 개발팀에 의견 보내기</h3>
-            <p className="modal-desc">Clover 서비스 개선을 위한 소중한 의견을 자유롭게 적어주세요.</p>
+            <p className="modal-desc">Clover 서비스 개선을 위한 소중한 의견을 작성해 주세요. DB에 안전하게 보관됩니다.</p>
             <textarea
               className="feedback-textarea"
               rows={5}
@@ -264,9 +306,70 @@ export default function Settings() {
                 className="btn-modal-primary"
                 onClick={handleSendFeedback}
               >
-                보내기
+                제출하기
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Feedback List Modal */}
+      {showListModal && (
+        <div className="settings-modal-backdrop" onClick={() => setShowListModal(false)}>
+          <div className="settings-modal-card modal-terms" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <h3 className="modal-title" style={{ margin: 0 }}>📋 제출된 피드백 목록</h3>
+              <button
+                type="button"
+                onClick={() => setShowListModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+            <p className="modal-desc">사용자들이 등록한 개선 제안과 문의 내역입니다.</p>
+
+            {loadingList ? (
+              <p style={{ textAlign: 'center', padding: '20px 0', color: 'var(--ink-muted)' }}>불러오는 중…</p>
+            ) : feedbackList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--ink-muted)', fontSize: '14px' }}>
+                아직 등록된 피드백이 없습니다.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                {feedbackList.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      padding: '12px',
+                      background: 'var(--grey-50, #f8fafc)',
+                      border: '1px solid var(--border-soft, #e2e8f0)',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ink-dark)' }}>
+                        👤 {item.userName}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
+                        {formatDate(item.createdAt)}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '13.5px', color: 'var(--ink-dark)', margin: '4px 0', lineHeight: 1.45, wordBreak: 'break-all' }}>
+                      {item.content}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}>
+                        🔍 검토 완료 / DB 보관됨
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
