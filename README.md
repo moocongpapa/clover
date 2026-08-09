@@ -10,7 +10,7 @@
 | 서비스 | 플랫폼 | 역할 및 엔드포인트 |
 | :--- | :--- | :--- |
 | **Frontend (웹앱 & PWA)** | **Vercel** | [https://clover-gilt.vercel.app](https://clover-gilt.vercel.app) (Edge Global CDN) |
-| **Backend (REST API & SSE)** | **Render** | [https://clover-backend-vm9k.onrender.com](https://clover-backend-vm9k.onrender.com) (NestJS) |
+| **Backend (REST API & SSE)** | **Render** | [https://clover-backend-vm9k.onrender.com](https://clover-backend-vm9k.onrender.com) (24/7 Always-On Starter Server) |
 | **Database (PostgreSQL)** | **Supabase** | `aws-0-ap-southeast-1.pooler.supabase.com` (영구 클라우드 DB) |
 | **Cloud Storage** | **Firebase** | `clover-e3338.firebasestorage.app` (모임/프로필 사진 영구 CDN 스토리지) |
 | **Push Notification** | **Firebase & Kakao** | `clover-e3338` (FCM Web Push) + **KakaoTalk** 알림톡 리마인더 |

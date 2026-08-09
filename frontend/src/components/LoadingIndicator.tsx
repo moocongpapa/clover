@@ -20,9 +20,9 @@ export default function LoadingIndicator({
 
   let statusHint = message;
   if (elapsedSeconds >= 8) {
-    statusHint = '⏳ 무료 서버가 절전 모드에서 깨어나는 중입니다 (약 20~30초 소요). 잠시만 기다려 주세요!';
+    statusHint = '⚡ 네트워크 데이터를 빠르게 동기화하고 있습니다. 잠시만 기다려 주세요!';
   } else if (elapsedSeconds >= 3) {
-    statusHint = '⚡ 서버와 연결하고 있습니다…';
+    statusHint = '⚡ 클로버 전용 서버와 연결 중입니다…';
   }
 
   return (
