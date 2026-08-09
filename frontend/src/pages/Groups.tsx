@@ -7,8 +7,6 @@ import './Groups.css';
 
 import { getGroupCoordinates, getDistanceKm } from '../utils/geo';
 
-type SortOption = 'newest' | 'members' | 'distance';
-
 function GroupCard({
   group,
   onUpdated,
@@ -169,8 +167,6 @@ export default function Groups() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showSearchInput, setShowSearchInput] = useState(false);
   const { user } = useAuth();
@@ -212,44 +208,17 @@ export default function Groups() {
 
   useEffect(() => {
     setVisibleCount(15);
-  }, [search, category, sortBy, selectedRegion]);
-
-  const handleResetFilters = () => {
-    setSearch('');
-    setCategory('');
-    setSortBy('newest');
-    setSelectedRegion('');
-  };
+  }, [search, category]);
 
   // Fixed 20km distance filtering by default
-  const filteredAndSortedGroups = groups
-    .filter((g) => {
-      // 1. Fixed 20km distance filter (if userCoords available)
-      if (userCoords) {
-        const groupCoords = getGroupCoordinates(g);
-        const distance = getDistanceKm(userCoords.lat, userCoords.lng, groupCoords.lat, groupCoords.lng);
-        if (distance > 20) return false;
-      }
-
-      // 2. Region filter if selected
-      if (selectedRegion) {
-        const regStr = `${g.activitySido || ''} ${g.activitySigungu || ''} ${g.activityDistrict || ''}`;
-        if (!regStr.includes(selectedRegion)) return false;
-      }
-
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'members') {
-        return (b._count?.members ?? 0) - (a._count?.members ?? 0);
-      }
-      if (sortBy === 'distance' && userCoords) {
-        const dA = getDistanceKm(userCoords.lat, userCoords.lng, getGroupCoordinates(a).lat, getGroupCoordinates(a).lng);
-        const dB = getDistanceKm(userCoords.lat, userCoords.lng, getGroupCoordinates(b).lat, getGroupCoordinates(b).lng);
-        return dA - dB;
-      }
-      return 0; // default newest
-    });
+  const filteredAndSortedGroups = groups.filter((g) => {
+    if (userCoords) {
+      const groupCoords = getGroupCoordinates(g);
+      const distance = getDistanceKm(userCoords.lat, userCoords.lng, groupCoords.lat, groupCoords.lng);
+      if (distance > 20) return false;
+    }
+    return true;
+  });
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -326,42 +295,6 @@ export default function Groups() {
         ))}
       </nav>
 
-      {/* Sub-filter Control Bar matching screenshot */}
-      <div className="sub-filter-control-bar">
-        <select
-          className="filter-select-chip"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortOption)}
-        >
-          <option value="newest">최근 생성순 ∨</option>
-          <option value="members">회원 수 ∨</option>
-          <option value="distance">거리순 ∨</option>
-        </select>
-
-        <select
-          className="filter-select-chip"
-          value={selectedRegion}
-          onChange={(e) => setSelectedRegion(e.target.value)}
-        >
-          <option value="">지역 ∨</option>
-          <option value="강남">강남구</option>
-          <option value="강서">강서구</option>
-          <option value="송파">송파구</option>
-          <option value="마포">마포구</option>
-          <option value="분당">분당/성남</option>
-        </select>
-
-        <button
-          type="button"
-          className="filter-reset-chip"
-          onClick={handleResetFilters}
-        >
-          🔄 초기화
-        </button>
-
-        <span className="fixed-geo-badge">📍 20km 이내</span>
-      </div>
-
       {/* Group List Area */}
       {loading ? (
         <div className="groups-loading-state">
@@ -370,8 +303,8 @@ export default function Groups() {
       ) : filteredAndSortedGroups.length === 0 ? (
         <div className="groups-empty-state">
           <p>20km 이내에 해당하는 모임이 없습니다.</p>
-          <button type="button" className="btn-sm btn-outline" onClick={handleResetFilters} style={{ marginTop: '10px' }}>
-            필터 초기화
+          <button type="button" className="btn-sm btn-outline" onClick={() => { setSearch(''); setCategory(''); }} style={{ marginTop: '10px' }}>
+            전체 모임 보기
           </button>
         </div>
       ) : (
