@@ -674,7 +674,7 @@ export function notificationIcon(type: string): string {
     case 'JOIN_REQUEST':
       return '👋';
     case 'JOIN_APPROVED':
-      return '✅';
+      return '🎉';
     case 'CREATED':
       return '📅';
     case 'CHANGED':
@@ -684,8 +684,96 @@ export function notificationIcon(type: string): string {
     case 'REMINDER':
       return '⏰';
     default:
-      return '🔔';
+      return '📢';
   }
+}
+
+export interface NotificationBadgeInfo {
+  label: string;
+  category: '일정' | '가입/승인' | '알림';
+  emoji: string;
+  color: string;
+  bg: string;
+  border: string;
+}
+
+export function getNotificationBadge(type: string): NotificationBadgeInfo {
+  switch (type) {
+    case 'CREATED':
+      return {
+        label: '새 일정',
+        category: '일정',
+        emoji: '📅',
+        color: '#10b981',
+        bg: 'rgba(16, 185, 129, 0.1)',
+        border: 'rgba(16, 185, 129, 0.25)',
+      };
+    case 'CHANGED':
+      return {
+        label: '일정 변경',
+        category: '일정',
+        emoji: '✏️',
+        color: '#f59e0b',
+        bg: 'rgba(245, 158, 11, 0.1)',
+        border: 'rgba(245, 158, 11, 0.25)',
+      };
+    case 'CANCELLED':
+      return {
+        label: '일정 취소',
+        category: '일정',
+        emoji: '🚫',
+        color: '#ef4444',
+        bg: 'rgba(239, 68, 68, 0.1)',
+        border: 'rgba(239, 68, 68, 0.25)',
+      };
+    case 'REMINDER':
+      return {
+        label: '투표 리마인더',
+        category: '일정',
+        emoji: '⏰',
+        color: '#8b5cf6',
+        bg: 'rgba(139, 92, 246, 0.1)',
+        border: 'rgba(139, 92, 246, 0.25)',
+      };
+    case 'JOIN_REQUEST':
+      return {
+        label: '가입 신청',
+        category: '가입/승인',
+        emoji: '👋',
+        color: '#3b82f6',
+        bg: 'rgba(59, 130, 246, 0.1)',
+        border: 'rgba(59, 130, 246, 0.25)',
+      };
+    case 'JOIN_APPROVED':
+      return {
+        label: '가입 승인',
+        category: '가입/승인',
+        emoji: '🎉',
+        color: '#10b981',
+        bg: 'rgba(16, 185, 129, 0.1)',
+        border: 'rgba(16, 185, 129, 0.25)',
+      };
+    default:
+      return {
+        label: '공지/소식',
+        category: '알림',
+        emoji: '📢',
+        color: '#64748b',
+        bg: 'rgba(100, 116, 139, 0.1)',
+        border: 'rgba(100, 116, 139, 0.25)',
+      };
+  }
+}
+
+export function parseNotificationMessage(rawMessage: string): { title: string; detail: string | null } {
+  if (!rawMessage) return { title: '알림 소식', detail: null };
+  const colonIdx = rawMessage.indexOf(':');
+  if (colonIdx !== -1) {
+    const title = rawMessage.slice(0, colonIdx).trim();
+    const detail = rawMessage.slice(colonIdx + 1).trim();
+    return { title, detail: detail || null };
+  }
+  return { title: rawMessage, detail: null };
 }
 
 export const VOTE_LABELS: Record<VoteChoice, string> = {

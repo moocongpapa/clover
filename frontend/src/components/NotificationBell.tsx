@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   api,
-  notificationIcon,
+  getNotificationBadge,
+  parseNotificationMessage,
   notificationLink,
   type NotificationItem,
 } from '../api';
@@ -111,40 +112,70 @@ export default function NotificationBell() {
             <p className="notification-bell__empty">새 알림이 없습니다</p>
           ) : (
             <ul className="notification-bell__list">
-              {items.map((item) => (
-                <li key={item.id}>
-                  <Link
-                    to={notificationLink(item)}
-                    className={`notification-bell__item${item.readAt ? '' : ' is-unread'}`}
-                    onClick={() => setOpen(false)}
-                  >
-                    {item.group?.profileImageUrl ? (
-                      <GroupAvatar
-                        src={item.group.profileImageUrl}
-                        name={item.group.name}
-                        size={32}
-                        radius={8}
-                        className="notification-bell__item-icon"
-                      />
-                    ) : (
-                      <span className="notification-bell__item-icon" aria-hidden>
-                        {notificationIcon(item.type)}
+              {items.map((item) => {
+                const badge = getNotificationBadge(item.type);
+                const { title, detail } = parseNotificationMessage(item.message);
+
+                return (
+                  <li key={item.id}>
+                    <Link
+                      to={notificationLink(item)}
+                      className={`notification-bell__item${item.readAt ? '' : ' is-unread'}`}
+                      onClick={() => setOpen(false)}
+                    >
+                      {item.group?.profileImageUrl ? (
+                        <GroupAvatar
+                          src={item.group.profileImageUrl}
+                          name={item.group.name}
+                          size={36}
+                          radius={10}
+                          className="notification-bell__item-icon"
+                        />
+                      ) : (
+                        <span className="notification-bell__item-icon" aria-hidden>
+                          {badge.emoji}
+                        </span>
+                      )}
+                      <span className="notification-bell__item-body">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                          <span
+                            style={{
+                              fontSize: '10px',
+                              fontWeight: '800',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              color: badge.color,
+                              backgroundColor: badge.bg,
+                            }}
+                          >
+                            {badge.label}
+                          </span>
+                          <span className="notification-bell__time" style={{ marginLeft: 'auto' }}>
+                            {formatRelativeTime(item.sentAt)}
+                          </span>
+                        </span>
+                        <span className="notification-bell__message" style={{ fontWeight: '700', color: 'var(--ink-dark)' }}>
+                          {title}
+                        </span>
+                        {detail && (
+                          <span style={{
+                            display: 'block',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: 'var(--ink-muted)',
+                            marginTop: '2px',
+                            background: 'var(--grey-50)',
+                            padding: '3px 6px',
+                            borderRadius: '6px'
+                          }}>
+                            📌 {detail}
+                          </span>
+                        )}
                       </span>
-                    )}
-                    <span className="notification-bell__item-body">
-                      <span className="notification-bell__message">
-                        {item.message ||
-                          item.event?.title ||
-                          item.group?.name ||
-                          '알림'}
-                      </span>
-                      <span className="notification-bell__time">
-                        {formatRelativeTime(item.sentAt)}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
