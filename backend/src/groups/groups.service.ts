@@ -582,13 +582,23 @@ export class GroupsService {
         year,
         month,
       },
+      include: {
+        paidBy: {
+          select: {
+            id: true,
+            displayName: true,
+          },
+        },
+      },
     });
 
-    const paidUserIds = new Set(payments.map(p => p.userId));
+    const paymentMap = new Map(payments.map(p => [p.userId, p]));
 
     const list = group.members.map(member => {
       const isExempt = group.officerFeeExempt && isOfficer(member.role);
-      const isPaid = isExempt || paidUserIds.has(member.userId);
+      const paymentRecord = paymentMap.get(member.userId);
+      const isPaid = isExempt || Boolean(paymentRecord);
+      const paidByName = isExempt ? '임원 면제' : paymentRecord?.paidBy?.displayName || null;
       const displayName = member.profileCard?.nickname || member.user.displayName;
       const profileImageUrl = member.profileCard?.profileImageUrl || member.user.profileImageUrl;
       return {
@@ -600,6 +610,8 @@ export class GroupsService {
         role: member.role,
         isExempt,
         isPaid,
+        paidByName,
+        paidAt: paymentRecord?.paidAt || null,
       };
     });
 

@@ -1655,20 +1655,35 @@ export default function GroupDetail() {
                                   </span>
                                   {p.isExempt && <span className="payment-exempt-badge">면제</span>}
                                 </div>
-                                {isOfficer ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleTogglePayment(p.userId)}
-                                    disabled={p.isExempt}
-                                    className={`payment-toggle-btn${p.isPaid ? ' is-paid' : ''}`}
-                                  >
-                                    {p.isPaid ? '납부완료' : '미납'}
-                                  </button>
-                                ) : (
-                                  <span style={{ fontSize: '13px', fontWeight: 700, color: p.isPaid ? 'var(--green-500)' : 'var(--red-500)' }}>
-                                    {p.isPaid ? '납부완료' : '미납'}
-                                  </span>
-                                )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {p.isPaid && p.paidByName && (
+                                    <span
+                                      className="payment-recorder-name"
+                                      style={{
+                                        fontSize: '11.5px',
+                                        color: 'var(--ink-muted, #64748b)',
+                                        fontWeight: 600,
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      {p.isExempt ? '임원면제' : `${p.paidByName} 확인`}
+                                    </span>
+                                  )}
+                                  {isOfficer ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTogglePayment(p.userId)}
+                                      disabled={p.isExempt}
+                                      className={`payment-toggle-btn${p.isPaid ? ' is-paid' : ''}`}
+                                    >
+                                      {p.isPaid ? '납부완료' : '미납'}
+                                    </button>
+                                  ) : (
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: p.isPaid ? 'var(--green-500)' : 'var(--red-500)' }}>
+                                      {p.isPaid ? '납부완료' : '미납'}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
