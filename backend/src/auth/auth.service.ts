@@ -36,11 +36,15 @@ interface KakaoTokenResponse {
 
 interface KakaoUserResponse {
   id: number;
-  properties: {
-    nickname: string;
+  properties?: {
+    nickname?: string;
     profile_image?: string;
   };
   kakao_account?: {
+    profile?: {
+      nickname?: string;
+      profile_image_url?: string;
+    };
     email?: string;
     gender?: string;
     birthyear?: string;
@@ -93,28 +97,42 @@ export class AuthService {
       return this.issueToken(user);
     }
 
-    const tokenRes = await axios.post<KakaoTokenResponse>(
-      'https://kauth.kakao.com/oauth/token',
-      null,
-      {
-        params: {
-          grant_type: 'authorization_code',
-          client_id: restApiKey,
-          redirect_uri: redirectUri,
-          code,
+    let tokenRes: { data: KakaoTokenResponse };
+    try {
+      tokenRes = await axios.post<KakaoTokenResponse>(
+        'https://kauth.kakao.com/oauth/token',
+        null,
+        {
+          params: {
+            grant_type: 'authorization_code',
+            client_id: restApiKey,
+            redirect_uri: redirectUri,
+            code,
+          },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         },
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      },
-    );
+      );
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error_description || err.response?.data?.error || err.message;
+      this.logger.error(`Kakao token request failed: ${errorMsg}`, err.response?.data);
+      throw new BadRequestException(`카카오 로그인 토큰 발급 실패: ${errorMsg}`);
+    }
 
-    const userRes = await axios.get<KakaoUserResponse>(
-      'https://kapi.kakao.com/v2/user/me',
-      {
-        headers: {
-          Authorization: `Bearer ${tokenRes.data.access_token}`,
+    let userRes: { data: KakaoUserResponse };
+    try {
+      userRes = await axios.get<KakaoUserResponse>(
+        'https://kapi.kakao.com/v2/user/me',
+        {
+          headers: {
+            Authorization: `Bearer ${tokenRes.data.access_token}`,
+          },
         },
-      },
-    );
+      );
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error_description || err.message;
+      this.logger.error(`Kakao user profile request failed: ${errorMsg}`);
+      throw new UnauthorizedException(`카카오 사용자 정보 조회 실패: ${errorMsg}`);
+    }
 
     // Sync Kakao Friends list talk UUIDs
     try {
@@ -140,6 +158,7 @@ export class AuthService {
 
     const kakaoUser = userRes.data;
     const account = kakaoUser.kakao_account;
+    const nickname = kakaoUser.properties?.nickname || account?.profile?.nickname || '카카오 사용자';
 
     let gender: Gender | null = null;
     if (account?.gender === 'male') gender = Gender.MALE;
@@ -167,29 +186,29 @@ export class AuthService {
       }
     }
 
-    const rawImage = kakaoUser.properties.profile_image ?? null;
+    const rawImage = kakaoUser.properties?.profile_image || account?.profile?.profile_image_url || null;
     const profileImageUrl = rawImage ? rawImage.replace(/^http:\/\//i, 'https://') : null;
 
     const user = await this.prisma.user.upsert({
       where: { kakaoId: String(kakaoUser.id) },
       update: {
-        displayName: kakaoUser.properties.nickname,
+        displayName: nickname,
         profileImageUrl,
         ...(gender ? { gender } : {}),
         ...(birthYear ? { birthYear } : {}),
         ...(birthDate ? { birthDate } : {}),
         ...(phoneNumber ? { phoneNumber } : {}),
-        role: kakaoUser.properties.nickname === '김완석' ? 'ADMIN' : 'MEMBER',
+        role: nickname === '김완석' ? 'ADMIN' : 'MEMBER',
       },
       create: {
         kakaoId: String(kakaoUser.id),
-        displayName: kakaoUser.properties.nickname,
+        displayName: nickname,
         profileImageUrl,
         gender,
         birthYear,
         birthDate,
         phoneNumber,
-        role: kakaoUser.properties.nickname === '김완석' ? 'ADMIN' : 'MEMBER',
+        role: nickname === '김완석' ? 'ADMIN' : 'MEMBER',
       },
     });
 

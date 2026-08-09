@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, isProfileComplete } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,7 @@ export default function Login() {
   const [kakaoPassword, setKakaoPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const hasProcessedCodeRef = useRef(false);
 
   useEffect(() => {
     if (user) {
@@ -27,7 +28,10 @@ export default function Login() {
 
   useEffect(() => {
     const code = searchParams.get('code');
-    if (code) {
+    if (code && !hasProcessedCodeRef.current) {
+      hasProcessedCodeRef.current = true;
+      // Clean query parameter from URL to prevent re-submission on page reload
+      window.history.replaceState({}, document.title, window.location.pathname);
       setLoading(true);
       api
         .kakaoCallback(code)
