@@ -7,6 +7,8 @@ import './Groups.css';
 
 import { getGroupCoordinates, getDistanceKm } from '../utils/geo';
 
+type SortOption = 'newest' | 'members' | 'distance';
+
 function GroupCard({
   group,
   onUpdated,
@@ -73,7 +75,7 @@ function GroupCard({
           className="btn-sm btn-outline group-card__action"
           onClick={(e) => e.stopPropagation()}
         >
-          로그인 후 가입
+          가입
         </Link>
       );
     }
@@ -94,20 +96,7 @@ function GroupCard({
           disabled={busy}
           onClick={handleCancel}
         >
-          {busy ? '처리 중…' : '신청 취소'}
-        </button>
-      );
-    }
-
-    if (status === 'REJECTED') {
-      return (
-        <button
-          type="button"
-          className="btn-sm btn-outline group-card__action"
-          disabled={busy}
-          onClick={handleJoin}
-        >
-          {busy ? '처리 중…' : '다시 신청'}
+          {busy ? '…' : '신청취소'}
         </button>
       );
     }
@@ -119,10 +108,12 @@ function GroupCard({
         disabled={busy}
         onClick={handleJoin}
       >
-        {busy ? '처리 중…' : '가입 신청'}
+        {busy ? '…' : '가입신청'}
       </button>
     );
   };
+
+  const locationText = group.activityDistrict || group.activitySigungu || group.activitySido || '지역 미정';
 
   const distanceStr = (() => {
     if (!userCoords) return '';
@@ -132,36 +123,43 @@ function GroupCard({
   })();
 
   return (
-    <article className="group-card group-card--interactive group-card--row">
-      <Link to={`/groups/${group.id}`} className="group-card__main-link">
-        <GroupAvatar
-          src={group.profileImageUrl}
-          name={group.name}
-          className="group-card__avatar"
-        />
-        <div className="group-card__content">
-          <h3 className="group-card__title">{group.name}</h3>
-          <p className="group-card__desc">{group.description}</p>
-          <div className="group-card__footer">
-            <span className="category-more-pill">
-              <strong>{group.category}</strong> <span className="more-arrow">모임 더보기 ›</span>
+    <article className="group-list-row-item">
+      <Link to={`/groups/${group.id}`} className="group-list-row-link">
+        {/* Left: Square Profile Image */}
+        <div className="group-list-thumb-wrapper">
+          <GroupAvatar
+            src={group.profileImageUrl}
+            name={group.name}
+            size={92}
+            radius={14}
+            className="group-list-thumb"
+          />
+        </div>
+
+        {/* Right: Info */}
+        <div className="group-list-info">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="group-list-category-badge">
+              {group.category}
+            </div>
+            {renderAction()}
+          </div>
+
+          <h3 className="group-list-title">{group.name}</h3>
+
+          <p className="group-list-desc">{group.description}</p>
+
+          <div className="group-list-meta-line">
+            <span className="group-list-location">
+              📍 {locationText} {distanceStr ? `(${distanceStr})` : ''}
             </span>
-            <span className="group-meta-info">
-              {group.activityRegion && (
-                <span className="group-meta-info__region">{group.activityRegion}</span>
-              )}
-              {distanceStr && (
-                <span className="group-meta-info__distance">📍 {distanceStr}</span>
-              )}
-              <span className="group-meta-info__members">회원 {group._count?.members ?? 0}명</span>
-            </span>
+            <span className="group-list-meta-divider">·</span>
+            <span className="group-list-status">회원 모집중</span>
+            <span className="group-list-count">({group._count?.members ?? 0}명)</span>
           </div>
         </div>
       </Link>
-      <div className="group-card__side">
-        {renderAction()}
-        {error && <p className="group-card__error">{error}</p>}
-      </div>
+      {error && <p className="group-card__error" style={{ margin: '4px 16px 8px', fontSize: '11px', color: '#ef4444' }}>{error}</p>}
     </article>
   );
 }
@@ -171,20 +169,34 @@ export default function Groups() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(true);
-  const [maxDistance, setMaxDistance] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [geoError, setGeoError] = useState('');
+  const [showSearchInput, setShowSearchInput] = useState(false);
   const { user } = useAuth();
 
-  const [visibleCount, setVisibleCount] = useState(10);
+  const [visibleCount, setVisibleCount] = useState(15);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const scrollRight = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+  // Automatically fetch geolocation on mount for 20km fixed filtering
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        () => {
+          // Fallback to Gangnam Station
+          setUserCoords({ lat: 37.49808, lng: 127.02797 });
+        }
+      );
+    } else {
+      setUserCoords({ lat: 37.49808, lng: 127.02797 });
     }
-  };
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -199,62 +211,51 @@ export default function Groups() {
   }, [load, user?.id]);
 
   useEffect(() => {
-    setVisibleCount(10);
-  }, [search, category, maxDistance]);
+    setVisibleCount(15);
+  }, [search, category, sortBy, selectedRegion]);
 
-  const handleGeoToggle = (distance: number) => {
-    if (maxDistance === distance) {
-      setMaxDistance(null);
-      setGeoError('');
-      return;
-    }
-
-    const requestLocationAndSet = () => {
-      if (userCoords) {
-        setMaxDistance(distance);
-        return;
-      }
-
-      if (!navigator.geolocation) {
-        setGeoError('이 브라우저는 위치 정보를 지원하지 않습니다.');
-        setUserCoords({ lat: 37.49808, lng: 127.02797 }); // Fallback to Gangnam Station
-        setMaxDistance(distance);
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserCoords({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-          setMaxDistance(distance);
-          setGeoError('');
-        },
-        (err) => {
-          console.warn('Geolocation failed, using Gangnam fallback:', err);
-          setUserCoords({ lat: 37.49808, lng: 127.02797 }); // Fallback to Gangnam
-          setMaxDistance(distance);
-          setGeoError('위치 정보를 가져올 수 없어 기본 위치(강남역) 기준으로 조회합니다.');
-        }
-      );
-    };
-
-    requestLocationAndSet();
+  const handleResetFilters = () => {
+    setSearch('');
+    setCategory('');
+    setSortBy('newest');
+    setSelectedRegion('');
   };
 
-  const displayedGroups = groups.filter((g) => {
-    if (!maxDistance || !userCoords) return true;
-    const groupCoords = getGroupCoordinates(g);
-    const distance = getDistanceKm(userCoords.lat, userCoords.lng, groupCoords.lat, groupCoords.lng);
-    return distance <= maxDistance;
-  });
+  // Fixed 20km distance filtering by default
+  const filteredAndSortedGroups = groups
+    .filter((g) => {
+      // 1. Fixed 20km distance filter (if userCoords available)
+      if (userCoords) {
+        const groupCoords = getGroupCoordinates(g);
+        const distance = getDistanceKm(userCoords.lat, userCoords.lng, groupCoords.lat, groupCoords.lng);
+        if (distance > 20) return false;
+      }
+
+      // 2. Region filter if selected
+      if (selectedRegion) {
+        const regStr = `${g.activitySido || ''} ${g.activitySigungu || ''} ${g.activityDistrict || ''}`;
+        if (!regStr.includes(selectedRegion)) return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'members') {
+        return (b._count?.members ?? 0) - (a._count?.members ?? 0);
+      }
+      if (sortBy === 'distance' && userCoords) {
+        const dA = getDistanceKm(userCoords.lat, userCoords.lng, getGroupCoordinates(a).lat, getGroupCoordinates(a).lng);
+        const dB = getDistanceKm(userCoords.lat, userCoords.lng, getGroupCoordinates(b).lat, getGroupCoordinates(b).lng);
+        return dA - dB;
+      }
+      return 0; // default newest
+    });
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => prev + 10);
+          setVisibleCount((prev) => prev + 15);
         }
       },
       { threshold: 0.1 }
@@ -270,93 +271,123 @@ export default function Groups() {
         observer.unobserve(currentSentinel);
       }
     };
-  }, [displayedGroups, visibleCount]);
+  }, [filteredAndSortedGroups, visibleCount]);
 
   return (
-    <div className="groups-page groups-browse">
-      <div className="groups-filters-section">
-        <div className="category-filter-container">
-          <div className="category-filter-scroll" ref={scrollRef}>
-            <button
-              type="button"
-              className={`category-filter-chip ${category === '' ? 'is-active' : ''}`}
-              onClick={() => setCategory('')}
-            >
-              전체
-            </button>
-            {CATEGORY_OPTIONS.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                className={`category-filter-chip ${category === c.value ? 'is-active' : ''}`}
-                onClick={() => setCategory(c.value)}
-              >
-                <span className="category-filter-chip__emoji">{c.emoji}</span>
-                <span className="category-filter-chip__text">{c.value}</span>
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="category-filter-scroll-right"
-            onClick={scrollRight}
-            aria-label="카테고리 더보기"
-          >
-            ❯
-          </button>
-        </div>
+    <div className="groups-page-screen">
+      {/* Top Bar matching screenshot */}
+      <header className="groups-top-header">
+        <h1 className="groups-top-title">모임 찾기</h1>
+        <button
+          type="button"
+          className="groups-search-toggle-btn"
+          onClick={() => setShowSearchInput((prev) => !prev)}
+          aria-label="검색"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
+      </header>
 
-        <div className="filters">
+      {/* Expandable Search Input */}
+      {showSearchInput && (
+        <div className="search-bar-dropdown">
           <input
-            className="filters__search"
+            className="search-bar-input"
             type="search"
-            placeholder="모임 이름 검색"
+            placeholder="모임 이름 또는 관심사 검색"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            autoFocus
           />
-          <div className="geo-filters-row">
-            <button
-              type="button"
-              className={`filters__geo ${maxDistance === 10 ? 'is-active' : ''}`}
-              onClick={() => handleGeoToggle(10)}
-            >
-              📍 내 주변 10km
-            </button>
-            <button
-              type="button"
-              className={`filters__geo ${maxDistance === 20 ? 'is-active' : ''}`}
-              onClick={() => handleGeoToggle(20)}
-            >
-              📍 내 주변 20km
-            </button>
-          </div>
         </div>
-      </div>
-
-      {geoError && <p className="geo-error">{geoError}</p>}
-
-      {loading ? (
-        <p className="loading-text">불러오는 중…</p>
-      ) : displayedGroups.length === 0 ? (
-        <div className="empty-state">
-          <p>{maxDistance ? `주변 ${maxDistance}km 이내에 모임이 없어요.` : '공개된 모임이 없어요.'}</p>
-        </div>
-      ) : (
-        <>
-          <div className="group-grid">
-            {displayedGroups.slice(0, visibleCount).map((g) => (
-              <GroupCard key={g.id} group={g} onUpdated={load} userCoords={maxDistance ? userCoords : null} />
-            ))}
-          </div>
-          {visibleCount < displayedGroups.length && (
-            <div ref={sentinelRef} className="scroll-sentinel" style={{ height: '20px', margin: '10px 0' }} />
-          )}
-        </>
       )}
 
-      <Link to="/groups/new" className="fab-button" title="모임 만들기">
-        <span className="fab-button__icon">＋</span>
-        <span className="fab-button__text">모임 만들기</span>
+      {/* Horizontal Category Underline Tabs (Matching screenshot) */}
+      <nav className="groups-category-tab-bar">
+        <button
+          type="button"
+          className={`category-underline-tab ${category === '' ? 'is-active' : ''}`}
+          onClick={() => setCategory('')}
+        >
+          전체
+        </button>
+        {CATEGORY_OPTIONS.map((c) => (
+          <button
+            key={c.value}
+            type="button"
+            className={`category-underline-tab ${category === c.value ? 'is-active' : ''}`}
+            onClick={() => setCategory(c.value)}
+          >
+            {c.value}
+          </button>
+        ))}
+      </nav>
+
+      {/* Sub-filter Control Bar matching screenshot */}
+      <div className="sub-filter-control-bar">
+        <select
+          className="filter-select-chip"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+        >
+          <option value="newest">최근 생성순 ∨</option>
+          <option value="members">회원 수 ∨</option>
+          <option value="distance">거리순 ∨</option>
+        </select>
+
+        <select
+          className="filter-select-chip"
+          value={selectedRegion}
+          onChange={(e) => setSelectedRegion(e.target.value)}
+        >
+          <option value="">지역 ∨</option>
+          <option value="강남">강남구</option>
+          <option value="강서">강서구</option>
+          <option value="송파">송파구</option>
+          <option value="마포">마포구</option>
+          <option value="분당">분당/성남</option>
+        </select>
+
+        <button
+          type="button"
+          className="filter-reset-chip"
+          onClick={handleResetFilters}
+        >
+          🔄 초기화
+        </button>
+
+        <span className="fixed-geo-badge">📍 20km 이내</span>
+      </div>
+
+      {/* Group List Area */}
+      {loading ? (
+        <div className="groups-loading-state">
+          <p>모임을 불러오는 중…</p>
+        </div>
+      ) : filteredAndSortedGroups.length === 0 ? (
+        <div className="groups-empty-state">
+          <p>20km 이내에 해당하는 모임이 없습니다.</p>
+          <button type="button" className="btn-sm btn-outline" onClick={handleResetFilters} style={{ marginTop: '10px' }}>
+            필터 초기화
+          </button>
+        </div>
+      ) : (
+        <div className="groups-list-container">
+          {filteredAndSortedGroups.slice(0, visibleCount).map((g) => (
+            <GroupCard key={g.id} group={g} onUpdated={load} userCoords={userCoords} />
+          ))}
+          {visibleCount < filteredAndSortedGroups.length && (
+            <div ref={sentinelRef} className="scroll-sentinel" style={{ height: '20px' }} />
+          )}
+        </div>
+      )}
+
+      {/* Floating Action Button (+) */}
+      <Link to="/groups/new" className="fab-group-add-btn" title="모임 만들기" aria-label="모임 만들기">
+        ＋
       </Link>
     </div>
   );
