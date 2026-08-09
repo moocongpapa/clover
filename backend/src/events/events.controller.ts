@@ -64,8 +64,12 @@ export class EventsController {
 
   @Post('events/:id/cancel')
   @UseGuards(JwtAuthGuard)
-  cancel(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.eventsService.cancel(id, user.id);
+  cancel(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: { reason?: string },
+  ) {
+    return this.eventsService.cancel(id, user.id, dto?.reason);
   }
 
   @Get('events/:id/teams')

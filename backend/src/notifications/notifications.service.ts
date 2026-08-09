@@ -90,6 +90,31 @@ export class NotificationsService {
     }
   }
 
+  async notifyEventCancelled(eventId: string, cancelReason?: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        group: {
+          include: {
+            members: {
+              where: { status: MemberStatus.APPROVED },
+              include: { user: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!event) return;
+
+    const reasonText = cancelReason ? ` (취소 사유: ${cancelReason})` : '';
+    const message = `이벤트가 취소되었습니다: ${event.title}${reasonText}`;
+
+    for (const member of event.group.members) {
+      await this.sendEventNotification(member.userId, eventId, 'CANCELLED', message);
+    }
+  }
+
   async notifyJoinRequest(groupId: string, requesterUserId: string) {
     const group = await this.prisma.group.findUnique({ where: { id: groupId } });
     const requester = await this.prisma.user.findUnique({

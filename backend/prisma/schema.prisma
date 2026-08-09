@@ -142,6 +142,7 @@ model Event {
   location    String
   description String
   status          EventStatus @default(ACTIVE)
+  cancelReason    String?
   createdById     String
   reminderOffsets String      @default("24,1") // 이벤트 시작 몇 시간 전에 알림을 보낼지 쉼표로 구분
   createdAt       DateTime    @default(now())

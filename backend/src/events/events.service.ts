@@ -134,15 +134,18 @@ export class EventsService {
     return updated;
   }
 
-  async cancel(eventId: string, userId: string) {
+  async cancel(eventId: string, userId: string, reason?: string) {
     const event = await this.requireOfficerForEvent(eventId, userId);
 
     const cancelled = await this.prisma.event.update({
       where: { id: event.id },
-      data: { status: EventStatus.CANCELLED },
+      data: {
+        status: EventStatus.CANCELLED,
+        cancelReason: reason || null,
+      },
     });
 
-    await this.notifications.notifyGroupMembers(event.id, 'CANCELLED');
+    await this.notifications.notifyEventCancelled(event.id, reason);
     return cancelled;
   }
 

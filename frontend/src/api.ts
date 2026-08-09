@@ -341,8 +341,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  cancelEvent: (id: string) =>
-    request(`/events/${id}/cancel`, { method: 'POST' }),
+  cancelEvent: (id: string, reason?: string) =>
+    request(`/events/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
 
   getEventTeams: (eventId: string) =>
     request<EventTeamsResult>(`/events/${eventId}/teams`),
@@ -551,6 +554,7 @@ export interface Event {
   location: string;
   description: string;
   status: 'ACTIVE' | 'CANCELLED';
+  cancelReason?: string | null;
   createdBy: User;
   _count?: { votes: number };
   reminderOffsets?: string | null;

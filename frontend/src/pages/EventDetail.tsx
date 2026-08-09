@@ -116,9 +116,17 @@ export default function EventDetailPage() {
   };
 
   const handleCancel = async () => {
-    if (!id || !confirm('일정을 삭제하시겠습니까?')) return;
-    await api.cancelEvent(id);
-    load();
+    if (!id) return;
+    const reason = prompt('일정 취소 사유를 입력해 주세요 (선택/필수):\n예: 우천 예보로 인한 취소, 장소 예약 변경 등', '우천 예보로 인한 취소');
+    if (reason === null) return;
+    try {
+      await api.cancelEvent(id, reason.trim() || undefined);
+      alert('일정이 취소되었으며, 모임원들에게 취소 사유 알림이 발송되었습니다.');
+      load();
+    } catch (err) {
+      console.error(err);
+      alert('일정 취소 처리 중 오류가 발생했습니다.');
+    }
   };
 
   const handleSplitTeams = async () => {
@@ -258,6 +266,25 @@ export default function EventDetailPage() {
             </div>
           )}
         </div>
+        {event.status === 'CANCELLED' && (
+          <div style={{
+            marginTop: '12px',
+            padding: '12px 16px',
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            borderRadius: '12px',
+            color: '#ef4444',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}>
+            <span>🚫 이 일정은 취소되었습니다.</span>
+            {event.cancelReason && (
+              <span style={{ display: 'block', marginTop: '4px', color: 'var(--ink-dark)', fontWeight: '700' }}>
+                📌 취소 사유: {event.cancelReason}
+              </span>
+            )}
+          </div>
+        )}
         <p className="event-detail-header__desc">{event.description}</p>
 
         <div className="event-detail-meta">
