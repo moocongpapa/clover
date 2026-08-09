@@ -221,12 +221,6 @@ export default function Notifications() {
                       <span className="notification-detail-text">{detail}</span>
                     </div>
                   )}
-
-                  {/* Optional Bottom Action Hint */}
-                  <div className="notification-action-hint">
-                    <span>자세히 보기</span>
-                    <span className="notification-action-arrow">→</span>
-                  </div>
                 </div>
               </Link>
             );
