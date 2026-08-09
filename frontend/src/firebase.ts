@@ -3,13 +3,13 @@ import { getMessaging, getToken } from 'firebase/messaging';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'REDACTED_API_KEY',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'clover-e3338.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'clover-e3338',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'clover-e3338.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1085828612485',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:1085828612485:web:d28568bed15717d44084ec',
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-SJXH7DJWHD',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || '',
 };
 
 const isFirebaseConfigured = Boolean(

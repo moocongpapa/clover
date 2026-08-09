@@ -120,7 +120,7 @@ flowchart TD
 | :--- | :--- | :--- |
 | `VITE_API_URL` | 백엔드 API 주소 | `https://clover-backend-vm9k.onrender.com` |
 | `VITE_GOOGLE_MAPS_API_KEY` | 구글 맵 API 키 | `AIzaSy...` |
-| `VITE_FIREBASE_API_KEY` | Firebase API 키 | `REDACTED_API_KEY` |
+| `VITE_FIREBASE_API_KEY` | Firebase API 키 | `AIzaSy...` |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Firebase 인증 도메인 | `clover-e3338.firebaseapp.com` |
 | `VITE_FIREBASE_PROJECT_ID` | Firebase 프로젝트 ID | `clover-e3338` |
 | `VITE_FIREBASE_STORAGE_BUCKET` | Firebase 스토리지 버킷 | `clover-e3338.firebasestorage.app` |
