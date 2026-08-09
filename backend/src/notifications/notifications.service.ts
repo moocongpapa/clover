@@ -395,8 +395,14 @@ export class NotificationsService {
 
   private getFrontendLink(): string {
     const fromConfig = this.config.get<string>('FRONTEND_URL');
-    if (fromConfig && !fromConfig.includes('localhost')) {
-      return fromConfig;
+    if (fromConfig) {
+      const parts = fromConfig.split(',').map((p) => p.trim());
+      const validHttpsUrl = parts.find(
+        (p) => p.startsWith('https://') && !p.includes('localhost') && !p.includes('127.0.0.1'),
+      );
+      if (validHttpsUrl) {
+        return validHttpsUrl;
+      }
     }
     return 'https://clover-gilt.vercel.app';
   }
