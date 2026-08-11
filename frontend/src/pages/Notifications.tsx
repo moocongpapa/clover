@@ -34,6 +34,7 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'events' | 'joins'>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const load = () => {
     setLoading(true);
@@ -44,6 +45,7 @@ export default function Notifications() {
           (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
         );
         setNotifications(sorted);
+        setSelectedIds(new Set());
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -58,6 +60,49 @@ export default function Notifications() {
     try {
       await api.markNotificationsRead();
       load();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!window.confirm('전체 새소식을 지우시겠습니까?')) return;
+    try {
+      await api.deleteAllNotifications();
+      setNotifications([]);
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error(err);
+      alert('삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    const idsArray = Array.from(selectedIds);
+    if (idsArray.length === 0) return;
+    if (!window.confirm(`선택한 ${idsArray.length}개의 알림을 삭제하시겠습니까?`)) return;
+
+    try {
+      await api.deleteSelectedNotifications(idsArray);
+      setNotifications((prev) => prev.filter((item) => !selectedIds.has(item.id)));
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error(err);
+      alert('선택 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDeleteSingle = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await api.deleteNotification(id);
+      setNotifications((prev) => prev.filter((item) => item.id !== id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     } catch (err) {
       console.error(err);
     }
@@ -83,6 +128,33 @@ export default function Notifications() {
   const filteredList = getFilteredNotifications();
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
+  const isAllSelected =
+    filteredList.length > 0 && filteredList.every((item) => selectedIds.has(item.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      const next = new Set<string>();
+      filteredList.forEach((item) => next.add(item.id));
+      setSelectedIds(next);
+    }
+  };
+
+  const handleToggleItem = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="notifications-page">
       {/* Top Header */}
@@ -93,15 +165,26 @@ export default function Notifications() {
             모임의 새로운 일정, 투표 및 가입 소식을 한곳에서 확인하세요.
           </p>
         </div>
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            className="mark-all-read-btn"
-            onClick={handleMarkAllRead}
-          >
-            모두 읽음
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              className="mark-all-read-btn"
+              onClick={handleMarkAllRead}
+            >
+              모두 읽음
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              className="mark-all-read-btn mark-all-read-btn--danger"
+              onClick={handleDeleteAll}
+            >
+              🗑️ 전체 지우기
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filter Chips Bar */}
@@ -136,6 +219,30 @@ export default function Notifications() {
         </button>
       </div>
 
+      {/* Bulk Control Bar (Checkbox & Delete selected) */}
+      {filteredList.length > 0 && (
+        <div className="notifications-batch-bar">
+          <label className="batch-select-all" onClick={handleToggleSelectAll}>
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={() => {}}
+            />
+            <span>전체 선택 ({selectedIds.size}/{filteredList.length})</span>
+          </label>
+
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              className="btn-delete-selected"
+              onClick={handleDeleteSelected}
+            >
+              🗑️ 선택 삭제 ({selectedIds.size})
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Content List */}
       {loading ? (
         <div className="notifications-loading-wrap">
@@ -151,78 +258,101 @@ export default function Notifications() {
         <div className="notifications-list">
           {filteredList.map((item) => {
             const isUnread = !item.readAt;
+            const isChecked = selectedIds.has(item.id);
             const linkUrl = notificationLink(item);
             const badge = getNotificationBadge(item.type);
             const { title, detail } = parseNotificationMessage(item.message);
 
             return (
-              <Link
-                key={item.id}
-                to={linkUrl}
-                className={`notification-card ${isUnread ? 'is-unread' : ''}`}
-              >
-                {/* Left: Group/Actor Avatar */}
-                <div className="notification-avatar-container">
-                  {item.group ? (
-                    <GroupAvatar
-                      src={item.group.profileImageUrl}
-                      name={item.group.name}
-                      size={44}
-                      radius={12}
-                      className="notification-avatar"
-                    />
-                  ) : item.actor?.profileImageUrl ? (
-                    <img
-                      src={item.actor.profileImageUrl}
-                      alt={item.actor.displayName}
-                      className="notification-avatar"
-                    />
-                  ) : (
-                    <div className="notification-avatar-fallback">
-                      {badge.emoji}
-                    </div>
-                  )}
-                  {isUnread && <span className="notification-unread-dot" />}
+              <div key={item.id} className={`notification-item-row${isChecked ? ' is-selected' : ''}`}>
+                <div
+                  className="notification-checkbox-wrap"
+                  onClick={(e) => handleToggleItem(e, item.id)}
+                  title="선택"
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => {}}
+                  />
                 </div>
 
-                {/* Right: Detailed Content */}
-                <div className="notification-card-body">
-                  {/* Top Meta: Group name, Type Badge, Relative Time */}
-                  <div className="notification-card-meta">
-                    <div className="notification-meta-left">
-                      <span className="notification-group-name">
-                        {item.group?.name || 'Clover 알림'}
-                      </span>
-                      <span
-                        className="notification-type-badge"
-                        style={{
-                          color: badge.color,
-                          backgroundColor: badge.bg,
-                          borderColor: badge.border,
-                        }}
-                      >
-                        {badge.emoji} {badge.label}
-                      </span>
-                    </div>
-                    <span className="notification-time-text">
-                      {formatRelativeTime(item.sentAt)}
-                    </span>
+                <Link
+                  to={linkUrl}
+                  className={`notification-card ${isUnread ? 'is-unread' : ''}`}
+                >
+                  {/* Left: Group/Actor Avatar */}
+                  <div className="notification-avatar-container">
+                    {item.group ? (
+                      <GroupAvatar
+                        src={item.group.profileImageUrl}
+                        name={item.group.name}
+                        size={44}
+                        radius={12}
+                        className="notification-avatar"
+                      />
+                    ) : item.actor?.profileImageUrl ? (
+                      <img
+                        src={item.actor.profileImageUrl}
+                        alt={item.actor.displayName}
+                        className="notification-avatar"
+                      />
+                    ) : (
+                      <div className="notification-avatar-fallback">
+                        {badge.emoji}
+                      </div>
+                    )}
+                    {isUnread && <span className="notification-unread-dot" />}
                   </div>
 
-                  {/* Headline Title */}
-                  <div className="notification-headline">
-                    {title}
-                  </div>
-
-                  {/* Highlighted Detail Box (한 줄 띄워서 출력) */}
-                  {detail && (
-                    <div className="notification-detail-box">
-                      <span className="notification-detail-bullet">📌</span>
-                      <span className="notification-detail-text">{detail}</span>
+                  {/* Right: Detailed Content */}
+                  <div className="notification-card-body">
+                    {/* Top Meta: Group name, Type Badge, Relative Time */}
+                    <div className="notification-card-meta">
+                      <div className="notification-meta-left">
+                        <span className="notification-group-name">
+                          {item.group?.name || 'Clover 알림'}
+                        </span>
+                        <span
+                          className="notification-type-badge"
+                          style={{
+                            color: badge.color,
+                            backgroundColor: badge.bg,
+                            borderColor: badge.border,
+                          }}
+                        >
+                          {badge.emoji} {badge.label}
+                        </span>
+                      </div>
+                      <span className="notification-time-text">
+                        {formatRelativeTime(item.sentAt)}
+                      </span>
                     </div>
-                  )}
-                </div>
-              </Link>
+
+                    {/* Headline Title */}
+                    <div className="notification-headline">
+                      {title}
+                    </div>
+
+                    {/* Highlighted Detail Box */}
+                    {detail && (
+                      <div className="notification-detail-box">
+                        <span className="notification-detail-bullet">📌</span>
+                        <span className="notification-detail-text">{detail}</span>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+
+                <button
+                  type="button"
+                  className="btn-single-delete"
+                  onClick={(e) => handleDeleteSingle(e, item.id)}
+                  title="삭제"
+                >
+                  🗑️
+                </button>
+              </div>
             );
           })}
         </div>

@@ -47,6 +47,114 @@
   color: var(--ink-dark);
 }
 
+.mark-all-read-btn--danger {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.mark-all-read-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+/* Batch Control Bar */
+.notifications-batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.batch-select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-dark, #191f28);
+  cursor: pointer;
+  user-select: none;
+}
+
+.batch-select-all input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3182f6;
+  cursor: pointer;
+}
+
+.btn-delete-selected {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+.btn-delete-selected:hover {
+  background: #dc2626;
+}
+
+/* Item Row Wrapper */
+.notification-item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.notification-item-row.is-selected .notification-card {
+  border-color: #3182f6;
+  background: rgba(49, 130, 246, 0.03);
+}
+
+.notification-checkbox-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 2px;
+  cursor: pointer;
+}
+
+.notification-checkbox-wrap input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3182f6;
+  cursor: pointer;
+}
+
+.notification-item-row .notification-card {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-single-delete {
+  background: none;
+  border: none;
+  font-size: 15px;
+  opacity: 0.4;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-single-delete:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.1);
+}
+
 /* Filter Bar */
 .notifications-filter-bar {
   display: flex;

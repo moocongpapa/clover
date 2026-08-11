@@ -377,6 +377,15 @@ export const api = {
     request<number>('/notifications/unread-count'),
   markNotificationsRead: () =>
     request<{ ok: boolean }>('/notifications/read', { method: 'PATCH' }),
+  deleteAllNotifications: () =>
+    request<{ ok: boolean }>('/notifications/all', { method: 'DELETE' }),
+  deleteSelectedNotifications: (ids: string[]) =>
+    request<{ count: number }>('/notifications/selected', {
+      method: 'DELETE',
+      body: JSON.stringify({ ids }),
+    }),
+  deleteNotification: (id: string) =>
+    request<{ count: number }>(`/notifications/${id}`, { method: 'DELETE' }),
   getRegions: () => request<RegionsData>('/regions'),
 
   getLatestEventTemplate: (groupId: string) =>

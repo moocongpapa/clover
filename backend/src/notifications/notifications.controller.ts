@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -28,6 +28,30 @@ export class NotificationsController {
   @UseGuards(JwtAuthGuard)
   markRead(@CurrentUser() user: AuthUser) {
     return this.notificationsService.markAllAsRead(user.id);
+  }
+
+  @Delete('all')
+  @UseGuards(JwtAuthGuard)
+  deleteAll(@CurrentUser() user: AuthUser) {
+    return this.notificationsService.deleteAllForUser(user.id);
+  }
+
+  @Delete('selected')
+  @UseGuards(JwtAuthGuard)
+  deleteSelected(
+    @CurrentUser() user: AuthUser,
+    @Body() body: { ids: string[] },
+  ) {
+    return this.notificationsService.deleteSelectedForUser(user.id, body?.ids ?? []);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  deleteSingle(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.notificationsService.deleteSelectedForUser(user.id, [id]);
   }
 
   /** E2E/개발용: 하루 전 리마인더 크론 수동 실행 */

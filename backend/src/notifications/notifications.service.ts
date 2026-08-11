@@ -378,6 +378,24 @@ export class NotificationsService {
     return { ok: true };
   }
 
+  async deleteAllForUser(userId: string) {
+    await this.prisma.notificationLog.deleteMany({
+      where: { userId },
+    });
+    return { ok: true };
+  }
+
+  async deleteSelectedForUser(userId: string, ids: string[]) {
+    if (!ids || ids.length === 0) return { count: 0 };
+    const result = await this.prisma.notificationLog.deleteMany({
+      where: {
+        userId,
+        id: { in: ids },
+      },
+    });
+    return { count: result.count };
+  }
+
   async sendEventNotification(
     userId: string,
     eventId: string,

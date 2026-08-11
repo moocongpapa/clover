@@ -84,6 +84,17 @@ export default function NotificationBell() {
     }
   };
 
+  const handleClearAll = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await api.deleteAllNotifications();
+      setItems([]);
+      setUnreadCount(0);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="notification-bell" ref={panelRef}>
       <button
@@ -108,7 +119,28 @@ export default function NotificationBell() {
 
       {open && (
         <div className="notification-bell__panel" role="dialog" aria-label="알림 목록">
-          <div className="notification-bell__header">알림</div>
+          <div className="notification-bell__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>알림</span>
+            {items.length > 0 && (
+              <button
+                type="button"
+                className="btn-bell-clear-all"
+                onClick={handleClearAll}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  color: '#ef4444',
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}
+              >
+                🗑️ 전체 지우기
+              </button>
+            )}
+          </div>
           {loading ? (
             <p className="notification-bell__empty">불러오는 중…</p>
           ) : items.length === 0 ? (
