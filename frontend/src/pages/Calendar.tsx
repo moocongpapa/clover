@@ -233,15 +233,16 @@ export default function Calendar() {
             <section className="cal-section">
               <div className="cal-list">
                 {upcoming.length === 0 ? (
-                  <div className="empty-inline-block">
+                  <div className="empty-inline-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <p className="empty-inline">예정된 이벤트가 없어요.</p>
                     {past.length > 0 && (
                       <button
                         type="button"
-                        className="link-text"
+                        className="btn-view-past-events"
                         onClick={() => setListTab('past')}
                       >
-                        지난 일정 보기
+                        <span>📜 지난 일정 보기 ({past.length})</span>
+                        <span style={{ fontSize: '12px' }}>→</span>
                       </button>
                     )}
                   </div>

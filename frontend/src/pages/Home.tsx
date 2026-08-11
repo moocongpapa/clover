@@ -680,15 +680,16 @@ function HomeDashboard() {
             </div>
           ) : tab === 'upcoming' ? (
             needsVote.length === 0 && voted.length === 0 ? (
-              <div className="home-empty">
-                <p>진행 중인 일정이 없어요.</p>
+              <div className="home-empty" style={{ padding: '36px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <p style={{ margin: 0, fontSize: '14.5px', fontWeight: '700', color: 'var(--ink-dark)' }}>진행 중인 일정이 없어요.</p>
                 {past.length > 0 && (
                   <button
                     type="button"
-                    className="link-text"
+                    className="btn-view-past-events"
                     onClick={() => setTab('past')}
                   >
-                    지난 일정 보기
+                    <span>📜 지난 일정 보기 ({past.length})</span>
+                    <span style={{ fontSize: '12px' }}>→</span>
                   </button>
                 )}
               </div>
