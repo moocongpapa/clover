@@ -26,6 +26,8 @@ export default function CreateGroup() {
   const [selectedArenas, setSelectedArenas] = useState<{ placeName: string; address: string }[]>([]);
   const [primaryArenaIndex, setPrimaryArenaIndex] = useState<number>(-1);
   const [maxMembers, setMaxMembers] = useState(50);
+  const [monthlyFee, setMonthlyFee] = useState<number | undefined>(undefined);
+  const [monthlyFeeInput, setMonthlyFeeInput] = useState<string>('');
   const [dueDay, setDueDay] = useState<number | undefined>(undefined);
   const [officerFeeExempt, setOfficerFeeExempt] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
@@ -93,6 +95,7 @@ export default function CreateGroup() {
         category,
         customSportName: category === '기타' ? customSportName : null,
         maxMembers,
+        monthlyFee,
         dueDay,
         officerFeeExempt,
         arenas: arenasPayload,
@@ -247,37 +250,116 @@ export default function CreateGroup() {
         </div>
 
         {/* 3. Fee settings and limits */}
-        <div className="form-row form-row--double">
-          <div className="form-group">
-            <label htmlFor="maxMembers">최대 정원 (명)</label>
-            <select
-              id="maxMembers"
-              value={maxMembers}
-              onChange={(e) => setMaxMembers(parseInt(e.target.value, 10))}
-              required
-            >
-              {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((num) => (
-                <option key={num} value={num}>
-                  {num}명
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="form-group" style={{ marginBottom: '16px' }}>
+          <label htmlFor="maxMembers">최대 정원 (명)</label>
+          <select
+            id="maxMembers"
+            value={maxMembers}
+            onChange={(e) => setMaxMembers(parseInt(e.target.value, 10))}
+            required
+          >
+            {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((num) => (
+              <option key={num} value={num}>
+                {num}명
+              </option>
+            ))}
+          </select>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="dueDay">매월 회비 마감일 (일)</label>
-            <select
-              id="dueDay"
-              value={dueDay || ''}
-              onChange={(e) => setDueDay(e.target.value ? parseInt(e.target.value, 10) : undefined)}
-            >
-              <option value="">미설정</option>
-              {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
-                <option key={day} value={day}>
-                  {day}일
-                </option>
-              ))}
-            </select>
+        {/* 💳 회비 설정 (정기 회비 금액 & 납부 마감일) */}
+        <div style={{
+          background: 'var(--surface, #ffffff)',
+          border: '1px solid var(--border, #e2e8f0)',
+          borderRadius: '16px',
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+          marginBottom: '16px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)'
+        }}>
+          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'var(--ink-dark, #0f172a)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>💳</span> 모임 정기 회비 설정
+          </h3>
+
+          <div className="form-row form-row--double">
+            <div className="form-group">
+              <label htmlFor="monthlyFee">정기 회비 금액 (원)</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="monthlyFee"
+                  type="text"
+                  inputMode="numeric"
+                  value={monthlyFeeInput}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, '');
+                    if (!raw) {
+                      setMonthlyFeeInput('');
+                      setMonthlyFee(undefined);
+                    } else {
+                      const num = parseInt(raw, 10);
+                      setMonthlyFee(num);
+                      setMonthlyFeeInput(num.toLocaleString());
+                    }
+                  }}
+                  placeholder="예: 10,000"
+                  style={{ paddingRight: '32px' }}
+                />
+                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', color: 'var(--ink-muted, #64748b)', fontWeight: '700' }}>
+                  원
+                </span>
+              </div>
+
+              {/* Quick Fee Amount Presets */}
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                {[
+                  { label: '회비 없음', val: 0 },
+                  { label: '1만원', val: 10000 },
+                  { label: '2만원', val: 20000 },
+                  { label: '3만원', val: 30000 },
+                  { label: '5만원', val: 50000 },
+                  { label: '10만원', val: 100000 },
+                ].map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => {
+                      setMonthlyFee(p.val);
+                      setMonthlyFeeInput(p.val === 0 ? '0' : p.val.toLocaleString());
+                    }}
+                    style={{
+                      padding: '4px 10px',
+                      background: monthlyFee === p.val ? 'rgba(16, 185, 129, 0.12)' : 'var(--grey-100, #f1f5f9)',
+                      border: monthlyFee === p.val ? '1px solid #10b981' : '1px solid transparent',
+                      borderRadius: '999px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: monthlyFee === p.val ? '#10b981' : 'var(--ink-muted, #64748b)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="dueDay">매월 회비 마감일 (일)</label>
+              <select
+                id="dueDay"
+                value={dueDay || ''}
+                onChange={(e) => setDueDay(e.target.value ? parseInt(e.target.value, 10) : undefined)}
+              >
+                <option value="">미설정</option>
+                {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
+                  <option key={day} value={day}>
+                    매월 {day}일 마감
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

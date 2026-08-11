@@ -63,6 +63,9 @@ export class CreateGroupDto {
   customSportName?: string;
 
   @IsOptional()
+  monthlyFee?: number;
+
+  @IsOptional()
   dueDay?: number;
 
   @IsOptional()
@@ -127,6 +130,9 @@ export class UpdateGroupDto {
   @IsOptional()
   @IsString()
   customSportName?: string | null;
+
+  @IsOptional()
+  monthlyFee?: number | null;
 
   @IsOptional()
   dueDay?: number | null;

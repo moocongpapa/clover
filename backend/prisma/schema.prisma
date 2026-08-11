@@ -99,6 +99,7 @@ model Group {
   inviteCode        String           @unique
   maxMembers        Int              @default(50)
   customSportName   String?          // 기타 스포츠 입력 필드
+  monthlyFee        Int?             // 정기 회비 금액 (원)
   dueDay            Int?             // 회비 납부 마감일 (1~28)
   officerFeeExempt  Boolean          @default(false) // 운영진 회비 면제 여부
   createdAt         DateTime         @default(now())

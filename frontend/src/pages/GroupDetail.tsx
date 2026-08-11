@@ -704,9 +704,13 @@ export default function GroupDetail() {
                 </span>
               </div>
               <div className="info-detail-row">
-                <span className="info-detail-label">💰 회비 납부</span>
+                <span className="info-detail-label">💰 정기 회비</span>
                 <span className="info-detail-val">
-                  {group.dueDay ? `매월 ${group.dueDay}일` : '회비 미설정'}
+                  {group.monthlyFee
+                    ? `월 ${group.monthlyFee.toLocaleString()}원${group.dueDay ? ` (매월 ${group.dueDay}일 마감)` : ''}`
+                    : group.dueDay
+                    ? `매월 ${group.dueDay}일 마감`
+                    : '회비 미설정'}
                   {group.officerFeeExempt && ' (운영진 면제)'}
                 </span>
               </div>
@@ -1614,9 +1618,9 @@ export default function GroupDetail() {
                     </div>
                   )}
 
-                  {group.dueDay && (
+                  {(group.monthlyFee || group.dueDay) && (
                     <div className="compact-dues-notice-line">
-                      <span>💡 매월 <strong>{group.dueDay}일</strong> 납부일</span>
+                      <span>💡 {group.monthlyFee ? `월 ` + group.monthlyFee.toLocaleString() + `원` : ''}{group.dueDay ? ` (매월 ` + group.dueDay + `일 납부)` : ''}</span>
                       {group.officerFeeExempt && (
                         <span className="compact-dues-notice-badge">운영진 면제</span>
                       )}

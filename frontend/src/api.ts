@@ -479,6 +479,7 @@ export interface Group {
   myMembership?: { status: string; role: string; profileCardId?: string | null } | null;
   customSportName?: string | null;
   maxMembers?: number | null;
+  monthlyFee?: number | null;
   dueDay?: number | null;
   officerFeeExempt?: boolean | null;
   arenas?: any[] | null;
@@ -519,6 +520,7 @@ export interface CreateGroupInput {
   bankAccountHolder?: string | null;
   customSportName?: string | null;
   maxMembers?: number;
+  monthlyFee?: number | null;
   dueDay?: number | null;
   officerFeeExempt?: boolean;
   arenas?: any[];
@@ -539,6 +541,7 @@ export interface UpdateGroupInput {
   bankAccountHolder?: string | null;
   customSportName?: string | null;
   maxMembers?: number;
+  monthlyFee?: number | null;
   dueDay?: number | null;
   officerFeeExempt?: boolean;
   arenas?: any[];

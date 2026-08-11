@@ -12,6 +12,7 @@ interface DueSummaryItem {
   bankName: string;
   bankAccountNumber: string;
   bankAccountHolder: string;
+  monthlyFee?: number | null;
   dueDay?: number | null;
   isPaid: boolean;
   isExempt: boolean;
