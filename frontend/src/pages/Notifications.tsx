@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   api,
@@ -32,12 +32,10 @@ function formatRelativeTime(isoStr: string): string {
 
 interface NotificationRowProps {
   item: NotificationItem;
-  isChecked: boolean;
-  onToggleSelect: (e: React.MouseEvent, id: string) => void;
   onDelete: (id: string) => void;
 }
 
-function NotificationRow({ item, isChecked, onToggleSelect, onDelete }: NotificationRowProps) {
+function NotificationRow({ item, onDelete }: NotificationRowProps) {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
   const isSwipingRef = useRef(false);
@@ -79,7 +77,7 @@ function NotificationRow({ item, isChecked, onToggleSelect, onDelete }: Notifica
   const { title, detail } = parseNotificationMessage(item.message);
 
   return (
-    <div className={`notification-swipe-wrapper${isChecked ? ' is-selected' : ''}`}>
+    <div className="notification-swipe-wrapper">
       {/* Background Revealed Delete Action */}
       <button
         type="button"
@@ -103,18 +101,6 @@ function NotificationRow({ item, isChecked, onToggleSelect, onDelete }: Notifica
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div
-          className="notification-checkbox-wrap"
-          onClick={(e) => onToggleSelect(e, item.id)}
-          title="선택"
-        >
-          <input
-            type="checkbox"
-            checked={isChecked}
-            onChange={() => {}}
-          />
-        </div>
-
         <Link
           to={linkUrl}
           className={`notification-card ${isUnread ? 'is-unread' : ''}`}
@@ -192,7 +178,6 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'events' | 'joins'>('all');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const load = () => {
     setLoading(true);
@@ -203,7 +188,6 @@ export default function Notifications() {
           (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
         );
         setNotifications(sorted);
-        setSelectedIds(new Set());
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -224,29 +208,13 @@ export default function Notifications() {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm('전체 알림을 삭제하시겠습니까?')) return;
+    if (!window.confirm('전체 알림을 비우시겠습니까?')) return;
     try {
       await api.deleteAllNotifications();
       setNotifications([]);
-      setSelectedIds(new Set());
     } catch (err) {
       console.error(err);
       alert('삭제 처리 중 오류가 발생했습니다.');
-    }
-  };
-
-  const handleDeleteSelected = async () => {
-    const idsArray = Array.from(selectedIds);
-    if (idsArray.length === 0) return;
-    if (!window.confirm(`선택한 ${idsArray.length}개의 알림을 삭제하시겠습니까?`)) return;
-
-    try {
-      await api.deleteSelectedNotifications(idsArray);
-      setNotifications((prev) => prev.filter((item) => !selectedIds.has(item.id)));
-      setSelectedIds(new Set());
-    } catch (err) {
-      console.error(err);
-      alert('선택 삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -254,11 +222,6 @@ export default function Notifications() {
     try {
       await api.deleteNotification(id);
       setNotifications((prev) => prev.filter((item) => item.id !== id));
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
     } catch (err) {
       console.error(err);
     }
@@ -283,33 +246,6 @@ export default function Notifications() {
 
   const filteredList = getFilteredNotifications();
   const unreadCount = notifications.filter((n) => !n.readAt).length;
-
-  const isAllSelected =
-    filteredList.length > 0 && filteredList.every((item) => selectedIds.has(item.id));
-
-  const handleToggleSelectAll = () => {
-    if (isAllSelected) {
-      setSelectedIds(new Set());
-    } else {
-      const next = new Set<string>();
-      filteredList.forEach((item) => next.add(item.id));
-      setSelectedIds(next);
-    }
-  };
-
-  const handleToggleItem = (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
 
   return (
     <div className="notifications-page">
@@ -375,30 +311,6 @@ export default function Notifications() {
         </button>
       </div>
 
-      {/* Bulk Control Bar (Checkbox & Delete selected) */}
-      {filteredList.length > 0 && (
-        <div className="notifications-batch-bar">
-          <label className="batch-select-all" onClick={handleToggleSelectAll}>
-            <input
-              type="checkbox"
-              checked={isAllSelected}
-              onChange={() => {}}
-            />
-            <span>전체 선택 ({selectedIds.size}/{filteredList.length})</span>
-          </label>
-
-          {selectedIds.size > 0 && (
-            <button
-              type="button"
-              className="btn-delete-selected-clean"
-              onClick={handleDeleteSelected}
-            >
-              선택 삭제 ({selectedIds.size})
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Content List */}
       {loading ? (
         <div className="notifications-loading-wrap">
@@ -416,8 +328,6 @@ export default function Notifications() {
             <NotificationRow
               key={item.id}
               item={item}
-              isChecked={selectedIds.has(item.id)}
-              onToggleSelect={handleToggleItem}
               onDelete={handleDeleteSingle}
             />
           ))}
