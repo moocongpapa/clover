@@ -123,7 +123,9 @@ export default function MyPage() {
           <h2 className="my-dues-title">
             💳 {currentMonth}월 내 회비 납부 현황
           </h2>
-          {unpaidCount > 0 ? (
+          {duesList.length === 0 ? (
+            <span className="paid-badge-highlight" style={{ background: 'var(--grey-100, #f1f5f9)', color: 'var(--ink-muted, #64748b)' }}>모임 없음</span>
+          ) : unpaidCount > 0 ? (
             <span className="unpaid-badge-highlight">미납 {unpaidCount}건</span>
           ) : (
             <span className="paid-badge-highlight">완납 ✨</span>
@@ -135,37 +137,57 @@ export default function MyPage() {
         ) : duesList.length === 0 ? (
           <p className="dues-empty-text">가입된 모임이 없습니다.</p>
         ) : (
-          <div className="dues-list">
-            {duesList.map((item) => (
-              <div key={item.groupId} className={`dues-item-card ${item.isPaid ? 'is-paid' : 'is-unpaid'}`}>
-                <div className="dues-item-left">
-                  <GroupAvatar src={item.profileImageUrl} name={item.groupName} size={36} radius={10} />
-                  <div className="dues-item-info">
-                    <span className="dues-group-name">{item.groupName}</span>
-                    <span className="dues-date-label">
-                      {item.month}월 정기 회비
-                      {item.dueDay ? ` (매월 ${item.dueDay}일 마감)` : ''}
-                    </span>
+          <div>
+            {unpaidCount === 0 && (
+              <div style={{
+                background: '#e8f8f0',
+                border: '1px solid #10b981',
+                borderRadius: '14px',
+                padding: '12px 16px',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                color: '#065f46',
+                fontSize: '13px',
+                fontWeight: '700'
+              }}>
+                <span>🎉</span>
+                <span>모든 모임의 이번 달 회비를 완납하셨습니다!</span>
+              </div>
+            )}
+            <div className="dues-list">
+              {duesList.map((item) => (
+                <div key={item.groupId} className={`dues-item-card ${item.isPaid ? 'is-paid' : 'is-unpaid'}`}>
+                  <div className="dues-item-left">
+                    <GroupAvatar src={item.profileImageUrl} name={item.groupName} size={36} radius={10} />
+                    <div className="dues-item-info">
+                      <span className="dues-group-name">{item.groupName}</span>
+                      <span className="dues-date-label">
+                        {item.month}월 정기 회비
+                        {item.dueDay ? ` (매월 ${item.dueDay}일 마감)` : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="dues-item-right">
+                    {item.isPaid ? (
+                      <span className="dues-status-tag dues-status-tag--paid">
+                        {item.isExempt ? '임원 면제' : '납부 완료 🟢'}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-pay-direct"
+                        onClick={() => setSelectedPayGroup(item)}
+                      >
+                        💸 1초 간편 송금
+                      </button>
+                    )}
                   </div>
                 </div>
-
-                <div className="dues-item-right">
-                  {item.isPaid ? (
-                    <span className="dues-status-tag dues-status-tag--paid">
-                      {item.isExempt ? '임원 면제' : '납부 완료 🟢'}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn-pay-direct"
-                      onClick={() => setSelectedPayGroup(item)}
-                    >
-                      💸 1초 간편 송금
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
