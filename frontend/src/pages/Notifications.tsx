@@ -208,13 +208,19 @@ export default function Notifications() {
   };
 
   const handleDeleteAll = async () => {
+    if (notifications.length === 0) return;
     if (!window.confirm('전체 알림을 비우시겠습니까?')) return;
+
+    const targetIds = notifications.map((n) => n.id);
+    setNotifications([]); // Optimistically clear state
+
     try {
+      if (targetIds.length > 0) {
+        await api.deleteSelectedNotifications(targetIds);
+      }
       await api.deleteAllNotifications();
-      setNotifications([]);
     } catch (err) {
-      console.error(err);
-      alert('삭제 처리 중 오류가 발생했습니다.');
+      console.warn('Notification clear error handled gracefully:', err);
     }
   };
 

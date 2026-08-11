@@ -377,8 +377,13 @@ export const api = {
     request<number>('/notifications/unread-count'),
   markNotificationsRead: () =>
     request<{ ok: boolean }>('/notifications/read', { method: 'PATCH' }),
-  deleteAllNotifications: () =>
-    request<{ ok: boolean }>('/notifications/all', { method: 'DELETE' }),
+  deleteAllNotifications: async () => {
+    try {
+      return await request<{ ok: boolean }>('/notifications/all', { method: 'DELETE' });
+    } catch {
+      return await request<{ ok: boolean }>('/notifications/delete-all', { method: 'POST' });
+    }
+  },
   deleteSelectedNotifications: (ids: string[]) =>
     request<{ count: number }>('/notifications/delete-batch', {
       method: 'POST',
