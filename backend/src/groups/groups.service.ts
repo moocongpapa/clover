@@ -749,9 +749,10 @@ export class GroupsService {
     for (const unpaid of unpaidMembers) {
       await this.notifications.sendEventNotification(
         unpaid.userId,
-        groupId,
+        '',
         'REMINDER',
         message,
+        groupId,
       );
     }
 

@@ -402,8 +402,8 @@ export class NotificationsService {
       userId,
       type: type as NotificationType,
       message,
-      eventId,
-      groupId: targetGroupId,
+      eventId: eventId ? eventId : undefined,
+      groupId: targetGroupId || undefined,
     });
   }
 
