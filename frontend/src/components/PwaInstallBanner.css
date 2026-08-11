@@ -1,6 +1,6 @@
 .pwa-floating-banner {
   position: fixed;
-  top: 12px;
+  top: calc(52px + max(10px, env(safe-area-inset-top, 0px)) + 8px);
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 24px);
