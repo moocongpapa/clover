@@ -8,7 +8,7 @@ import BankAccountFields, {
 } from '../components/BankAccountFields';
 import GoogleMapSelector from '../components/GoogleMapSelector';
 import { api, CATEGORY_OPTIONS } from '../api';
-import '../pages/Groups.css';
+import './CreateGroup.css';
 
 import BackButton from '../components/BackButton';
 

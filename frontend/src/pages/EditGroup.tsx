@@ -8,7 +8,7 @@ import BankAccountFields, {
 } from '../components/BankAccountFields';
 import GoogleMapSelector from '../components/GoogleMapSelector';
 import { api, CATEGORY_OPTIONS, isStaffRole, normalizeCategory } from '../api';
-import '../pages/Groups.css';
+import './CreateGroup.css';
 
 export default function EditGroup() {
   const { id } = useParams<{ id: string }>();

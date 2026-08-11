@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ROLE_LABELS, type MyGroup } from '../api';
 import GroupAvatar from '../components/GroupAvatar';
-import './Groups.css';
+import './MyGroups.css';
 
 export default function MyGroups() {
   const [groups, setGroups] = useState<MyGroup[]>([]);
@@ -15,50 +15,76 @@ export default function MyGroups() {
       .finally(() => setLoading(false));
   }, []);
 
+  const getRoleBadgeClass = (role?: string) => {
+    if (role === 'PRESIDENT') return 'my-group-role-badge--president';
+    if (role === 'OFFICER') return 'my-group-role-badge--officer';
+    return 'my-group-role-badge--member';
+  };
+
   return (
-    <div className="groups-page">
+    <div className="my-groups-page">
+      <div className="my-groups-header">
+        <h1 className="my-groups-title">내 가입 모임</h1>
+        {groups.length > 0 && (
+          <span className="my-groups-count-badge">{groups.length}개</span>
+        )}
+      </div>
+
       {loading ? (
-        <p className="loading-text">불러오는 중…</p>
+        <p className="loading-text" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+          불러오는 중…
+        </p>
       ) : groups.length === 0 ? (
-        <div className="empty-state">
-          <p>아직 가입한 모임이 없어요.</p>
-          <Link to="/groups" className="link-text">모임 찾아보기</Link>
+        <div className="my-groups-empty">
+          <span className="my-groups-empty__icon">👥</span>
+          <h2 className="my-groups-empty__title">아직 가입한 모임이 없어요</h2>
+          <p className="my-groups-empty__desc">주변의 관심사 모임을 탐색하고 함께 활동해 보세요!</p>
+          <Link to="/groups" className="btn-explore-groups">
+            모임 찾아보기
+          </Link>
         </div>
       ) : (
-        <div className="group-grid">
+        <div className="my-groups-list">
           {groups.map((g) => (
             <Link
               key={g.id}
               to={`/groups/${g.id}`}
-              className="group-card group-card--interactive group-card--row"
+              className="my-group-card"
             >
-              <GroupAvatar src={g.profileImageUrl} name={g.name} size={64} />
-              <div className="group-card__body">
-                <div className="group-card__header-row">
-                  <h3 className="group-name">{g.name}</h3>
-                </div>
-                <p className="group-description">{g.description}</p>
-                <div className="group-card__footer">
-                  <span className="category-more-pill">
-                    <strong>{g.category}</strong> <span className="more-arrow">모임 더보기 ›</span>
-                  </span>
-                  <span className="group-meta-info">
+              <div className="my-group-card__left">
+                <GroupAvatar src={g.profileImageUrl} name={g.name} size={60} radius={14} />
+                <div className="my-group-card__info">
+                  <div className="my-group-card__title-row">
+                    <h3 className="my-group-card__name">{g.name}</h3>
+                    <span className={`my-group-role-badge ${getRoleBadgeClass(g.myRole)}`}>
+                      {ROLE_LABELS[g.myRole] ?? '회원'}
+                    </span>
+                  </div>
+                  <p className="my-group-card__desc">{g.description}</p>
+                  <div className="my-group-card__meta-row">
+                    <span className="my-group-card__category">{g.category}</span>
                     {g.activityRegion && (
-                      <span className="group-meta-info__region">{g.activityRegion}</span>
+                      <>
+                        <span className="my-group-card__divider">·</span>
+                        <span>📍 {g.activityRegion}</span>
+                      </>
                     )}
-                    <span className="group-meta-info__role">{ROLE_LABELS[g.myRole] ?? '회원'}</span>
-                    <span className="group-meta-info__members">회원 {g.memberCount}명</span>
-                  </span>
+                    <span className="my-group-card__divider">·</span>
+                    <span>회원 {g.memberCount}명</span>
+                  </div>
                 </div>
+              </div>
+              <div className="my-group-card__right">
+                <span className="my-group-card__arrow">›</span>
               </div>
             </Link>
           ))}
         </div>
       )}
 
-      <Link to="/groups/new" className="fab-button" title="모임 만들기">
-        <span className="fab-button__icon">＋</span>
-        <span className="fab-button__text">모임 만들기</span>
+      <Link to="/groups/new" className="fab-create-group" title="모임 만들기">
+        <span>＋</span>
+        <span>모임 만들기</span>
       </Link>
     </div>
   );
