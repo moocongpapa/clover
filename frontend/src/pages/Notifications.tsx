@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   api,
@@ -28,6 +28,164 @@ function formatRelativeTime(isoStr: string): string {
   const m = date.getMonth() + 1;
   const d = date.getDate();
   return `${m}월 ${d}일`;
+}
+
+interface NotificationRowProps {
+  item: NotificationItem;
+  isChecked: boolean;
+  onToggleSelect: (e: React.MouseEvent, id: string) => void;
+  onDelete: (id: string) => void;
+}
+
+function NotificationRow({ item, isChecked, onToggleSelect, onDelete }: NotificationRowProps) {
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const touchStartXRef = useRef<number | null>(null);
+  const isSwipingRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    isSwipingRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const currentX = e.touches[0].clientX;
+    const diffX = currentX - touchStartXRef.current;
+
+    // Swipe left (negative diffX)
+    if (diffX < -10) {
+      isSwipingRef.current = true;
+      const offset = Math.max(diffX, -84);
+      setSwipeOffset(offset);
+    } else if (diffX > 10 && swipeOffset < 0) {
+      isSwipingRef.current = true;
+      const offset = Math.min(0, swipeOffset + diffX);
+      setSwipeOffset(offset);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (swipeOffset < -40) {
+      setSwipeOffset(-76); // Snap open delete button
+    } else {
+      setSwipeOffset(0); // Snap close
+    }
+    touchStartXRef.current = null;
+  };
+
+  const isUnread = !item.readAt;
+  const linkUrl = notificationLink(item);
+  const badge = getNotificationBadge(item.type);
+  const { title, detail } = parseNotificationMessage(item.message);
+
+  return (
+    <div className={`notification-swipe-wrapper${isChecked ? ' is-selected' : ''}`}>
+      {/* Background Revealed Delete Action */}
+      <button
+        type="button"
+        className="notification-swipe-delete-btn"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(item.id);
+        }}
+      >
+        삭제
+      </button>
+
+      {/* Foreground Sliding Card Container */}
+      <div
+        className="notification-swipe-content"
+        style={{
+          transform: `translateX(${swipeOffset}px)`,
+          transition: isSwipingRef.current ? 'none' : 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div
+          className="notification-checkbox-wrap"
+          onClick={(e) => onToggleSelect(e, item.id)}
+          title="선택"
+        >
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={() => {}}
+          />
+        </div>
+
+        <Link
+          to={linkUrl}
+          className={`notification-card ${isUnread ? 'is-unread' : ''}`}
+          onClick={(e) => {
+            // Prevent navigation if user was just swiping or snap opened
+            if (swipeOffset < 0) {
+              e.preventDefault();
+              setSwipeOffset(0);
+            }
+          }}
+        >
+          {/* Left Avatar */}
+          <div className="notification-avatar-container">
+            {item.group ? (
+              <GroupAvatar
+                src={item.group.profileImageUrl}
+                name={item.group.name}
+                size={44}
+                radius={12}
+                className="notification-avatar"
+              />
+            ) : item.actor?.profileImageUrl ? (
+              <img
+                src={item.actor.profileImageUrl}
+                alt={item.actor.displayName}
+                className="notification-avatar"
+              />
+            ) : (
+              <div className="notification-avatar-fallback">
+                {badge.emoji}
+              </div>
+            )}
+            {isUnread && <span className="notification-unread-dot" />}
+          </div>
+
+          {/* Right Content */}
+          <div className="notification-card-body">
+            <div className="notification-card-meta">
+              <div className="notification-meta-left">
+                <span className="notification-group-name">
+                  {item.group?.name || 'Clover 알림'}
+                </span>
+                <span
+                  className="notification-type-badge"
+                  style={{
+                    color: badge.color,
+                    backgroundColor: badge.bg,
+                    borderColor: badge.border,
+                  }}
+                >
+                  {badge.emoji} {badge.label}
+                </span>
+              </div>
+              <span className="notification-time-text">
+                {formatRelativeTime(item.sentAt)}
+              </span>
+            </div>
+
+            <div className="notification-headline">{title}</div>
+
+            {detail && (
+              <div className="notification-detail-box">
+                <span className="notification-detail-bullet">📌</span>
+                <span className="notification-detail-text">{detail}</span>
+              </div>
+            )}
+          </div>
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export default function Notifications() {
@@ -66,14 +224,14 @@ export default function Notifications() {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm('전체 새소식을 지우시겠습니까?')) return;
+    if (!window.confirm('전체 알림을 삭제하시겠습니까?')) return;
     try {
       await api.deleteAllNotifications();
       setNotifications([]);
       setSelectedIds(new Set());
     } catch (err) {
       console.error(err);
-      alert('삭제 중 오류가 발생했습니다.');
+      alert('삭제 처리 중 오류가 발생했습니다.');
     }
   };
 
@@ -92,9 +250,7 @@ export default function Notifications() {
     }
   };
 
-  const handleDeleteSingle = async (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDeleteSingle = async (id: string) => {
     try {
       await api.deleteNotification(id);
       setNotifications((prev) => prev.filter((item) => item.id !== id));
@@ -165,11 +321,11 @@ export default function Notifications() {
             모임의 새로운 일정, 투표 및 가입 소식을 한곳에서 확인하세요.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {unreadCount > 0 && (
             <button
               type="button"
-              className="mark-all-read-btn"
+              className="notif-text-action-btn"
               onClick={handleMarkAllRead}
             >
               모두 읽음
@@ -178,10 +334,10 @@ export default function Notifications() {
           {notifications.length > 0 && (
             <button
               type="button"
-              className="mark-all-read-btn mark-all-read-btn--danger"
+              className="notif-text-action-btn notif-text-action-btn--danger"
               onClick={handleDeleteAll}
             >
-              🗑️ 전체 지우기
+              전체 비우기
             </button>
           )}
         </div>
@@ -234,10 +390,10 @@ export default function Notifications() {
           {selectedIds.size > 0 && (
             <button
               type="button"
-              className="btn-delete-selected"
+              className="btn-delete-selected-clean"
               onClick={handleDeleteSelected}
             >
-              🗑️ 선택 삭제 ({selectedIds.size})
+              선택 삭제 ({selectedIds.size})
             </button>
           )}
         </div>
@@ -256,105 +412,15 @@ export default function Notifications() {
         </div>
       ) : (
         <div className="notifications-list">
-          {filteredList.map((item) => {
-            const isUnread = !item.readAt;
-            const isChecked = selectedIds.has(item.id);
-            const linkUrl = notificationLink(item);
-            const badge = getNotificationBadge(item.type);
-            const { title, detail } = parseNotificationMessage(item.message);
-
-            return (
-              <div key={item.id} className={`notification-item-row${isChecked ? ' is-selected' : ''}`}>
-                <div
-                  className="notification-checkbox-wrap"
-                  onClick={(e) => handleToggleItem(e, item.id)}
-                  title="선택"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => {}}
-                  />
-                </div>
-
-                <Link
-                  to={linkUrl}
-                  className={`notification-card ${isUnread ? 'is-unread' : ''}`}
-                >
-                  {/* Left: Group/Actor Avatar */}
-                  <div className="notification-avatar-container">
-                    {item.group ? (
-                      <GroupAvatar
-                        src={item.group.profileImageUrl}
-                        name={item.group.name}
-                        size={44}
-                        radius={12}
-                        className="notification-avatar"
-                      />
-                    ) : item.actor?.profileImageUrl ? (
-                      <img
-                        src={item.actor.profileImageUrl}
-                        alt={item.actor.displayName}
-                        className="notification-avatar"
-                      />
-                    ) : (
-                      <div className="notification-avatar-fallback">
-                        {badge.emoji}
-                      </div>
-                    )}
-                    {isUnread && <span className="notification-unread-dot" />}
-                  </div>
-
-                  {/* Right: Detailed Content */}
-                  <div className="notification-card-body">
-                    {/* Top Meta: Group name, Type Badge, Relative Time */}
-                    <div className="notification-card-meta">
-                      <div className="notification-meta-left">
-                        <span className="notification-group-name">
-                          {item.group?.name || 'Clover 알림'}
-                        </span>
-                        <span
-                          className="notification-type-badge"
-                          style={{
-                            color: badge.color,
-                            backgroundColor: badge.bg,
-                            borderColor: badge.border,
-                          }}
-                        >
-                          {badge.emoji} {badge.label}
-                        </span>
-                      </div>
-                      <span className="notification-time-text">
-                        {formatRelativeTime(item.sentAt)}
-                      </span>
-                    </div>
-
-                    {/* Headline Title */}
-                    <div className="notification-headline">
-                      {title}
-                    </div>
-
-                    {/* Highlighted Detail Box */}
-                    {detail && (
-                      <div className="notification-detail-box">
-                        <span className="notification-detail-bullet">📌</span>
-                        <span className="notification-detail-text">{detail}</span>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-
-                <button
-                  type="button"
-                  className="btn-single-delete"
-                  onClick={(e) => handleDeleteSingle(e, item.id)}
-                  title="삭제"
-                >
-                  🗑️
-                </button>
-              </div>
-            );
-          })}
+          {filteredList.map((item) => (
+            <NotificationRow
+              key={item.id}
+              item={item}
+              isChecked={selectedIds.has(item.id)}
+              onToggleSelect={handleToggleItem}
+              onDelete={handleDeleteSingle}
+            />
+          ))}
         </div>
       )}
     </div>

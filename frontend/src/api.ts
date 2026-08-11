@@ -380,8 +380,8 @@ export const api = {
   deleteAllNotifications: () =>
     request<{ ok: boolean }>('/notifications/all', { method: 'DELETE' }),
   deleteSelectedNotifications: (ids: string[]) =>
-    request<{ count: number }>('/notifications/selected', {
-      method: 'DELETE',
+    request<{ count: number }>('/notifications/delete-batch', {
+      method: 'POST',
       body: JSON.stringify({ ids }),
     }),
   deleteNotification: (id: string) =>

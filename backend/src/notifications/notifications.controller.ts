@@ -36,7 +36,7 @@ export class NotificationsController {
     return this.notificationsService.deleteAllForUser(user.id);
   }
 
-  @Delete('selected')
+  @Post('delete-batch')
   @UseGuards(JwtAuthGuard)
   deleteSelected(
     @CurrentUser() user: AuthUser,

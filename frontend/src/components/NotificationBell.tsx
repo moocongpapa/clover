@@ -127,17 +127,18 @@ export default function NotificationBell() {
                 className="btn-bell-clear-all"
                 onClick={handleClearAll}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '12px',
+                  background: '#fff1f2',
+                  border: '1px solid #fecdd3',
+                  fontSize: '11.5px',
                   fontWeight: '700',
-                  color: '#ef4444',
+                  color: '#e11d48',
                   cursor: 'pointer',
-                  padding: '2px 6px',
-                  borderRadius: '4px'
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                🗑️ 전체 지우기
+                전체 비우기
               </button>
             )}
           </div>
