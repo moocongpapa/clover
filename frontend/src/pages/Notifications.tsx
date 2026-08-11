@@ -279,7 +279,7 @@ export default function Notifications() {
               className="notif-text-action-btn notif-text-action-btn--danger"
               onClick={handleDeleteAll}
             >
-              전체 비우기
+              전체 지우기
             </button>
           )}
         </div>
