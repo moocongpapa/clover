@@ -20,6 +20,12 @@ export default function Settings() {
   const [nightMode, setNightMode] = useState<boolean>(
     localStorage.getItem('clover_night_notify') === 'true'
   );
+  const [fontFamily, setFontFamily] = useState<string>(
+    localStorage.getItem('clover_font_family') || 'Pretendard Variable, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif'
+  );
+  const [fontSize, setFontSize] = useState<string>(
+    localStorage.getItem('clover_font_size') || '14'
+  );
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
   const [showListModal, setShowListModal] = useState<boolean>(false);
@@ -33,6 +39,25 @@ export default function Settings() {
     setTimeout(() => {
       setToastMessage(null);
     }, 2000);
+  };
+
+  const handleFontFamilyChange = (val: string) => {
+    setFontFamily(val);
+    localStorage.setItem('clover_font_family', val);
+    document.documentElement.style.setProperty('--font-body', val);
+    triggerToast('🔤 전체 글꼴 서체가 적용되었습니다.');
+  };
+
+  const handleFontSizeChange = (val: string) => {
+    setFontSize(val);
+    localStorage.setItem('clover_font_size', val);
+    document.documentElement.style.setProperty('--app-font-size', `${val}px`);
+    const sizeNum = parseInt(val, 10);
+    if (!isNaN(sizeNum)) {
+      const zoomVal = (sizeNum / 14).toFixed(3);
+      document.documentElement.style.setProperty('--app-zoom', zoomVal);
+    }
+    triggerToast(`🔍 폰트 크기가 ${val}px로 설정되었습니다.`);
   };
 
   const handleRequestPermission = async () => {
@@ -253,6 +278,80 @@ export default function Settings() {
               />
               <span className="toggle-slider"></span>
             </label>
+          </div>
+        </section>
+
+        {/* 🔤 글꼴 서체 및 폰트 크기 설정 */}
+        <section className="settings-section form-card">
+          <h2 className="settings-section__title">
+            <span className="section-title-icon">🔤</span> 화면 글꼴 및 폰트 크기
+          </h2>
+
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+            <div className="settings-row__info">
+              <span className="settings-row__label">글꼴 서체 (Font Family)</span>
+              <p className="settings-row__desc">앱 전체에 적용할 폰트 서체를 선택하세요.</p>
+            </div>
+            <select
+              value={fontFamily}
+              onChange={(e) => handleFontFamilyChange(e.target.value)}
+              className="profile-field-input"
+              style={{ width: '100%', height: '44px', borderRadius: '12px', fontSize: '14px', fontWeight: '700', padding: '0 12px' }}
+            >
+              <option value="Pretendard Variable, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif">
+                ✨ 프리텐다드 (기본 추천)
+              </option>
+              <option value="'Nanum Gothic', sans-serif">
+                📖 나눔고딕 (부드러운 고딕)
+              </option>
+              <option value="'NanumSquare', sans-serif">
+                📐 나눔스퀘어 (모던 스퀘어)
+              </option>
+              <option value="'Nanum Myeongjo', serif">
+                📜 나눔명조 (클래식 명조)
+              </option>
+              <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+                📱 시스템 기본 폰트
+              </option>
+            </select>
+          </div>
+
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px', marginTop: '14px' }}>
+            <div className="settings-row__info">
+              <span className="settings-row__label">글자 크기 (Font Size)</span>
+              <p className="settings-row__desc">앱 화면 텍스트 크기를 조절합니다.</p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', width: '100%' }}>
+              {[
+                { label: '작게', val: '13' },
+                { label: '보통', val: '14' },
+                { label: '크게', val: '16' },
+                { label: '매우 크게', val: '18' },
+              ].map((item) => {
+                const isActive = fontSize === item.val;
+                return (
+                  <button
+                    key={item.val}
+                    type="button"
+                    onClick={() => handleFontSizeChange(item.val)}
+                    style={{
+                      padding: '10px 4px',
+                      borderRadius: '12px',
+                      border: `1.5px solid ${isActive ? '#10b981' : 'var(--border, #e2e8f0)'}`,
+                      background: isActive ? 'rgba(16, 185, 129, 0.08)' : 'var(--surface, #ffffff)',
+                      color: isActive ? '#10b981' : 'var(--ink-dark, #0f172a)',
+                      fontSize: '13px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
 
