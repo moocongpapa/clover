@@ -38,12 +38,18 @@ if (savedSize) {
 }
 
 import SplashScreen from './components/SplashScreen';
+import { PwaProvider } from './context/PwaContext';
+import PwaInstallBanner from './components/PwaInstallBanner';
+import PwaInstallModal from './components/PwaInstallModal';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SplashScreen />
-      <BrowserRouter>
+    <PwaProvider>
+      <AuthProvider>
+        <SplashScreen />
+        <PwaInstallBanner />
+        <PwaInstallModal />
+        <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
             <Route index element={<Home />} />
@@ -192,5 +198,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+  </PwaProvider>
   );
 }

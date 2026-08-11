@@ -1,0 +1,213 @@
+.pwa-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99990;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  animation: pwaFadeIn 0.25s ease-out forwards;
+}
+
+@keyframes pwaFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pwa-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 24px 20px 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  animation: pwaSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pwaSlideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.pwa-modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.pwa-modal-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.pwa-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.pwa-modal-app-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+  flex-shrink: 0;
+}
+
+.pwa-modal-title-wrap {
+  flex: 1;
+}
+
+.pwa-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.02em;
+}
+
+.pwa-modal-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* OS Badge Indicator */
+.pwa-os-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: #047857;
+  margin-bottom: 14px;
+}
+
+/* Step-by-Step Card Box */
+.pwa-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+
+.pwa-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.pwa-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.pwa-step-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.pwa-step-highlight {
+  color: #10b981;
+  font-weight: 800;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Action Buttons */
+.pwa-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pwa-btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pwa-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(16, 185, 129, 0.4);
+}
+
+.pwa-btn-secondary {
+  width: 100%;
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pwa-btn-secondary:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
