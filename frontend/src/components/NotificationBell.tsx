@@ -86,12 +86,19 @@ export default function NotificationBell() {
 
   const handleClearAll = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (items.length === 0) return;
+
+    const targetIds = items.map((n) => n.id);
+    setItems([]);
+    setUnreadCount(0);
+
     try {
+      if (targetIds.length > 0) {
+        await api.deleteSelectedNotifications(targetIds);
+      }
       await api.deleteAllNotifications();
-      setItems([]);
-      setUnreadCount(0);
     } catch (err) {
-      console.error(err);
+      console.warn('NotificationBell clear error handled gracefully:', err);
     }
   };
 
