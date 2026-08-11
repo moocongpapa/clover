@@ -220,81 +220,6 @@ export default function CreateEvent() {
         </div>
       )}
 
-      {/* Past Event Quick Import Bar */}
-      {pastEvents.length > 0 && (
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '14px',
-          padding: '12px 14px',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '10px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--ink-dark)', fontWeight: '600' }}>
-            <span>💡</span>
-            <span>지난 일정을 그대로 불러올까요?</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowPastDropdown(!showPastDropdown)}
-            style={{
-              padding: '6px 12px',
-              background: 'var(--grey-100)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: '700',
-              color: 'var(--brand-primary)',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {showPastDropdown ? '닫기 ▲' : '불러오기 ▼'}
-          </button>
-        </div>
-      )}
-
-      {/* Past Events Dropdown Card */}
-      {showPastDropdown && pastEvents.length > 0 && (
-        <div style={{
-          background: 'var(--surface)',
-          border: '1.5px solid var(--brand-primary)',
-          borderRadius: '14px',
-          padding: '12px',
-          marginBottom: '16px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.06)'
-        }}>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--ink-muted)', marginBottom: '8px' }}>
-            최근 일정 선택 (내용 자동 입력)
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
-            {pastEvents.slice(0, 5).map((ev) => (
-              <button
-                key={ev.id}
-                type="button"
-                onClick={() => handleSelectPastEvent(ev)}
-                style={{
-                  textAlign: 'left',
-                  padding: '10px 12px',
-                  background: 'var(--grey-50)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--ink-dark)' }}>{ev.title}</div>
-                <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '2px' }}>
-                  {ev.location} · {ev.startTime}{ev.endTime ? `~${ev.endTime}` : ''}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* Card 1: Title & Date & Time */}
         <div style={{
@@ -308,7 +233,7 @@ export default function CreateEvent() {
           boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
         }}>
           {/* Title */}
-          <div>
+          <div style={{ position: 'relative' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
               일정 제목 <span style={{ color: '#ef4444' }}>*</span>
             </label>
@@ -316,6 +241,7 @@ export default function CreateEvent() {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onFocus={() => setShowPastDropdown(true)}
               placeholder="예: 이번 주 정기 풋살 매치"
               required
               style={{
@@ -323,14 +249,85 @@ export default function CreateEvent() {
                 height: '46px',
                 padding: '0 14px',
                 background: 'var(--grey-50)',
-                border: '1.5px solid var(--border)',
+                border: showPastDropdown && pastEvents.length > 0 ? '1.5px solid #10b981' : '1.5px solid var(--border)',
                 borderRadius: '12px',
                 fontSize: '15px',
                 fontWeight: '600',
                 color: 'var(--ink-dark)',
-                outline: 'none'
+                outline: 'none',
+                boxSizing: 'border-box'
               }}
             />
+
+            {/* Recent 3 Past Events Suggestion Card (Shows under title input when focused) */}
+            {showPastDropdown && pastEvents.length > 0 && (
+              <div style={{
+                marginTop: '8px',
+                background: 'var(--surface, #ffffff)',
+                border: '1.5px solid #10b981',
+                borderRadius: '14px',
+                padding: '12px',
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.12)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>💡 최근 작성한 지난 일정 (선택 시 내용 자동채우기)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPastDropdown(false)}
+                    style={{ background: 'none', border: 'none', fontSize: '11px', color: 'var(--ink-muted)', cursor: 'pointer', fontWeight: '700' }}
+                  >
+                    ✕ 닫기
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {pastEvents.slice(0, 3).map((ev) => (
+                    <button
+                      key={ev.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectPastEvent(ev);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 12px',
+                        background: 'var(--grey-50, #f8fafc)',
+                        border: '1px solid var(--border, #e2e8f0)',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--ink-dark)' }}>
+                          {ev.title}
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: 'var(--ink-muted)', marginTop: '2px' }}>
+                          📅 {ev.date} {ev.startTime} · 📍 {ev.location || '장소미정'}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: '11.5px',
+                        fontWeight: '800',
+                        color: '#10b981',
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        선택 ⚡
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Quick title presets */}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
               {quickTitles.map((t) => (
