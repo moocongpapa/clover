@@ -29,6 +29,7 @@ export default function EditGroup() {
   const [maxMembers, setMaxMembers] = useState(50);
   const [dueDay, setDueDay] = useState<number | undefined>(undefined);
   const [officerFeeExempt, setOfficerFeeExempt] = useState(false);
+  const [isPublic, setIsPublic] = useState(true);
 
   const [region, setRegion] = useState<RegionSelection>({
     activitySido: '',
@@ -66,6 +67,7 @@ export default function EditGroup() {
         setMaxMembers(g.maxMembers || 50);
         setDueDay(g.dueDay || undefined);
         setOfficerFeeExempt(g.officerFeeExempt || false);
+        setIsPublic(g.isPublic !== false);
 
         setRegion({
           activitySido: g.activitySido ?? '',
@@ -150,7 +152,7 @@ export default function EditGroup() {
         name: fd.get('name') as string,
         description: fd.get('description') as string,
         category,
-        isPublic: fd.get('isPublic') === 'on',
+        isPublic,
         customSportName: category === '기타' ? customSportName : null,
         maxMembers,
         dueDay: dueDay || null,
@@ -362,26 +364,71 @@ export default function EditGroup() {
           </div>
         </div>
 
-        <div className="form-group checkbox-row">
-          <input
-            id="officerFeeExempt"
-            type="checkbox"
-            checked={officerFeeExempt}
-            onChange={(e) => setOfficerFeeExempt(e.target.checked)}
-          />
-          <label htmlFor="officerFeeExempt">운영진 회비 면제 적용</label>
-        </div>
+        {/* ⚙️ 모임 운영 & 공개 설정 카드 */}
+        <div className="group-options-card" style={{
+          background: 'var(--surface, #ffffff)',
+          border: '1px solid var(--border, #e2e8f0)',
+          borderRadius: '16px',
+          padding: '16px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          margin: '16px 0',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)'
+        }}>
+          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'var(--ink-dark, #0f172a)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>⚙️</span> 모임 운영 & 공개 설정
+          </h3>
 
+          {/* Option 1: 운영진 회비 면제 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <label
+                htmlFor="officerFeeExempt"
+                style={{ fontSize: '14px', fontWeight: '700', color: 'var(--ink-dark, #0f172a)', display: 'block', cursor: 'pointer', marginBottom: '2px' }}
+              >
+                운영진 회비 면제 적용
+              </label>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--ink-muted, #64748b)', lineHeight: 1.35 }}>
+                모임장 및 운영진의 정기 회비 납부 대상 제외
+              </p>
+            </div>
+            <label className="toggle-switch" style={{ flexShrink: 0 }}>
+              <input
+                id="officerFeeExempt"
+                type="checkbox"
+                checked={officerFeeExempt}
+                onChange={(e) => setOfficerFeeExempt(e.target.checked)}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
 
+          <div style={{ height: '1px', background: 'var(--border-subtle, #f1f5f9)' }} />
 
-        <div className="form-group checkbox-row">
-          <input
-            id="isPublic"
-            name="isPublic"
-            type="checkbox"
-            defaultChecked={group.isPublic}
-          />
-          <label htmlFor="isPublic">검색·목록에 공개</label>
+          {/* Option 2: 검색·목록 공개 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <label
+                htmlFor="isPublic"
+                style={{ fontSize: '14px', fontWeight: '700', color: 'var(--ink-dark, #0f172a)', display: 'block', cursor: 'pointer', marginBottom: '2px' }}
+              >
+                검색 · 목록에 모임 공개
+              </label>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--ink-muted, #64748b)', lineHeight: 1.35 }}>
+                비공개 설정 시 초대 링크를 가진 멤버만 가입 가능
+              </p>
+            </div>
+            <label className="toggle-switch" style={{ flexShrink: 0 }}>
+              <input
+                id="isPublic"
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
         </div>
 
         <BankAccountFields
