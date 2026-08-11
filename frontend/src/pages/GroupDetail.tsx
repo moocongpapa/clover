@@ -8,6 +8,7 @@ import {
   formatEventTimeRange,
   ASSIGNABLE_ROLES,
   formatMemberDisplayName,
+  formatUserDisplayName,
   formatPhoneNumber,
   isStaffRole,
   normalizeCategory,
@@ -371,15 +372,14 @@ export default function GroupDetail() {
 
   const renderUserDisplayWithBadge = (userObj: any) => {
     if (!userObj) return null;
-    const genderEmoji = userObj.gender === 'MALE' ? '🙋‍♂️' : userObj.gender === 'FEMALE' ? '🙋‍♀️' : '👤';
-    const birthYearText = userObj.birthYear ? String(userObj.birthYear).slice(-2) : '';
     const member = group?.members?.find((m: any) => m.user.id === userObj.id);
     const roleLabel = member ? ROLE_LABELS[member.role] : (userObj.role ? ROLE_LABELS[userObj.role] : '회원');
+    const formattedName = formatUserDisplayName(userObj);
 
     return (
       <span className="user-display-badge-container">
         <span className="user-display-name-text">
-          {genderEmoji} {birthYearText ? birthYearText + ' ' : ''}{userObj.displayName}
+          {formattedName}
         </span>
         <span className="user-role-pill-badge">{roleLabel}</span>
       </span>
@@ -399,7 +399,7 @@ export default function GroupDetail() {
         return (
           <span className="user-display-badge-container">
             <span className="user-display-name-text">
-              🙋‍♂️ {year} {name}
+              👨 {year} {name}
             </span>
             <span className="user-role-pill-badge">{role}</span>
           </span>
@@ -410,11 +410,10 @@ export default function GroupDetail() {
   };
 
   const getMemberHeaderInfo = (userObj: any) => {
-    if (!group || !group.members) return userObj.displayName;
+    if (!group || !group.members) return formatUserDisplayName(userObj);
     const member = group.members.find((m: any) => m.user.id === userObj.id);
     const roleLabel = member ? ROLE_LABELS[member.role] : '회원';
-    const birthYearText = userObj.birthYear ? `${String(userObj.birthYear % 100).padStart(2, '0')}` : '';
-    return `${birthYearText ? birthYearText + '/' : ''}${userObj.displayName}/${roleLabel}`;
+    return `${formatUserDisplayName(userObj)}/${roleLabel}`;
   };
 
   const feedItems = (() => {
@@ -450,9 +449,7 @@ export default function GroupDetail() {
   };
 
   const formatMemberNameWithEmoji = (mUser: any) => {
-    const genderEmoji = mUser.gender === 'MALE' ? '🙋‍♂️' : mUser.gender === 'FEMALE' ? '🙋‍♀️' : '👤';
-    const birthYearTwoDigits = mUser.birthYear ? String(mUser.birthYear).slice(-2) : '';
-    return `${genderEmoji} ${birthYearTwoDigits ? birthYearTwoDigits + ' ' : ''}${mUser.displayName}`;
+    return formatUserDisplayName(mUser);
   };
 
   const formatHistoryDate = (dateStr: string) => {

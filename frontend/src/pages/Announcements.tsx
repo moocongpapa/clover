@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, type Announcement } from '../api';
+import { api, formatUserDisplayName, type Announcement } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
 import './Announcements.css';
@@ -62,7 +62,7 @@ export default function Announcements() {
                         {item.group.name}
                       </span>
                     )}
-                    <span className="announcement-author">{item.author.displayName}</span>
+                    <span className="announcement-author">{formatUserDisplayName(item.author)}</span>
                     <span className="announcement-date">
                       {new Date(item.createdAt).toLocaleDateString('ko-KR', {
                         year: 'numeric',

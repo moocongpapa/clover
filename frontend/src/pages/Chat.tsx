@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { api, API_BASE, type Announcement } from '../api';
+import { api, API_BASE, formatUserDisplayName, type Announcement } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
 import BackButton from '../components/BackButton';
@@ -20,6 +20,8 @@ interface MessagePayload {
     id: string;
     displayName: string;
     profileImageUrl: string | null;
+    gender?: string | null;
+    birthYear?: number | null;
   };
 }
 
@@ -302,7 +304,7 @@ export default function Chat() {
 
                   <div className="chat-message-content">
                     {!isSelf && (
-                      <span className="chat-sender-name">{msg.user.displayName}</span>
+                      <span className="chat-sender-name">{formatUserDisplayName(msg.user)}</span>
                     )}
                     <div className="chat-text-wrapper">
                       <div className="chat-text-box">

@@ -858,31 +858,47 @@ export const ROLE_LABELS: Record<string, string> = {
   MEMBER: '회원',
 };
 
+export function getGenderEmoji(gender?: string | null): string {
+  if (gender === 'MALE') return '👨';
+  if (gender === 'FEMALE') return '👩';
+  return '👤';
+}
+
+export function getShortBirthYear(birthYear?: number | null, birthDate?: string | null): string {
+  if (birthYear) {
+    return String(birthYear % 100).padStart(2, '0');
+  }
+  if (birthDate) {
+    const y = new Date(birthDate).getFullYear();
+    if (!isNaN(y)) return String(y % 100).padStart(2, '0');
+  }
+  return '';
+}
+
+export function formatUserDisplayName(u?: {
+  displayName?: string | null;
+  gender?: 'MALE' | 'FEMALE' | string | null;
+  birthYear?: number | null;
+  birthDate?: string | null;
+  nickname?: string | null;
+} | null): string {
+  if (!u) return '익명';
+  const name = u.displayName || u.nickname || '익명';
+  const genderEmoji = getGenderEmoji(u.gender);
+  const birthStr = getShortBirthYear(u.birthYear, u.birthDate);
+
+  const parts = [genderEmoji, birthStr, name].filter(Boolean);
+  return parts.join(' ');
+}
+
 export function formatMemberDisplayName(user: {
   displayName: string;
-  gender?: 'MALE' | 'FEMALE' | null;
+  gender?: 'MALE' | 'FEMALE' | string | null;
   birthYear?: number | null;
+  birthDate?: string | null;
   isEarlyYear?: boolean | null;
 }) {
-  const parts: string[] = [];
-
-  if (user.isEarlyYear) {
-    parts.push('빠른');
-    if (user.birthYear) {
-      parts.push(String(user.birthYear % 100).padStart(2, '0'));
-    }
-    if (user.gender === 'MALE') parts.push('👨');
-    else if (user.gender === 'FEMALE') parts.push('👩');
-  } else {
-    if (user.gender === 'MALE') parts.push('👨');
-    else if (user.gender === 'FEMALE') parts.push('👩');
-    if (user.birthYear) {
-      parts.push(String(user.birthYear % 100).padStart(2, '0'));
-    }
-  }
-
-  parts.push(user.displayName);
-  return parts.join(' ');
+  return formatUserDisplayName(user);
 }
 
 export function formatPhoneNumber(phone: string) {

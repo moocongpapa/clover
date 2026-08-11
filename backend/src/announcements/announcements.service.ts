@@ -16,6 +16,8 @@ export class AnnouncementsService {
             displayName: true,
             profileImageUrl: true,
             role: true,
+            gender: true,
+            birthYear: true,
           },
         },
         group: {
@@ -40,6 +42,8 @@ export class AnnouncementsService {
             displayName: true,
             profileImageUrl: true,
             role: true,
+            gender: true,
+            birthYear: true,
           },
         },
         group: {
@@ -91,6 +95,8 @@ export class AnnouncementsService {
             displayName: true,
             profileImageUrl: true,
             role: true,
+            gender: true,
+            birthYear: true,
           },
         },
       },
