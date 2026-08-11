@@ -258,7 +258,7 @@ export default function CreateGroup() {
             onChange={(e) => setMaxMembers(parseInt(e.target.value, 10))}
             required
           >
-            {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((num) => (
+            {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200, 300, 500, 1000].map((num) => (
               <option key={num} value={num}>
                 {num}명
               </option>
@@ -358,6 +358,7 @@ export default function CreateGroup() {
                     매월 {day}일 마감
                   </option>
                 ))}
+                <option value="31">월말 (마지막날)</option>
               </select>
             </div>
           </div>

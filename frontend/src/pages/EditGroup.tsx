@@ -337,7 +337,7 @@ export default function EditGroup() {
             required
           >
             {(() => {
-              const opts = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+              const opts = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200, 300, 500, 1000];
               if (maxMembers && !opts.includes(maxMembers)) {
                 opts.push(maxMembers);
                 opts.sort((a, b) => a - b);
@@ -443,6 +443,7 @@ export default function EditGroup() {
                     매월 {day}일 마감
                   </option>
                 ))}
+                <option value="31">월말 (마지막날)</option>
               </select>
             </div>
           </div>

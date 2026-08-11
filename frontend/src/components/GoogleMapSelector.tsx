@@ -53,11 +53,44 @@ function normalizeSido(sido: string): string {
 
 export function parseKoreanAddress(address: string) {
   if (!address) return null;
-  let cleanAddress = address.trim();
-  if (cleanAddress.startsWith('대한민국')) {
-    cleanAddress = cleanAddress.substring(4).trim();
+  let clean = address.trim();
+
+  // Reverse comma-separated address (e.g., "융합기술로116번길, 흥해읍, 북구, 포항시, 경상북도, 37554, 대한민국")
+  if (clean.includes(',')) {
+    const rawParts = clean.split(',').map((p) => p.trim()).filter(Boolean);
+    const filteredParts = rawParts.filter(
+      (p) => !/^\d{5}$/.test(p) && p !== '대한민국' && p !== 'South Korea' && p !== 'ROK'
+    );
+    const lastPart = filteredParts[filteredParts.length - 1];
+    if (
+      lastPart &&
+      (lastPart.endsWith('도') ||
+        lastPart.endsWith('시') ||
+        lastPart.includes('경상') ||
+        lastPart.includes('전라') ||
+        lastPart.includes('충청') ||
+        lastPart.includes('경기') ||
+        lastPart.includes('서울') ||
+        lastPart.includes('부산') ||
+        lastPart.includes('대구') ||
+        lastPart.includes('인천') ||
+        lastPart.includes('광주') ||
+        lastPart.includes('대전') ||
+        lastPart.includes('울산') ||
+        lastPart.includes('세종') ||
+        lastPart.includes('제주') ||
+        lastPart.includes('강원'))
+    ) {
+      filteredParts.reverse();
+    }
+    clean = filteredParts.join(' ');
+  } else {
+    if (clean.startsWith('대한민국')) {
+      clean = clean.substring(4).trim();
+    }
   }
-  const tokens = cleanAddress.split(/\s+/);
+
+  const tokens = clean.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return null;
 
   const activitySido = normalizeSido(tokens[0]);
@@ -69,12 +102,30 @@ export function parseKoreanAddress(address: string) {
     const second = tokens[1];
     if (tokens.length > 2 && second.endsWith('시') && (tokens[2].endsWith('구') || tokens[2].endsWith('군'))) {
       activitySigungu = `${second} ${tokens[2]}`;
-      if (tokens.length > 3) activityDistrict = tokens[3];
-      if (tokens.length > 4) activityTown = tokens[4];
+      if (tokens.length > 3) {
+        if (tokens[3].endsWith('읍') || tokens[3].endsWith('면') || tokens[3].endsWith('동') || tokens[3].endsWith('리')) {
+          activityTown = tokens[3];
+          activityDistrict = tokens[3];
+        } else {
+          activityDistrict = tokens[3];
+        }
+      }
+      if (tokens.length > 4 && (tokens[4].endsWith('읍') || tokens[4].endsWith('면') || tokens[4].endsWith('동') || tokens[4].endsWith('리'))) {
+        activityTown = tokens[4];
+      }
     } else {
       activitySigungu = second;
-      if (tokens.length > 2) activityDistrict = tokens[2];
-      if (tokens.length > 3) activityTown = tokens[3];
+      if (tokens.length > 2) {
+        if (tokens[2].endsWith('읍') || tokens[2].endsWith('면') || tokens[2].endsWith('동') || tokens[2].endsWith('리')) {
+          activityTown = tokens[2];
+          activityDistrict = tokens[2];
+        } else {
+          activityDistrict = tokens[2];
+        }
+      }
+      if (tokens.length > 3 && (tokens[3].endsWith('읍') || tokens[3].endsWith('면') || tokens[3].endsWith('동') || tokens[3].endsWith('리'))) {
+        activityTown = tokens[3];
+      }
     }
   }
 
@@ -473,8 +524,8 @@ export default function GoogleMapSelector({
   };
 
   const handleAdd = (place: any) => {
-    if (selectedArenas.length >= 3) {
-      alert('활동 구장은 최대 3개까지 등록할 수 있습니다.');
+    if (selectedArenas.length >= 1) {
+      alert('주요 활동 구장은 1개만 선택하실 수 있습니다. 장소를 변경하시려면 기존 구장을 삭제 후 새로 선택해 주세요.');
       return;
     }
     if (selectedArenas.some((a) => a.placeName === place.place_name)) {
@@ -489,14 +540,13 @@ export default function GoogleMapSelector({
       lng: place.lng,
     };
 
-    const updated = [...selectedArenas, newArena];
+    const updated = [newArena];
     onChange(updated);
+    onPrimaryChange(0);
 
-    // If first arena, set as primary and auto-fill region
-    if (updated.length === 1) {
-      onPrimaryChange(0);
-      const parsed = parseKoreanAddress(newArena.address);
-      if (parsed) onAddressSelect(parsed);
+    const parsed = parseKoreanAddress(newArena.address);
+    if (parsed) {
+      onAddressSelect(parsed);
     }
 
     // Move map to added arena
@@ -539,10 +589,10 @@ export default function GoogleMapSelector({
     <div className="google-map-selector" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <label style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--ink-dark)' }}>
-          활동 구장 등록 (최대 3개)
+          주요 활동 구장 등록 (1개)
         </label>
         <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
-          {selectedArenas.length}/3개 등록됨
+          {selectedArenas.length}/1개 등록됨
         </span>
       </div>
 

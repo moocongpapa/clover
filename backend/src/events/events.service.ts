@@ -581,4 +581,14 @@ export class EventsService {
     await this.prisma.comment.delete({ where: { id: commentId } });
     return { success: true };
   }
+
+  async delete(eventId: string, userId: string) {
+    const event = await this.requireOfficerForEvent(eventId, userId);
+
+    await this.prisma.event.delete({
+      where: { id: event.id },
+    });
+
+    return { ok: true };
+  }
 }

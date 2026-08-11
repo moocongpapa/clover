@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import GroupAvatar from '../components/GroupAvatar';
 import {
   api,
@@ -7,6 +7,7 @@ import {
   formatMemberDisplayName,
   formatTeamLabel,
   groupVotesByChoice,
+  isStaffRole,
   TEAM_COUNT_OPTIONS,
   VOTE_LABELS,
   type EventDetail,
@@ -19,8 +20,10 @@ import './GroupDetail.css';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [event, setEvent] = useState<EventDetail | null>(null);
+  const [group, setGroup] = useState<any>(null);
   const [votes, setVotes] = useState<VoteResults | null>(null);
   const [teams, setTeams] = useState<EventTeamsResult | null>(null);
   const [comments, setComments] = useState<any[]>([]);
@@ -70,6 +73,7 @@ export default function EventDetailPage() {
         setTeams(t);
         setComments(c);
         if (t.split) setTeamCount(t.split.teamCount);
+        api.getGroup(e.groupId).then(setGroup).catch(() => null);
       })
       .catch((e) => setError(e.message));
   };
@@ -126,6 +130,19 @@ export default function EventDetailPage() {
     } catch (err) {
       console.error(err);
       alert('일정 취소 처리 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!id || !event) return;
+    if (!confirm(`'${event.title}' 일정을 정말로 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.`)) return;
+    try {
+      await api.deleteEvent(id);
+      alert('일정이 삭제되었습니다.');
+      navigate(`/groups/${event.groupId}`);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : '일정 삭제 실패');
     }
   };
 
@@ -244,27 +261,56 @@ export default function EventDetailPage() {
               <span className="status-cancelled">취소됨</span>
             )}
           </h1>
-          {event.status === 'ACTIVE' && (
-            <div className="event-detail-header__actions">
-              <Link
-                to={`/events/${event.id}/edit`}
-                className="icon-action-btn icon-action-btn--edit"
-                title="일정 수정"
-                aria-label="일정 수정"
-              >
-                ✏️
-              </Link>
-              <button
-                type="button"
-                className="icon-action-btn icon-action-btn--delete"
-                onClick={handleCancel}
-                title="일정 삭제"
-                aria-label="일정 삭제"
-              >
-                🗑️
-              </button>
-            </div>
-          )}
+          {(() => {
+            const isStaff = group?.myMembership?.role ? isStaffRole(group.myMembership.role) : false;
+            const canManage = isStaff || (event.createdBy && event.createdBy.id === user?.id);
+            if (!canManage) return null;
+
+            return (
+              <div className="event-detail-header__actions">
+                {event.status === 'ACTIVE' && (
+                  <>
+                    <Link
+                      to={`/events/${event.id}/edit`}
+                      className="icon-action-btn icon-action-btn--edit"
+                      title="일정 수정"
+                      aria-label="일정 수정"
+                    >
+                      ✏️
+                    </Link>
+                    <button
+                      type="button"
+                      className="icon-action-btn"
+                      onClick={handleCancel}
+                      title="일정 취소 처리"
+                      aria-label="일정 취소 처리"
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: '#ef4444',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '6px 10px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🚫 취소
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="icon-action-btn icon-action-btn--delete"
+                  onClick={handleDeleteEvent}
+                  title="일정 영구 삭제"
+                  aria-label="일정 영구 삭제"
+                >
+                  🗑️
+                </button>
+              </div>
+            );
+          })()}
         </div>
         {event.status === 'CANCELLED' && (
           <div style={{
@@ -275,14 +321,44 @@ export default function EventDetailPage() {
             borderRadius: '12px',
             color: '#ef4444',
             fontSize: '14px',
-            fontWeight: '600'
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            flexWrap: 'wrap'
           }}>
-            <span>🚫 이 일정은 취소되었습니다.</span>
-            {event.cancelReason && (
-              <span style={{ display: 'block', marginTop: '4px', color: 'var(--ink-dark)', fontWeight: '700' }}>
-                📌 취소 사유: {event.cancelReason}
-              </span>
-            )}
+            <div>
+              <span>🚫 이 일정은 취소되었습니다.</span>
+              {event.cancelReason && (
+                <span style={{ display: 'block', marginTop: '4px', color: 'var(--ink-dark)', fontWeight: '700' }}>
+                  📌 취소 사유: {event.cancelReason}
+                </span>
+              )}
+            </div>
+            {(() => {
+              const isStaff = group?.myMembership?.role ? isStaffRole(group.myMembership.role) : false;
+              const canManage = isStaff || (event.createdBy && event.createdBy.id === user?.id);
+              if (!canManage) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={handleDeleteEvent}
+                  style={{
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🗑️ 일정 완전 삭제
+                </button>
+              );
+            })()}
           </div>
         )}
         <p className="event-detail-header__desc">{event.description}</p>

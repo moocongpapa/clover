@@ -707,9 +707,9 @@ export default function GroupDetail() {
                 <span className="info-detail-label">💰 정기 회비</span>
                 <span className="info-detail-val">
                   {group.monthlyFee
-                    ? `월 ${group.monthlyFee.toLocaleString()}원${group.dueDay ? ` (매월 ${group.dueDay}일 마감)` : ''}`
+                    ? `월 ${group.monthlyFee.toLocaleString()}원${group.dueDay ? ` (${group.dueDay === 31 ? '매월 말일' : `매월 ${group.dueDay}일`} 마감)` : ''}`
                     : group.dueDay
-                    ? `매월 ${group.dueDay}일 마감`
+                    ? `${group.dueDay === 31 ? '매월 말일' : `매월 ${group.dueDay}일`} 마감`
                     : '회비 미설정'}
                   {group.officerFeeExempt && ' (운영진 면제)'}
                 </span>
@@ -1620,7 +1620,7 @@ export default function GroupDetail() {
 
                   {(group.monthlyFee || group.dueDay) && (
                     <div className="compact-dues-notice-line">
-                      <span>💡 {group.monthlyFee ? `월 ` + group.monthlyFee.toLocaleString() + `원` : ''}{group.dueDay ? ` (매월 ` + group.dueDay + `일 납부)` : ''}</span>
+                      <span>💡 {group.monthlyFee ? `월 ` + group.monthlyFee.toLocaleString() + `원` : ''}{group.dueDay ? ` (${group.dueDay === 31 ? '매월 말일' : `매월 ${group.dueDay}일`} 납부)` : ''}</span>
                       {group.officerFeeExempt && (
                         <span className="compact-dues-notice-badge">운영진 면제</span>
                       )}

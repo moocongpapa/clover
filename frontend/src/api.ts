@@ -346,6 +346,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
+  deleteEvent: (id: string) =>
+    request<{ ok: boolean }>(`/events/${id}`, {
+      method: 'DELETE',
+    }),
 
   getEventTeams: (eventId: string) =>
     request<EventTeamsResult>(`/events/${eventId}/teams`),

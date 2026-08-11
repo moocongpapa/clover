@@ -166,7 +166,9 @@ export default function MyPage() {
                       <span className="dues-group-name">{item.groupName}</span>
                       <span className="dues-date-label">
                         {item.month}월 정기 회비
-                        {item.dueDay ? ` (매월 ${item.dueDay}일 마감)` : ''}
+                        {item.monthlyFee ? ` (${item.monthlyFee.toLocaleString()}원` : ''}
+                        {item.dueDay ? `${item.monthlyFee ? ' · ' : ' ('}${item.dueDay === 31 ? '매월 말일' : `매월 ${item.dueDay}일`} 마감` : ''}
+                        {item.monthlyFee || item.dueDay ? ')' : ''}
                       </span>
                     </div>
                   </div>

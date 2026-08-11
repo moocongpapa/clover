@@ -113,4 +113,10 @@ export class EventsController {
   ) {
     return this.eventsService.deleteComment(id, commentId, user.id);
   }
+
+  @Delete('events/:id')
+  @UseGuards(JwtAuthGuard)
+  delete(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.eventsService.delete(id, user.id);
+  }
 }
