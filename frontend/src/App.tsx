@@ -37,9 +37,12 @@ if (savedSize) {
   }
 }
 
+import SplashScreen from './components/SplashScreen';
+
 export default function App() {
   return (
     <AuthProvider>
+      <SplashScreen />
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
