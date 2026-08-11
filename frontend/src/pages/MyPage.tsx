@@ -76,8 +76,12 @@ export default function MyPage() {
     }, 1200);
   };
 
-  const formattedPhone = user.phoneNumber ? formatPhoneNumber(user.phoneNumber) : '연락처 미등록';
-  const genderLabel = user.gender === 'MALE' ? '남성' : user.gender === 'FEMALE' ? '여성' : '미설정';
+  const formattedPhone = user.phoneNumber ? formatPhoneNumber(user.phoneNumber) : null;
+  const genderLabel = user.gender === 'MALE' ? '남성' : user.gender === 'FEMALE' ? '여성' : null;
+  const birthLabel = user.birthYear ? `${user.birthYear}년생` : user.birthDate ? `${user.birthDate}년생` : null;
+
+  const metaItems = [formattedPhone, birthLabel, genderLabel].filter(Boolean);
+  const profileMetaText = metaItems.length > 0 ? metaItems.join(' · ') : '기본 정보 미등록';
 
   const unpaidCount = duesList.filter((d) => !d.isPaid).length;
   const currentMonth = new Date().getMonth() + 1;
@@ -105,10 +109,7 @@ export default function MyPage() {
             <h1 className="my-profile-name">{user.displayName} 님</h1>
             <span className="my-kakao-badge">💬 카카오 연동</span>
           </div>
-          <p className="my-profile-meta">
-            {formattedPhone} · {genderLabel}
-            {user.birthYear ? ` · ${user.birthYear}년생` : ''}
-          </p>
+          <p className="my-profile-meta">{profileMetaText}</p>
         </div>
 
         <Link to="/profile/edit" className="btn-edit-profile-chip">

@@ -14,22 +14,23 @@
   background: var(--surface, #ffffff);
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 20px;
-  padding: 20px;
+  padding: 18px 20px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
   margin-bottom: 20px;
 }
 
 .my-profile-avatar {
-  width: 64px;
-  height: 64px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--border-soft, #f1f5f9);
+  flex-shrink: 0;
 }
 
 .my-profile-avatar-fallback {
-  width: 64px;
-  height: 64px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   background: var(--brand-primary, #10b981);
   color: #ffffff;
@@ -38,6 +39,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .my-profile-card__info {
@@ -56,9 +58,9 @@
 }
 
 .my-profile-name {
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 800;
-  color: var(--ink-dark, #191f28);
+  color: var(--ink-dark, #0f172a);
   margin: 0;
   letter-spacing: -0.02em;
 }
@@ -66,34 +68,41 @@
 .my-kakao-badge {
   font-size: 11px;
   font-weight: 700;
-  color: #3b1e1e;
-  background: #fee500;
-  padding: 3px 8px;
-  border-radius: 999px;
+  color: #78350f;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 2px 7px;
+  border-radius: 6px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .my-profile-meta {
   font-size: 13px;
+  font-weight: 600;
   color: var(--ink-muted, #64748b);
   margin: 0;
+  line-height: 1.4;
+  word-break: keep-all;
 }
 
 .btn-edit-profile-chip {
   padding: 8px 12px;
   border-radius: 12px;
   background: var(--grey-100, #f1f5f9);
-  border: 1px solid var(--border-soft, #e2e8f0);
-  color: var(--ink-dark, #191f28);
+  border: 1px solid var(--border, #e2e8f0);
+  color: var(--ink-dark, #0f172a);
   font-size: 12.5px;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
 .btn-edit-profile-chip:hover {
   background: var(--grey-200, #e2e8f0);
+  border-color: #cbd5e1;
 }
 
 /* Dues Section Dashboard */
