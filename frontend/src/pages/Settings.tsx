@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestFcmToken } from '../firebase';
 import { api } from '../api';
@@ -296,13 +295,7 @@ export default function Settings() {
             </span>
           </div>
 
-          <Link to="/profile/edit" className="settings-action-row" style={{ textDecoration: 'none' }}>
-            <div className="settings-row__info">
-              <span className="settings-row__label">내 프로필 상세 정보 수정</span>
-              <p className="settings-row__desc">이름, 생년월일, 성별, 대표 연락처 정보를 변경합니다.</p>
-            </div>
-            <span className="action-row-arrow">→</span>
-          </Link>
+
         </section>
 
         {/* 4. 앱 정보 및 고객 지원 */}
