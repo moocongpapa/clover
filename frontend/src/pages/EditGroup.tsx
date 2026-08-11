@@ -50,7 +50,11 @@ export default function EditGroup() {
           return;
         }
         setGroup(g);
-        const normCat = normalizeCategory(g.category);
+        const rawCategory = g.category || '';
+        let normCat = normalizeCategory(rawCategory);
+        if (normCat === '기타' && (g.name?.includes('FC') || g.name?.includes('풋살') || g.name?.includes('축구') || rawCategory.includes('풋살') || rawCategory.includes('축구'))) {
+          normCat = '풋살/축구';
+        }
         setCategory(normCat);
         if (normCat === '기타' && !g.customSportName && g.category && g.category !== '기타') {
           setCustomSportName(g.category);
