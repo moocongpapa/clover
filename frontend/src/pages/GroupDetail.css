@@ -2394,33 +2394,53 @@
 }
 
 .fab-menu-popover {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 8px 0;
-  box-shadow: 0 4px 14px rgba(25, 31, 40, 0.15);
-  margin-bottom: 10px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  padding: 6px 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 14px;
   display: flex;
   flex-direction: column;
-  min-width: 140px;
+  min-width: 165px;
+  box-sizing: border-box;
+  overflow: hidden;
+  animation: popoverScale 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom right;
+}
+
+@keyframes popoverScale {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .fab-popover-item {
   width: 100%;
   background: none;
   border: none;
-  padding: 10px 16px;
-  font-size: 13px;
+  padding: 12px 18px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--ink-dark);
+  color: var(--ink-dark, #0f172a);
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
 }
 
 .fab-popover-item:hover {
-  background: var(--grey-50);
-  color: var(--accent);
+  background: rgba(16, 185, 129, 0.08);
+  color: #10b981;
 }
 
 .fab-menu-container .fab-button {

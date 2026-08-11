@@ -1868,10 +1868,10 @@ export default function GroupDetail() {
                     <Link
                       to={`/groups/${group.id}/events/new`}
                       className="fab-popover-item"
-                      style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}
+                      style={{ textDecoration: 'none' }}
                       onClick={() => setShowWriteMenu(false)}
                     >
-                      📅 일정/투표 등록
+                      <span>📅</span> 일정/투표 등록
                     </Link>
                   </>
                 )}
