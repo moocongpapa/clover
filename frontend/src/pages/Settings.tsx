@@ -23,6 +23,7 @@ export default function Settings() {
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
   const [showListModal, setShowListModal] = useState<boolean>(false);
+  const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
   const [feedbackText, setFeedbackText] = useState<string>('');
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
   const [loadingList, setLoadingList] = useState<boolean>(false);
@@ -84,9 +85,7 @@ export default function Settings() {
   };
 
   const handleInstallApp = () => {
-    alert(
-      '📱 홈 화면에 앱 추가 방법:\n\n1. 브라우저 하단 공유/메뉴 버튼(⋮ 또는 공유 아이콘)을 누릅니다.\n2. [홈 화면에 추가] 또는 [앱 설치]를 선택하시면 모바일 앱처럼 빠르게 사용하실 수 있습니다! 🍀'
-    );
+    setShowInstallModal(true);
   };
 
   const handleSendFeedback = async () => {
@@ -392,6 +391,32 @@ export default function Settings() {
                 type="button"
                 className="btn-modal-primary"
                 onClick={() => setShowTermsModal(false)}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Install App Guide Modal */}
+      {showInstallModal && (
+        <div className="settings-modal-backdrop" onClick={() => setShowInstallModal(false)}>
+          <div className="settings-modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">📱 홈 화면에 앱 추가 방법</h3>
+            <div style={{ fontSize: '14px', color: 'var(--ink-dark, #191f28)', lineHeight: 1.6, padding: '6px 0' }}>
+              <p style={{ margin: '0 0 10px 0' }}>
+                <strong>1.</strong> 모바일 브라우저 하단 또는 상단의 <strong>공유/메뉴 버튼(공유 아이콘 또는 ⋮)</strong>을 누릅니다.
+              </p>
+              <p style={{ margin: '0 0 10px 0' }}>
+                <strong>2.</strong> <strong>[홈 화면에 추가]</strong> 또는 <strong>[앱 설치]</strong>를 선택하시면 스마트폰 홈 화면에서 모바일 앱처럼 1초 만에 실행할 수 있습니다! 🍀
+              </p>
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-modal-primary"
+                onClick={() => setShowInstallModal(false)}
               >
                 확인
               </button>

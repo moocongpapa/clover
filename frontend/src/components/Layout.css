@@ -257,12 +257,12 @@
   max-width: 680px;
   margin: 0 auto;
   padding: 0;
-  padding-bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--tab-bar-height, 56px) + env(safe-area-inset-bottom, 0px) + 36px);
   box-sizing: border-box;
 }
 
 .app-shell:not(:has(.tab-bar)) .site-main {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ── Bottom tab bar (mobile) ── */
@@ -276,10 +276,13 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
-  height: var(--tab-bar-height);
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom);
+  min-height: 56px;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  background: #ffffff !important;
+  border-top: 1px solid var(--border-soft, #e2e8f0);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
 }
 
 .tab-bar__item {
