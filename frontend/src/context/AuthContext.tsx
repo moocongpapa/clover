@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     
     try {
-      if (Notification.permission === 'granted') {
+      if (Notification.permission === 'granted' || Notification.permission === 'default') {
         const token = await requestFcmToken();
         if (token) {
           await api.updateFcmToken(token);

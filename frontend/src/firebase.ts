@@ -53,13 +53,22 @@ export async function uploadToFirebaseStorage(
 
 export async function requestFcmToken(): Promise<string | null> {
   if (!isFirebaseConfigured || !messaging) return null;
-  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+  const vapidKey =
+    import.meta.env.VITE_FIREBASE_VAPID_KEY ||
+    'BGB4iYanv8gfi03w1owjcQfVLIyMBTuxm1m_6OPjSBz9r_CHP1oUB1Oi2TM3a2KgPUda2ymdlZgidRfM5l40CRg';
 
   if (!vapidKey) {
     return null;
   }
 
   try {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        return null;
+      }
+    }
+
     const currentToken = await getToken(messaging, { vapidKey });
     if (currentToken) {
       return currentToken;
