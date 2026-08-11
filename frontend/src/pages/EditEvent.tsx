@@ -201,32 +201,45 @@ export default function EditEvent() {
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '8px' }}>
               일자 (날짜) <span style={{ color: '#ef4444' }}>*</span>
             </label>
-            <div
-              onClick={() => dateInputRef.current?.showPicker?.()}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                height: '48px',
-                padding: '0 14px',
-                background: 'var(--grey-50)',
-                border: '1.5px solid var(--border)',
-                borderRadius: '12px',
-                cursor: 'pointer',
-              }}
-            >
-              <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--ink-dark)' }}>
-                {formatDateWithDay(date)}
-              </span>
-              <span style={{ fontSize: '18px' }}>📅</span>
+            <div style={{ position: 'relative', height: '48px', width: '100%' }}>
               <input
                 ref={dateInputRef}
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0,
+                  zIndex: 2,
+                  cursor: 'pointer',
+                }}
               />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  height: '100%',
+                  padding: '0 14px',
+                  background: 'var(--grey-50)',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: '12px',
+                  boxSizing: 'border-box',
+                  pointerEvents: 'none',
+                }}
+              >
+                <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--ink-dark)' }}>
+                  {formatDateWithDay(date)}
+                </span>
+                <span style={{ fontSize: '18px' }}>📅</span>
+              </div>
             </div>
           </div>
 
