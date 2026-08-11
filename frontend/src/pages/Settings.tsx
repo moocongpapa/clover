@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { requestFcmToken } from '../firebase';
 import { api } from '../api';
 import './Settings.css';
 
@@ -35,13 +36,54 @@ export default function Settings() {
     }, 2000);
   };
 
+  const handleRequestPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert('이 브라우저는 웹 푸시 알림을 지원하지 않습니다.');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      alert(
+        '아이폰 알림 권한이 거부(차단)되어 있습니다.\n\n[해결 방법]\n1. 아이폰 설정 ➔ Safari ➔ 고급 ➔ 웹 사이트 데이터에서 clover 삭제 후 접속하시거나,\n2. 홈 화면의 Clover 앱을 삭제하신 후 다시 [홈 화면에 추가] 해주시면 권한 팝업이 다시 작동합니다!'
+      );
+      return;
+    }
+
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        const token = await requestFcmToken();
+        if (token) {
+          await api.updateFcmToken(token);
+        }
+        triggerToast('🎉 알림 권한이 허용되었습니다! 이제 휴대폰으로 알림이 옵니다.');
+      } else {
+        alert('알림 권한 동의가 거부되었습니다.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('알림 권한 요청 중 오류가 발생했습니다.');
+    }
+  };
+
   const handlePushToggle = async () => {
     if (!user) return;
     const nextVal = user.pushNotifyEnabled !== false ? false : true;
     try {
+      if (nextVal && typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'default') {
+          const perm = await Notification.requestPermission();
+          if (perm === 'granted') {
+            const token = await requestFcmToken();
+            if (token) {
+              await api.updateFcmToken(token);
+            }
+          }
+        }
+      }
       const updated = await api.updateProfile({ pushNotifyEnabled: nextVal });
       updateUser(updated);
-      triggerToast(nextVal ? '앱 푸시 알림이 켜졌습니다.' : '앱 푸시 알림이 꺼졌습니다.');
+      triggerToast(nextVal ? '🔔 앱 푸시 알림이 켜졌습니다.' : '앱 푸시 알림이 꺼졌습니다.');
     } catch (err) {
       console.error(err);
       alert('설정 변경에 실패했습니다.');
@@ -151,6 +193,37 @@ export default function Settings() {
               <span className="toggle-slider"></span>
             </label>
           </div>
+
+          {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+            <div style={{ marginTop: '8px', marginBottom: '14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <div>
+                <span style={{ fontSize: '13px', color: '#166534', fontWeight: 700, display: 'block' }}>
+                  📱 아이폰/모바일 푸시 알림 허용
+                </span>
+                <span style={{ fontSize: '12px', color: '#15803d', marginTop: '2px', display: 'block' }}>
+                  버튼을 눌러 시스템 알림 팝업을 띄우세요.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRequestPermission}
+                style={{
+                  background: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 14px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)'
+                }}
+              >
+                🔔 알림 허용하기
+              </button>
+            </div>
+          )}
 
           <div className="settings-row">
             <div className="settings-row__info">
