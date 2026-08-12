@@ -252,83 +252,60 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  uploadGroupImage: async (file: File) => {
-    // 1. Try Firebase Storage for permanent cloud CDN URL (prevents ephemeral file loss)
-    const cloudUrl = await uploadToFirebaseStorage(file, 'groups');
-    if (cloudUrl) {
-      return { url: cloudUrl, filename: file.name };
+  uploadGroupImage: async (file: File): Promise<{ url: string; filename: string }> => {
+    try {
+      const timeoutPromise = new Promise<null>((res) => setTimeout(() => res(null), 1000));
+      const cloudUrl = await Promise.race([
+        uploadToFirebaseStorage(file, 'groups').catch(() => null),
+        timeoutPromise,
+      ]);
+      if (cloudUrl) {
+        return { url: cloudUrl, filename: file.name };
+      }
+    } catch {
+      // Ignore Firebase Storage CORS errors
     }
 
-    // 2. Permanent Base64 Data URL fallback (stored in DB, survives server reboots)
-    try {
-      const dataUrl = await compressFileToBase64DataUrl(file, 600, 0.82);
-      return { url: dataUrl, filename: file.name };
-    } catch {
-      const token = getToken();
-      const form = new FormData();
-      form.append('image', file);
-      const headers: Record<string, string> = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${API_BASE}/uploads/group-image`, {
-        method: 'POST',
-        headers,
-        body: form,
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message ?? `업로드 실패 (${res.status})`);
-      }
-      return res.json() as Promise<{ url: string; filename: string }>;
-    }
+    const dataUrl = await compressFileToBase64DataUrl(file, 600, 0.82);
+    return { url: dataUrl, filename: file.name };
   },
-  uploadProfileImage: async (file: File) => {
-    // 1. Try Firebase Storage for permanent cloud CDN URL (prevents ephemeral file loss)
-    const cloudUrl = await uploadToFirebaseStorage(file, 'profiles');
-    if (cloudUrl) {
-      return { url: cloudUrl, filename: file.name };
+  uploadProfileImage: async (file: File): Promise<{ url: string; filename: string }> => {
+    try {
+      const timeoutPromise = new Promise<null>((res) => setTimeout(() => res(null), 1000));
+      const cloudUrl = await Promise.race([
+        uploadToFirebaseStorage(file, 'profiles').catch(() => null),
+        timeoutPromise,
+      ]);
+      if (cloudUrl) {
+        return { url: cloudUrl, filename: file.name };
+      }
+    } catch {
+      // Ignore Firebase Storage CORS errors
     }
 
-    // 2. Permanent Base64 Data URL fallback (stored in DB, survives server reboots)
-    try {
-      const dataUrl = await compressFileToBase64DataUrl(file, 600, 0.82);
-      return { url: dataUrl, filename: file.name };
-    } catch {
-      const token = getToken();
-      const form = new FormData();
-      form.append('image', file);
-      const headers: Record<string, string> = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${API_BASE}/uploads/profile-image`, {
-        method: 'POST',
-        headers,
-        body: form,
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message ?? `업로드 실패 (${res.status})`);
-      }
-      return res.json() as Promise<{ url: string; filename: string }>;
-    }
+    const dataUrl = await compressFileToBase64DataUrl(file, 600, 0.82);
+    return { url: dataUrl, filename: file.name };
   },
-  uploadGalleryFile: async (file: File) => {
-    // 1. Try Firebase Storage for permanent cloud CDN URL
+  uploadGalleryFile: async (file: File): Promise<{ url: string; filename: string; fileType: 'IMAGE' | 'VIDEO' }> => {
     const isVideo = file.type.startsWith('video/');
-    const cloudUrl = await uploadToFirebaseStorage(file, 'gallery');
-    if (cloudUrl) {
-      return { url: cloudUrl, filename: file.name, fileType: isVideo ? 'VIDEO' : 'IMAGE' };
-    }
-
-    // 2. Base64 fallback for images (stored in DB, survives server reboots)
-    if (!isVideo) {
-      try {
-        const dataUrl = await compressFileToBase64DataUrl(file, 800, 0.82);
-        return { url: dataUrl, filename: file.name, fileType: 'IMAGE' as const };
-      } catch {
-        // continue
+    try {
+      const timeoutPromise = new Promise<null>((res) => setTimeout(() => res(null), 1000));
+      const cloudUrl = await Promise.race([
+        uploadToFirebaseStorage(file, 'gallery').catch(() => null),
+        timeoutPromise,
+      ]);
+      if (cloudUrl) {
+        return { url: cloudUrl, filename: file.name, fileType: isVideo ? 'VIDEO' : 'IMAGE' };
       }
+    } catch {
+      // Ignore Firebase Storage CORS errors
     }
 
-    // 3. Fallback to server local upload if offline/mock
+    if (!isVideo) {
+      const dataUrl = await compressFileToBase64DataUrl(file, 800, 0.82);
+      return { url: dataUrl, filename: file.name, fileType: 'IMAGE' };
+    }
+
     const token = getToken();
     const form = new FormData();
     form.append('file', file);
