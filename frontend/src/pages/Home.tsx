@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import {
   api,
   formatDateTime,
   formatEventTimeRange,
   formatTeamLabel,
   isProfileComplete,
+  isStaffRole,
   VOTE_CHOICES,
   VOTE_LABELS,
   type CalendarEvent,
@@ -471,6 +472,7 @@ function MiniCalendar({
 }
 
 function HomeDashboard() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -479,6 +481,27 @@ function HomeDashboard() {
   const [pastFilter, setPastFilter] = useState<'1w' | '1m'>('1m');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [showPastEventsPopup, setShowPastEventsPopup] = useState(false);
+  const [isFabOpen, setIsFabOpen] = useState(false);
+  const [showGroupSelectModal, setShowGroupSelectModal] = useState(false);
+
+  const officerGroups = groups.filter((g) => g.myRole && isStaffRole(g.myRole));
+  const isOfficerInAnyGroup = officerGroups.length > 0;
+
+  const handleCreateEventClick = () => {
+    setIsFabOpen(false);
+    if (officerGroups.length === 1) {
+      navigate(`/groups/${officerGroups[0].id}/events/new`);
+    } else if (officerGroups.length > 1) {
+      setShowGroupSelectModal(true);
+    } else {
+      navigate('/groups/new');
+    }
+  };
+
+  const handleCreateGroupClick = () => {
+    setIsFabOpen(false);
+    navigate('/groups/new');
+  };
 
   const load = () => {
     setLoading(true);
@@ -813,6 +836,84 @@ function HomeDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Officer Floating Action Button (FAB) & Speed Dial */}
+      {isOfficerInAnyGroup && (
+        <div className="home-fab-container">
+          {isFabOpen && (
+            <div className="home-fab-backdrop" onClick={() => setIsFabOpen(false)} />
+          )}
+
+          <div className={`home-fab-speed-dial${isFabOpen ? ' is-open' : ''}`}>
+            <button
+              type="button"
+              className="home-fab-action-item"
+              onClick={handleCreateEventClick}
+            >
+              <span className="fab-item-icon">⚽</span>
+              <span>새 일정 만들기</span>
+            </button>
+            <button
+              type="button"
+              className="home-fab-action-item"
+              onClick={handleCreateGroupClick}
+            >
+              <span className="fab-item-icon">🌱</span>
+              <span>새 모임 만들기</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className={`home-fab-main-btn${isFabOpen ? ' is-open' : ''}`}
+            onClick={() => setIsFabOpen((prev) => !prev)}
+            aria-label="생성 메뉴 열기"
+            title="새 일정 또는 모임 생성"
+          >
+            +
+          </button>
+        </div>
+      )}
+
+      {/* Group Selector Modal for Event Creation */}
+      {showGroupSelectModal && (
+        <div className="group-select-modal-overlay" onClick={() => setShowGroupSelectModal(false)}>
+          <div className="group-select-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="group-select-modal__header">
+              <h3>어느 모임의 일정을 만드시겠어요?</h3>
+              <button
+                type="button"
+                className="group-select-modal__close-btn"
+                onClick={() => setShowGroupSelectModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="group-select-modal__body">
+              <div className="group-select-modal__list">
+                {officerGroups.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    className="group-select-modal__item"
+                    onClick={() => {
+                      setShowGroupSelectModal(false);
+                      navigate(`/groups/${g.id}/events/new`);
+                    }}
+                  >
+                    <GroupAvatar src={g.profileImageUrl} name={g.name} size={40} radius={12} />
+                    <div className="group-select-modal__item-info">
+                      <span className="group-select-modal__item-name">{g.name}</span>
+                      <span className="group-select-modal__item-role">운영진</span>
+                    </div>
+                    <span className="group-select-modal__arrow">→</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
