@@ -1628,42 +1628,13 @@ export default function GroupDetail() {
               <div className="payments-board">
                 {/* Compact Payments Control Header */}
                 <div className="compact-payments-header-card">
+                  {/* Top Row: Month Picker & Filter Group */}
                   <div className="compact-payments-top-row">
                     <div className="compact-month-picker">
                       <button type="button" onClick={prevMonth} className="compact-month-btn" title="이전달">‹</button>
                       <span className="compact-month-title">{payYear}년 {payMonth}월</span>
                       <button type="button" onClick={nextMonth} className="compact-month-btn" title="다음달">›</button>
                     </div>
-
-                    {(group.monthlyFee || group.dueDay) && (
-                      <div className="compact-dues-notice-line">
-                        <span>💡 {group.monthlyFee ? `월 ` + group.monthlyFee.toLocaleString() + `원` : ''}{group.dueDay ? ` (${group.dueDay === 31 ? '매월 말일' : `매월 ${group.dueDay}일`} 납부)` : ''}</span>
-                      </div>
-                    )}
-
-                    {paymentData && (() => {
-                      const totalCount = paymentData.payments.length;
-                      const paidCount = paymentData.payments.filter((p: any) => p.isPaid).length;
-                      const unpaidCount = paymentData.payments.filter((p: any) => !p.isPaid).length;
-                      const pct = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
-
-                      return (
-                        <div className="compact-dues-progress-card" style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--surface-alt)', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '12.5px', fontWeight: 800, color: 'var(--ink-dark)' }}>💰 {payYear}년 {payMonth}월 완납 현황</span>
-                            <span style={{ fontSize: '13px', fontWeight: 800, color: '#10b981' }}>{pct}%</span>
-                          </div>
-                          <div style={{ width: '100%', height: '7px', background: 'var(--grey-200)', borderRadius: '999px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #10b981, #34d399)', borderRadius: '999px', transition: 'width 0.4s ease' }} />
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11.5px', fontWeight: 700 }}>
-                            <span style={{ color: '#10b981' }}>✅ 완납 {paidCount}명</span>
-                            <span style={{ color: '#ef4444' }}>⏳ 미납 {unpaidCount}명</span>
-                            <span style={{ color: 'var(--ink-muted)' }}>총 {totalCount}명</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
 
                     {paymentData && (() => {
                       const totalCount = paymentData.payments.length;
@@ -1698,35 +1669,66 @@ export default function GroupDetail() {
                     })()}
                   </div>
 
-                  {isOfficer && (
-                    <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        onClick={handleRemindUnpaid}
-                        style={{
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          border: 'none',
-                          background: '#ef4444',
-                          color: '#ffffff',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        📣 미납 회원 1초 독촉 알림 발송
-                      </button>
-                    </div>
-                  )}
+                  {/* Middle Row: Full-width Dues Completion Progress Card */}
+                  {paymentData && (() => {
+                    const totalCount = paymentData.payments.length;
+                    const paidCount = paymentData.payments.filter((p: any) => p.isPaid).length;
+                    const unpaidCount = paymentData.payments.filter((p: any) => !p.isPaid).length;
+                    const pct = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
 
-                  {(group.monthlyFee || group.dueDay) && (
-                    <div className="compact-dues-notice-line">
-                      <span>💡 {group.monthlyFee ? `월 ` + group.monthlyFee.toLocaleString() + `원` : ''}{group.dueDay ? ` (${group.dueDay === 31 ? '매월 말일' : `매월 ${group.dueDay}일`} 납부)` : ''}</span>
-                      {group.officerFeeExempt && (
-                        <span className="compact-dues-notice-badge">운영진 면제</span>
-                      )}
-                    </div>
-                  )}
+                    return (
+                      <div className="compact-dues-progress-card" style={{ marginTop: '12px', padding: '12px 14px', background: 'var(--surface-alt)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--ink-dark)' }}>💰 {payYear}년 {payMonth}월 완납 현황</span>
+                          <span style={{ fontSize: '14px', fontWeight: 800, color: '#10b981' }}>{pct}%</span>
+                        </div>
+                        <div style={{ width: '100%', height: '8px', background: 'var(--grey-200)', borderRadius: '999px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #10b981, #34d399)', borderRadius: '999px', transition: 'width 0.4s ease' }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', fontWeight: 700 }}>
+                          <span style={{ color: '#10b981' }}>✅ 완납 {paidCount}명</span>
+                          <span style={{ color: '#ef4444' }}>⏳ 미납 {unpaidCount}명</span>
+                          <span style={{ color: 'var(--ink-muted)' }}>총 {totalCount}명</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Bottom Row: Fee Info & Remind Action */}
+                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(group.monthlyFee || group.dueDay) && (
+                      <div className="compact-dues-notice-line" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: 0 }}>
+                        <span>💡 {group.monthlyFee ? `월 ` + group.monthlyFee.toLocaleString() + `원` : ''}{group.dueDay ? ` (${group.dueDay === 31 ? '매월 말일' : `매월 ${group.dueDay}일`} 납부)` : ''}</span>
+                        {group.officerFeeExempt && (
+                          <span className="compact-dues-notice-badge">운영진 면제</span>
+                        )}
+                      </div>
+                    )}
+
+                    {isOfficer && (
+                      <div style={{ marginTop: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={handleRemindUnpaid}
+                          style={{
+                            width: '100%',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: '#ef4444',
+                            color: '#ffffff',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)'
+                          }}
+                        >
+                          📣 미납 회원 1초 독촉 알림 발송
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {paymentData && (() => {
