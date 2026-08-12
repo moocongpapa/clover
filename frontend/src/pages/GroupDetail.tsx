@@ -607,27 +607,54 @@ export default function GroupDetail() {
           <div className="group-detail-title-info">
             <div className="group-detail-title-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
               <h1 className="group-detail-title-name" style={{ margin: 0 }}>{group.name}</h1>
-              <button
-                type="button"
-                className="group-detail-invite-btn"
-                onClick={handleCopyInvite}
-                style={{
-                  background: 'var(--grey-100)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '6px 12px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  color: 'var(--ink-dark)',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  flexShrink: 0
-                }}
-              >
-                ✉️ {copied ? '링크 복사됨!' : '초대'}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                {isOfficer && (
+                  <Link
+                    to={`/groups/${group.id}/edit`}
+                    className="group-detail-edit-icon-btn"
+                    title="모임 설정 수정"
+                    aria-label="모임 설정 수정"
+                    style={{
+                      background: 'var(--grey-100)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 10px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: 'var(--ink-dark)',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textDecoration: 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    ✏️
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  className="group-detail-invite-btn"
+                  onClick={handleCopyInvite}
+                  style={{
+                    background: 'var(--grey-100)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    color: 'var(--ink-dark)',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    flexShrink: 0
+                  }}
+                >
+                  ✉️ {copied ? '링크 복사됨!' : '초대'}
+                </button>
+              </div>
             </div>
             <div className="group-detail-subtitle" style={{ marginTop: '6px' }}>
               <span className="visibility-icon">{group.isPublic ? '🌍 공개' : '🔒 비공개'}</span>
