@@ -1192,19 +1192,19 @@ export default function GroupDetail() {
                             </button>
                             <button
                               type="button"
-                              className="quick-vote-pill quick-vote-pill--absent"
-                              onClick={(e) => handleQuickVote(e, ev.id, 'ABSENT')}
-                              title="원터치 불참 투표"
-                            >
-                              🚫 불참
-                            </button>
-                            <button
-                              type="button"
                               className="quick-vote-pill quick-vote-pill--late"
                               onClick={(e) => handleQuickVote(e, ev.id, 'LATE')}
                               title="원터치 늦참 투표"
                             >
                               ⏰ 늦참
+                            </button>
+                            <button
+                              type="button"
+                              className="quick-vote-pill quick-vote-pill--absent"
+                              onClick={(e) => handleQuickVote(e, ev.id, 'ABSENT')}
+                              title="원터치 불참 투표"
+                            >
+                              🚫 불참
                             </button>
                           </div>
                         )}
