@@ -39,6 +39,49 @@ export function isProfileComplete(user?: User | null): boolean {
   return hasName && hasBirth && hasGender && hasPhone;
 }
 
+export async function compressFileToBase64DataUrl(file: File, maxPx = 600, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const resultStr = reader.result as string;
+      if (!file.type.startsWith('image/')) {
+        resolve(resultStr);
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxPx) {
+            height = Math.round((height * maxPx) / width);
+            width = maxPx;
+          }
+        } else {
+          if (height > maxPx) {
+            width = Math.round((width * maxPx) / height);
+            height = maxPx;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } else {
+          resolve(resultStr);
+        }
+      };
+      img.onerror = () => resolve(resultStr);
+      img.src = resultStr;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
 export function safeImageUrl(url?: string | null): string | null {
   if (!url) return null;
   return url.replace(/^http:\/\//i, 'https://');
@@ -216,22 +259,27 @@ export const api = {
       return { url: cloudUrl, filename: file.name };
     }
 
-    // 2. Fallback to server local upload if offline/mock
-    const token = getToken();
-    const form = new FormData();
-    form.append('image', file);
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/uploads/group-image`, {
-      method: 'POST',
-      headers,
-      body: form,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message ?? `업로드 실패 (${res.status})`);
+    // 2. Permanent Base64 Data URL fallback (stored in DB, survives server reboots)
+    try {
+      const dataUrl = await compressFileToBase64DataUrl(file, 600, 0.82);
+      return { url: dataUrl, filename: file.name };
+    } catch {
+      const token = getToken();
+      const form = new FormData();
+      form.append('image', file);
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/uploads/group-image`, {
+        method: 'POST',
+        headers,
+        body: form,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message ?? `업로드 실패 (${res.status})`);
+      }
+      return res.json() as Promise<{ url: string; filename: string }>;
     }
-    return res.json() as Promise<{ url: string; filename: string }>;
   },
   uploadProfileImage: async (file: File) => {
     // 1. Try Firebase Storage for permanent cloud CDN URL (prevents ephemeral file loss)
@@ -240,22 +288,27 @@ export const api = {
       return { url: cloudUrl, filename: file.name };
     }
 
-    // 2. Fallback to server local upload if offline/mock
-    const token = getToken();
-    const form = new FormData();
-    form.append('image', file);
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/uploads/profile-image`, {
-      method: 'POST',
-      headers,
-      body: form,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message ?? `업로드 실패 (${res.status})`);
+    // 2. Permanent Base64 Data URL fallback (stored in DB, survives server reboots)
+    try {
+      const dataUrl = await compressFileToBase64DataUrl(file, 600, 0.82);
+      return { url: dataUrl, filename: file.name };
+    } catch {
+      const token = getToken();
+      const form = new FormData();
+      form.append('image', file);
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/uploads/profile-image`, {
+        method: 'POST',
+        headers,
+        body: form,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message ?? `업로드 실패 (${res.status})`);
+      }
+      return res.json() as Promise<{ url: string; filename: string }>;
     }
-    return res.json() as Promise<{ url: string; filename: string }>;
   },
   uploadGalleryFile: async (file: File) => {
     // 1. Try Firebase Storage for permanent cloud CDN URL
@@ -265,7 +318,17 @@ export const api = {
       return { url: cloudUrl, filename: file.name, fileType: isVideo ? 'VIDEO' : 'IMAGE' };
     }
 
-    // 2. Fallback to server local upload if offline/mock
+    // 2. Base64 fallback for images (stored in DB, survives server reboots)
+    if (!isVideo) {
+      try {
+        const dataUrl = await compressFileToBase64DataUrl(file, 800, 0.82);
+        return { url: dataUrl, filename: file.name, fileType: 'IMAGE' as const };
+      } catch {
+        // continue
+      }
+    }
+
+    // 3. Fallback to server local upload if offline/mock
     const token = getToken();
     const form = new FormData();
     form.append('file', file);
