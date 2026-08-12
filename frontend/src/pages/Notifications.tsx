@@ -209,16 +209,16 @@ export default function Notifications() {
 
   const handleDeleteAll = async () => {
     if (notifications.length === 0) return;
-    if (!window.confirm('전체 알림을 비우시겠습니까?')) return;
+    if (!window.confirm('전체 알림을 지우시겠습니까?')) return;
 
     const targetIds = notifications.map((n) => n.id);
     setNotifications([]); // Optimistically clear state
 
     try {
-      if (targetIds.length > 0) {
-        await api.deleteSelectedNotifications(targetIds);
-      }
-      await api.deleteAllNotifications();
+      await Promise.allSettled([
+        api.deleteAllNotifications(),
+        targetIds.length > 0 ? api.deleteSelectedNotifications(targetIds) : Promise.resolve(),
+      ]);
     } catch (err) {
       console.warn('Notification clear error handled gracefully:', err);
     }

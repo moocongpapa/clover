@@ -42,6 +42,18 @@ export class NotificationsController {
     return this.notificationsService.deleteAllForUser(user.id);
   }
 
+  @Delete('clear')
+  @UseGuards(JwtAuthGuard)
+  deleteClear(@CurrentUser() user: AuthUser) {
+    return this.notificationsService.deleteAllForUser(user.id);
+  }
+
+  @Post('clear')
+  @UseGuards(JwtAuthGuard)
+  postClear(@CurrentUser() user: AuthUser) {
+    return this.notificationsService.deleteAllForUser(user.id);
+  }
+
   @Post('delete-batch')
   @UseGuards(JwtAuthGuard)
   deleteSelected(

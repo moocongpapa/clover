@@ -84,19 +84,19 @@ export default function NotificationBell() {
     }
   };
 
-  const handleClearAll = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleClearAll = async () => {
     if (items.length === 0) return;
+    if (!window.confirm('전체 알림을 지우시겠습니까?')) return;
 
     const targetIds = items.map((n) => n.id);
     setItems([]);
     setUnreadCount(0);
 
     try {
-      if (targetIds.length > 0) {
-        await api.deleteSelectedNotifications(targetIds);
-      }
-      await api.deleteAllNotifications();
+      await Promise.allSettled([
+        api.deleteAllNotifications(),
+        targetIds.length > 0 ? api.deleteSelectedNotifications(targetIds) : Promise.resolve(),
+      ]);
     } catch (err) {
       console.warn('NotificationBell clear error handled gracefully:', err);
     }
