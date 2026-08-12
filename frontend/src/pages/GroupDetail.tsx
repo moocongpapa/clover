@@ -15,6 +15,7 @@ import {
   ROLE_LABELS,
   ROLE_SORT_ORDER,
   type Event,
+  type VoteChoice,
 } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
@@ -455,6 +456,18 @@ export default function GroupDetail() {
   const formatHistoryDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  const handleQuickVote = async (e: React.MouseEvent, eventId: string, choice: VoteChoice) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await api.castVote(eventId, choice);
+      setMessage(choice === 'ATTEND' ? '⚽ 참석 투표가 즉시 반영되었습니다!' : choice === 'ABSENT' ? '🚫 불참으로 투표되었습니다.' : '⏰ 늦참으로 투표되었습니다.');
+      load();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const sortedMembers = [...group.members].sort((a: any, b: any) => {
@@ -1148,23 +1161,54 @@ export default function GroupDetail() {
               ) : (
                 <ul className="event-list">
                   {(eventSubTab === 'upcoming' ? upcomingEvents : pastEvents).map((ev) => (
-                    <li key={ev.id}>
-                      <Link to={`/events/${ev.id}`} className="event-item">
-                        <div>
-                          <strong>{ev.title}</strong>
-                          {ev.status === 'CANCELLED' && (
-                            <span className="status-cancelled">취소됨</span>
-                          )}
-                          <span className="event-meta">
-                            {formatEventDate(ev.date)}{' '}
-                            {formatEventTimeRange(ev.startTime, ev.endTime)}{' '}
-                            · {ev.location}
+                    <li key={ev.id} style={{ marginBottom: '10px' }}>
+                      <div className="event-item-card-wrapper" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 14px', boxShadow: 'var(--shadow-1)' }}>
+                        <Link to={`/events/${ev.id}`} className="event-item" style={{ border: 'none', padding: 0, background: 'transparent', margin: 0 }}>
+                          <div style={{ flex: 1 }}>
+                            <strong style={{ fontSize: '14.5px', color: 'var(--ink-dark)' }}>{ev.title}</strong>
+                            {ev.status === 'CANCELLED' && (
+                              <span className="status-cancelled" style={{ marginLeft: '6px' }}>취소됨</span>
+                            )}
+                            <span className="event-meta" style={{ display: 'block', marginTop: '4px', fontSize: '12.5px', color: 'var(--ink-muted)' }}>
+                              📅 {formatEventDate(ev.date)}{' '}
+                              {formatEventTimeRange(ev.startTime, ev.endTime)}{' '}
+                              · 📍 {ev.location}
+                            </span>
+                          </div>
+                          <span className="vote-pill" style={{ flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '4px 8px', borderRadius: '6px', background: 'var(--blue-50)', color: 'var(--accent)' }}>
+                            투표 {ev._count?.votes ?? 0}명
                           </span>
-                        </div>
-                        <span className="vote-pill">
-                          투표 {ev._count?.votes ?? 0}명
-                        </span>
-                      </Link>
+                        </Link>
+                        {ev.status === 'ACTIVE' && (
+                          <div className="quick-vote-row" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--grey-100)' }}>
+                            <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--ink-tertiary)' }}>원터치 투표:</span>
+                            <button
+                              type="button"
+                              className="quick-vote-pill quick-vote-pill--attend"
+                              onClick={(e) => handleQuickVote(e, ev.id, 'ATTEND')}
+                              title="원터치 참석 투표"
+                            >
+                              ⚽ 참석
+                            </button>
+                            <button
+                              type="button"
+                              className="quick-vote-pill quick-vote-pill--absent"
+                              onClick={(e) => handleQuickVote(e, ev.id, 'ABSENT')}
+                              title="원터치 불참 투표"
+                            >
+                              🚫 불참
+                            </button>
+                            <button
+                              type="button"
+                              className="quick-vote-pill quick-vote-pill--late"
+                              onClick={(e) => handleQuickVote(e, ev.id, 'LATE')}
+                              title="원터치 늦참 투표"
+                            >
+                              ⏰ 늦참
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -1590,6 +1634,36 @@ export default function GroupDetail() {
                       <span className="compact-month-title">{payYear}년 {payMonth}월</span>
                       <button type="button" onClick={nextMonth} className="compact-month-btn" title="다음달">›</button>
                     </div>
+
+                    {(group.monthlyFee || group.dueDay) && (
+                      <div className="compact-dues-notice-line">
+                        <span>💡 {group.monthlyFee ? `월 ` + group.monthlyFee.toLocaleString() + `원` : ''}{group.dueDay ? ` (${group.dueDay === 31 ? '매월 말일' : `매월 ${group.dueDay}일`} 납부)` : ''}</span>
+                      </div>
+                    )}
+
+                    {paymentData && (() => {
+                      const totalCount = paymentData.payments.length;
+                      const paidCount = paymentData.payments.filter((p: any) => p.isPaid).length;
+                      const unpaidCount = paymentData.payments.filter((p: any) => !p.isPaid).length;
+                      const pct = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
+
+                      return (
+                        <div className="compact-dues-progress-card" style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--surface-alt)', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '12.5px', fontWeight: 800, color: 'var(--ink-dark)' }}>💰 {payYear}년 {payMonth}월 완납 현황</span>
+                            <span style={{ fontSize: '13px', fontWeight: 800, color: '#10b981' }}>{pct}%</span>
+                          </div>
+                          <div style={{ width: '100%', height: '7px', background: 'var(--grey-200)', borderRadius: '999px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #10b981, #34d399)', borderRadius: '999px', transition: 'width 0.4s ease' }} />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11.5px', fontWeight: 700 }}>
+                            <span style={{ color: '#10b981' }}>✅ 완납 {paidCount}명</span>
+                            <span style={{ color: '#ef4444' }}>⏳ 미납 {unpaidCount}명</span>
+                            <span style={{ color: 'var(--ink-muted)' }}>총 {totalCount}명</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {paymentData && (() => {
                       const totalCount = paymentData.payments.length;

@@ -3302,8 +3302,54 @@
 }
 
 .media-lightbox-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
-  transform: translateY(-50%) scale(1.1);
+  background: rgba(255, 255, 255, 0.32);
+  transform: translateY(-50%) scale(1.05);
+}
+
+/* ── 1-Touch Quick Vote Pill UI ── */
+.quick-vote-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.15s var(--ease);
+}
+
+.quick-vote-pill:active {
+  transform: scale(0.94);
+}
+
+.quick-vote-pill--attend {
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.08);
+}
+.quick-vote-pill--attend:hover {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.quick-vote-pill--absent {
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+.quick-vote-pill--absent:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.quick-vote-pill--late {
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.08);
+}
+.quick-vote-pill--late:hover {
+  background: #f59e0b;
+  color: #ffffff;
 }
 
 .media-lightbox-prev {
