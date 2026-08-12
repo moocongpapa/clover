@@ -311,44 +311,14 @@ export default function EventDetailPage() {
             borderRadius: '12px',
             color: '#ef4444',
             fontSize: '14px',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            flexWrap: 'wrap'
+            fontWeight: '600'
           }}>
-            <div>
-              <span>🚫 이 일정은 취소되었습니다.</span>
-              {event.cancelReason && (
-                <span style={{ display: 'block', marginTop: '4px', color: 'var(--ink-dark)', fontWeight: '700' }}>
-                  📌 취소 사유: {event.cancelReason}
-                </span>
-              )}
-            </div>
-            {(() => {
-              const isStaff = group?.myMembership?.role ? isStaffRole(group.myMembership.role) : false;
-              const canManage = isStaff || (event.createdBy && event.createdBy.id === user?.id);
-              if (!canManage) return null;
-              return (
-                <button
-                  type="button"
-                  onClick={handleDeleteEvent}
-                  style={{
-                    background: '#ef4444',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🗑️ 일정 완전 삭제
-                </button>
-              );
-            })()}
+            <span>🚫 이 일정은 취소되었습니다.</span>
+            {event.cancelReason && (
+              <span style={{ display: 'block', marginTop: '4px', color: 'var(--ink-dark)', fontWeight: '700' }}>
+                📌 취소 사유: {event.cancelReason}
+              </span>
+            )}
           </div>
         )}
         <p className="event-detail-header__desc">{event.description}</p>
