@@ -280,22 +280,12 @@ export default function EventDetailPage() {
                     </Link>
                     <button
                       type="button"
-                      className="icon-action-btn"
+                      className="icon-action-btn icon-action-btn--cancel"
                       onClick={handleCancel}
-                      title="일정 취소 처리"
-                      aria-label="일정 취소 처리"
-                      style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        color: '#ef4444',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '6px 10px',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer'
-                      }}
+                      title="일정 취소 (사유 기록 및 알림 발송)"
+                      aria-label="일정 취소"
                     >
-                      🚫 취소
+                      🚫
                     </button>
                   </>
                 )}
