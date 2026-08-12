@@ -30,6 +30,21 @@ export class NotificationsController {
     return this.notificationsService.markAllAsRead(user.id);
   }
 
+  @Delete()
+  @UseGuards(JwtAuthGuard)
+  deleteRoot(@CurrentUser() user: AuthUser) {
+    return this.notificationsService.deleteAllForUser(user.id);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  postRoot(@CurrentUser() user: AuthUser, @Body() body: { ids?: string[] }) {
+    if (body?.ids && body.ids.length > 0) {
+      return this.notificationsService.deleteSelectedForUser(user.id, body.ids);
+    }
+    return this.notificationsService.deleteAllForUser(user.id);
+  }
+
   @Delete('all')
   @UseGuards(JwtAuthGuard)
   deleteAll(@CurrentUser() user: AuthUser) {

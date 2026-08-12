@@ -381,18 +381,31 @@ export const api = {
     request<number>('/notifications/unread-count'),
   markNotificationsRead: () =>
     request<{ ok: boolean }>('/notifications/read', { method: 'PATCH' }),
-  deleteAllNotifications: async () => {
+  deleteAllNotifications: async (): Promise<{ ok?: boolean; count?: number }> => {
     try {
-      return await request<{ ok: boolean }>('/notifications/all', { method: 'DELETE' });
+      return await request<{ ok: boolean }>('/notifications', { method: 'DELETE' });
     } catch {
-      return await request<{ ok: boolean }>('/notifications/delete-all', { method: 'POST' });
+      try {
+        return await request<{ ok: boolean }>('/notifications/all', { method: 'DELETE' });
+      } catch {
+        return await request<{ ok: boolean }>('/notifications/delete-all', { method: 'POST' });
+      }
     }
   },
-  deleteSelectedNotifications: (ids: string[]) =>
-    request<{ count: number }>('/notifications/delete-batch', {
-      method: 'POST',
-      body: JSON.stringify({ ids }),
-    }),
+  deleteSelectedNotifications: async (ids: string[]): Promise<{ count?: number; ok?: boolean }> => {
+    if (!ids || ids.length === 0) return { count: 0 };
+    try {
+      return await request<{ count: number }>('/notifications/delete-batch', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      });
+    } catch {
+      return await request<{ ok: boolean }>('/notifications', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      });
+    }
+  },
   deleteNotification: (id: string) =>
     request<{ count: number }>(`/notifications/${id}`, { method: 'DELETE' }),
   getRegions: () => request<RegionsData>('/regions'),
