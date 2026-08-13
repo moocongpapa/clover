@@ -73,14 +73,14 @@ export default function Layout() {
               <NavLink to="/" end className={navClass}>
                 홈
               </NavLink>
+              <NavLink to="/my-groups" className={navClass}>
+                내 모임
+              </NavLink>
               <NavLink to="/groups" className={navClass}>
                 모임 찾기
               </NavLink>
               <NavLink to="/calendar" className={navClass}>
                 일정
-              </NavLink>
-              <NavLink to="/notifications" className={navClass}>
-                새소식
               </NavLink>
               <NavLink to="/my" className={navClass}>
                 MY
@@ -115,14 +115,16 @@ export default function Layout() {
             </span>
             <span className="tab-bar__label">홈</span>
           </NavLink>
-          <NavLink to="/groups" className={tabClass} aria-label="모임 찾기" title="모임 찾기">
+          <NavLink to="/my-groups" className={tabClass} aria-label="내 모임" title="내 모임">
             <span className="tab-bar__icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </span>
-            <span className="tab-bar__label">모임 찾기</span>
+            <span className="tab-bar__label">내 모임</span>
           </NavLink>
           <NavLink to="/calendar" className={tabClass} aria-label="일정" title="일정">
             <span className="tab-bar__icon">
@@ -134,15 +136,6 @@ export default function Layout() {
               </svg>
             </span>
             <span className="tab-bar__label">일정</span>
-          </NavLink>
-          <NavLink to="/notifications" className={tabClass} aria-label="새소식" title="새소식">
-            <span className="tab-bar__icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </span>
-            <span className="tab-bar__label">새소식</span>
           </NavLink>
           <NavLink to="/my" className={tabClass} aria-label="MY" title="MY">
             <span className="tab-bar__icon">
