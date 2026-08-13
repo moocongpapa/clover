@@ -1986,9 +1986,10 @@ export default function GroupDetail() {
             type="button"
             className={`fab-button ${showWriteMenu ? 'is-active' : ''}`}
             onClick={() => setShowWriteMenu(!showWriteMenu)}
-            title="글쓰기"
+            aria-label="글쓰기 및 일정 등록"
+            title="글쓰기 및 일정 등록"
           >
-            ✏️
+            +
           </button>
         </div>
       )}

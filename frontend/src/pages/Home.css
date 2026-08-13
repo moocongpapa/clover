@@ -1182,7 +1182,7 @@
 /* ── Floating Action Button (FAB) & Speed Dial ── */
 .home-fab-container {
   position: fixed;
-  bottom: calc(var(--tab-bar-height, 56px) + 20px);
+  bottom: calc(var(--tab-bar-height, 56px) + 36px);
   right: 20px;
   z-index: 999;
 }
