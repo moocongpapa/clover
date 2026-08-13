@@ -1928,7 +1928,7 @@ export default function GroupDetail() {
 
       {/* Floating Action Button (FAB) popover & triggers for ALL approved members on posts & events tabs */}
       {membership?.status === 'APPROVED' && (activeTab === 'posts' || activeTab === 'events') && (
-        <div className="fab-menu-container">
+        <div className="fab-menu-container app-fab-fixed-container">
           {showWriteMenu && (
             <>
               <div
@@ -1995,7 +1995,7 @@ export default function GroupDetail() {
       )}
 
       {activeTab === 'gallery' && (
-        <div className="fab-menu-container">
+        <div className="fab-menu-container app-fab-fixed-container">
           <label
             className="fab-button"
             title="사진 업로드"

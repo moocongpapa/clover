@@ -843,7 +843,7 @@ function HomeDashboard() {
 
       {/* Officer Floating Action Button (FAB) & Speed Dial */}
       {isOfficerInAnyGroup && (
-        <div className="home-fab-container">
+        <div className="home-fab-container app-fab-fixed-container">
           {isFabOpen && (
             <div className="home-fab-backdrop" onClick={() => setIsFabOpen(false)} />
           )}
