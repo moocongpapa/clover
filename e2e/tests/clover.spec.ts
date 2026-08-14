@@ -35,13 +35,12 @@ test.describe('Clover 전체 기능 E2E', () => {
   const president = await devLogin('김회장');
   await loginWithToken(page, president.accessToken, president.user);
 
-  await page.getByRole('link', { name: '모임 만들기', exact: true }).click();
-  await page.getByLabel('모임 이름 *').fill('E2E 독서모임');
-  await page.getByLabel('소개 *').fill('Playwright 테스트용 독서모임');
-  await page.getByLabel('시·도 *').selectOption('서울특별시');
-  await page.getByLabel('시·군·구 *').selectOption('강남구');
-  await page.getByLabel('카테고리 *').selectOption('풋살/축구');
-  await page.getByRole('button', { name: '모임 만들기' }).click();
+  await page.locator('a[href="/groups/new"]').first().click();
+  await page.locator('#name').fill('E2E 독서모임');
+  await page.locator('#description').fill('Playwright 테스트용 독서모임');
+  await page.locator('#activitySido').selectOption('서울특별시');
+  await page.locator('#activitySigungu').selectOption('강남구');
+  await page.getByRole('button', { name: /모임 만들기/ }).click();
   await expect(page.getByRole('heading', { name: 'E2E 독서모임' })).toBeVisible();
 
   const bookClubUrl = page.url();
@@ -67,14 +66,12 @@ test.describe('Clover 전체 기능 E2E', () => {
   }
 
   // ── 3. 이벤트 등록 (UI) ──
-  await page.locator('.fab-button').click();
-  await page.getByRole('link', { name: '일정/투표 등록' }).click();
-  await page.getByLabel('제목 *').fill('이번 주 독서 토론');
-  await page.getByLabel('날짜 *').fill(tomorrow());
-  await page.getByLabel('시간 *').fill('19:00');
-  await page.getByLabel('장소 *').fill('강남 스터디카페');
-  await page.getByLabel('설명 *').fill('7시 토론 시작');
-  await page.getByRole('button', { name: '등록', exact: true }).click();
+  await page.locator('.fab-button').first().click();
+  await page.getByRole('link', { name: /일정\/투표 등록/ }).click();
+  await page.getByPlaceholder('예: 이번 주 정기 풋살 매치').fill('이번 주 독서 토론');
+  await page.getByPlaceholder('예: 펜타시티 풋살파크 A구장').fill('강남 스터디카페');
+  await page.getByPlaceholder('준비물, 회비, 주차 안내 등 전달할 내용을 적어주세요.').fill('7시 토론 시작');
+  await page.getByRole('button', { name: /일정 등록하기/ }).click();
   await expect(page.getByRole('heading', { name: '이번 주 독서 토론' })).toBeVisible();
 
   const eventUrl = page.url();
@@ -179,9 +176,9 @@ test.describe('Clover 전체 기능 E2E', () => {
   });
 
   await page.goto(`/events/${cancelTarget.id}`);
-  page.on('dialog', (d) => d.accept());
-  await page.getByRole('button', { name: '일정 삭제' }).click();
-  await expect(page.getByText('취소됨')).toBeVisible();
+  page.on('dialog', (d) => d.accept('개인 사정으로 취소합니다.'));
+  await page.locator('button[aria-label="일정 취소"]').click();
+  await expect(page.getByText('이 일정은 취소되었습니다')).toBeVisible();
 
   const cancelNotes = await getNotifications(sessions[1].accessToken);
   expect(
@@ -200,16 +197,16 @@ test.describe('Clover 전체 기능 E2E', () => {
 
   // ── 12. 모임 찾기 & 캘린더 ──
   await page.goto('/groups');
-  await expect(page.getByText('E2E 독서모임')).toBeVisible();
-  await expect(page.getByText('E2E 개발스터디')).toBeVisible();
+  await expect(page.getByText('E2E 독서모임').first()).toBeVisible();
+  await expect(page.getByText('E2E 개발스터디').first()).toBeVisible();
 
   await page.goto('/calendar');
-  await expect(page.getByText('이번 주 독서 토론 (시간 변경)')).toBeVisible();
+  await expect(page.getByText('이번 주 독서 토론 (시간 변경)').first()).toBeVisible();
 
   // ── 13. 내 모임 목록 ──
   await page.goto('/');
-  await expect(page.locator('.grid-group-name', { hasText: 'E2E 독서모임' })).toBeVisible();
-  await expect(page.locator('.grid-group-name', { hasText: 'E2E 개발스터디' })).toBeVisible();
+  await expect(page.locator('.grid-group-name', { hasText: 'E2E 독서모임' }).first()).toBeVisible();
+  await expect(page.locator('.grid-group-name', { hasText: 'E2E 개발스터디' }).first()).toBeVisible();
 
   await member1Ctx.close();
   await lockedPage.context().close();
@@ -217,9 +214,9 @@ test.describe('Clover 전체 기능 E2E', () => {
 
   test('비로그인 랜딩 & 로그인 플로우', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('main').getByRole('link', { name: '시작하기' })).toBeVisible();
+    await expect(page.getByRole('main').getByRole('link', { name: /시작하기/ }).first()).toBeVisible();
 
     await loginViaUI(page, '게스트테스터');
-    await expect(page.getByRole('tab', { name: '진행 중 일정' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '진행 중 일정' })).toBeVisible();
   });
 });

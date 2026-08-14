@@ -13,6 +13,7 @@ export async function loginWithToken(
   await page.goto('/login');
   await page.evaluate(
     ({ token, u }) => {
+      sessionStorage.setItem('clover_splash_shown', 'true');
       localStorage.setItem('token', token);
       localStorage.setItem(
         'user',
@@ -21,6 +22,9 @@ export async function loginWithToken(
           displayName: u.displayName,
           profileImageUrl: u.profileImageUrl ?? null,
           kakaoId: u.kakaoId ?? `dev-${u.id}`,
+          gender: (u as any).gender ?? 'MALE',
+          birthYear: (u as any).birthYear ?? '1990',
+          phoneNumber: (u as any).phoneNumber ?? '010-1234-5678',
         }),
       );
     },

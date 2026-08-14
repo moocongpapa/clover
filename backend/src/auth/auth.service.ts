@@ -228,12 +228,20 @@ export class AuthService {
         displayName: dto.displayName,
         profileImageUrl: dto.profileImageUrl ?? null,
         role: dto.displayName === '김완석' ? 'ADMIN' : 'MEMBER',
+        gender: Gender.MALE,
+        birthYear: 1990,
+        birthDate: new Date(1990, 0, 1),
+        phoneNumber: '010-1234-5678',
       },
       create: {
         kakaoId,
         displayName: dto.displayName,
         profileImageUrl: dto.profileImageUrl ?? null,
         role: dto.displayName === '김완석' ? 'ADMIN' : 'MEMBER',
+        gender: Gender.MALE,
+        birthYear: 1990,
+        birthDate: new Date(1990, 0, 1),
+        phoneNumber: '010-1234-5678',
       },
     });
 

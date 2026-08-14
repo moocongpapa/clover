@@ -3,25 +3,30 @@ import CloverLogo from './CloverLogo';
 import './SplashScreen.css';
 
 export default function SplashScreen() {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !sessionStorage.getItem('clover_splash_shown');
+  });
   const [hiding, setHiding] = useState(false);
 
   useEffect(() => {
-    // Start fading out at 1.7s
+    if (!visible) return;
+    sessionStorage.setItem('clover_splash_shown', 'true');
+    // Start fading out at 1.0s
     const fadeTimer = setTimeout(() => {
       setHiding(true);
-    }, 1700);
+    }, 1000);
 
-    // Unmount completely at 2.1s
+    // Unmount completely at 1.3s
     const removeTimer = setTimeout(() => {
       setVisible(false);
-    }, 2100);
+    }, 1300);
 
     return () => {
       clearTimeout(fadeTimer);
       clearTimeout(removeTimer);
     };
-  }, []);
+  }, [visible]);
 
   if (!visible) return null;
 
