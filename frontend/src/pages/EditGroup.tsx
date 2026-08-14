@@ -223,10 +223,12 @@ export default function EditGroup() {
             ) : (
               <label className="group-avatar-empty-picker" htmlFor="profileImage" title="모임 대표 사진 등록">
                 <div className="empty-picker-icon-badge">
-                  <span className="empty-picker-camera">📷</span>
-                  <span className="empty-picker-plus">+</span>
+                  <span>📷</span>
                 </div>
-                <span className="empty-picker-label">사진 등록</span>
+                <span className="empty-picker-label">대표 사진</span>
+                <div className="avatar-camera-floating-badge" title="사진 추가">
+                  <span>+</span>
+                </div>
               </label>
             )}
             <input

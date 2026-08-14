@@ -147,10 +147,12 @@ export default function CreateGroup() {
             ) : (
               <label className="group-avatar-empty-picker" htmlFor="profileImage" title="모임 대표 사진 등록">
                 <div className="empty-picker-icon-badge">
-                  <span className="empty-picker-camera">📷</span>
-                  <span className="empty-picker-plus">+</span>
+                  <span>📷</span>
                 </div>
-                <span className="empty-picker-label">사진 등록</span>
+                <span className="empty-picker-label">대표 사진</span>
+                <div className="avatar-camera-floating-badge" title="사진 추가">
+                  <span>+</span>
+                </div>
               </label>
             )}
             <input
@@ -172,8 +174,9 @@ export default function CreateGroup() {
                 id="name"
                 name="name"
                 required
-                placeholder="모임 이름을 입력하세요"
+                placeholder="예: FC 클로버, 주말 테니스 클럽"
                 className="profile-field-input"
+                autoComplete="off"
               />
             </div>
             <div className="profile-field-group">
@@ -185,7 +188,7 @@ export default function CreateGroup() {
                 name="description"
                 required
                 rows={2}
-                placeholder="모임 소개글을 입력하세요"
+                placeholder="모임 활동 목적이나 소개글을 입력하세요"
                 className="profile-field-textarea"
               />
             </div>
