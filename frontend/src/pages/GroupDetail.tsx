@@ -2134,7 +2134,7 @@ export default function GroupDetail() {
           )}
           <button
             type="button"
-            className={`home-fab-main-btn ${showWriteMenu ? 'is-open is-active' : ''}`}
+            className={`home-fab-main-btn fab-button ${showWriteMenu ? 'is-open is-active' : ''}`}
             onClick={() => setShowWriteMenu(!showWriteMenu)}
             aria-label="글쓰기 및 일정 등록"
             title="글쓰기 및 일정 등록"
@@ -2147,7 +2147,7 @@ export default function GroupDetail() {
       {activeTab === 'gallery' && (
         <div className="home-fab-container app-fab-fixed-container">
           <label
-            className="home-fab-main-btn"
+            className="home-fab-main-btn fab-button"
             title="사진 업로드"
             style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0, fontSize: '24px' }}
           >
