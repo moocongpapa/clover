@@ -27,6 +27,21 @@ function toDateKey(date: Date | string): string {
   return `${y}-${m}-${day}`;
 }
 
+function getCategoryDotColor(category?: string): string {
+  switch (category) {
+    case '풋살/축구': return '#10b981';
+    case '농구': return '#f97316';
+    case '야구': return '#3b82f6';
+    case '러닝': return '#06b6d4';
+    case '테니스': return '#84cc16';
+    case '탁구': return '#ec4899';
+    case '배드민턴': return '#8b5cf6';
+    case '볼링': return '#eab308';
+    case '골프': return '#14b8a6';
+    default: return '#10b981';
+  }
+}
+
 function getMonthCells(year: number, month: number): (number | null)[] {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -349,6 +364,9 @@ export default function Calendar() {
                           <span
                             key={ev.id}
                             className={`cal-dot${ev.status === 'CANCELLED' ? ' is-cancelled' : ''}${!ev.myVote ? ' needs-vote' : ''}`}
+                            style={{
+                              backgroundColor: ev.status === 'CANCELLED' ? '#94a3b8' : !ev.myVote ? '#f59e0b' : getCategoryDotColor(ev.group.category),
+                            }}
                           />
                         ))}
                         {dayEvents.length > 3 && (

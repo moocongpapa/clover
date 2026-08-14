@@ -27,8 +27,8 @@ declare global {
   }
 }
 
-// Feature Flag: Hide gallery from public service until officially opened
-const SHOW_GALLERY = false;
+// Feature Flag: Gallery tab enabled
+const SHOW_GALLERY = true;
 
 type GroupTab = 'posts' | 'events' | 'gallery' | 'members' | 'payments' | 'officers' | 'info';
 
