@@ -590,9 +590,37 @@ h3 {
 }
 
 /* Global Unified FAB Position Token across all pages */
-.app-fab-fixed-container {
+.app-fab-fixed-container,
+.home-fab-container,
+.fab-menu-container {
   position: fixed !important;
-  bottom: calc(56px + 16px + env(safe-area-inset-bottom, 0px)) !important;
+  bottom: calc(56px + 20px + env(safe-area-inset-bottom, 0px)) !important;
   right: 20px !important;
   z-index: 999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+.home-fab-main-btn,
+.fab-menu-container .fab-button {
+  position: relative !important;
+  z-index: 1000 !important;
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45) !important;
+  font-size: 28px !important;
+  font-weight: 300 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, box-shadow 0.2s ease !important;
+  -webkit-tap-highlight-color: transparent !important;
+  line-height: 1 !important;
+  margin: 0 !important;
 }
