@@ -2060,7 +2060,7 @@ export default function GroupDetail() {
 
       {/* Floating Action Button (FAB) popover & triggers for ALL approved members on posts & events tabs */}
       {membership?.status === 'APPROVED' && (activeTab === 'posts' || activeTab === 'events') && (
-        <div className="fab-menu-container app-fab-fixed-container">
+        <div className="home-fab-container app-fab-fixed-container">
           {showWriteMenu && (
             <>
               <div
@@ -2116,7 +2116,7 @@ export default function GroupDetail() {
           )}
           <button
             type="button"
-            className={`fab-button ${showWriteMenu ? 'is-active' : ''}`}
+            className={`home-fab-main-btn ${showWriteMenu ? 'is-open is-active' : ''}`}
             onClick={() => setShowWriteMenu(!showWriteMenu)}
             aria-label="글쓰기 및 일정 등록"
             title="글쓰기 및 일정 등록"
@@ -2127,11 +2127,11 @@ export default function GroupDetail() {
       )}
 
       {activeTab === 'gallery' && (
-        <div className="fab-menu-container app-fab-fixed-container">
+        <div className="home-fab-container app-fab-fixed-container">
           <label
-            className="fab-button"
+            className="home-fab-main-btn"
             title="사진 업로드"
-            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0 }}
+            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0, fontSize: '24px' }}
           >
             📷
             <input
