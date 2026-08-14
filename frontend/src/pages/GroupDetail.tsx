@@ -622,8 +622,8 @@ export default function GroupDetail() {
           />
           <div className="group-detail-title-info">
             <div className="group-detail-title-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
-              <h1 className="group-detail-title-name" style={{ margin: 0 }}>{group.name}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
+                <h1 className="group-detail-title-name" style={{ margin: 0 }}>{group.name}</h1>
                 {isOfficer && (
                   <Link
                     to={`/groups/${group.id}/edit`}
@@ -631,24 +631,25 @@ export default function GroupDetail() {
                     title="모임 설정 수정"
                     aria-label="모임 설정 수정"
                     style={{
-                      background: 'var(--grey-100)',
+                      background: 'none',
                       border: 'none',
-                      borderRadius: '8px',
-                      padding: '6px 10px',
-                      fontSize: '13px',
-                      fontWeight: '700',
-                      color: 'var(--ink-dark)',
+                      padding: '2px 4px',
+                      fontSize: '15px',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       textDecoration: 'none',
-                      transition: 'all 0.15s ease'
+                      lineHeight: 1,
+                      opacity: 0.8,
+                      transition: 'opacity 0.15s ease'
                     }}
                   >
                     ✏️
                   </Link>
                 )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                 <button
                   type="button"
                   className="group-detail-invite-btn"
