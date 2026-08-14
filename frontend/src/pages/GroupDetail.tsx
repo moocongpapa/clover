@@ -330,11 +330,14 @@ export default function GroupDetail() {
   };
 
   const handleCopyAccountNumber = async () => {
-    if (!group.bankAccountNumber) return;
+    if (!group?.bankAccountNumber) return;
     try {
-      await navigator.clipboard.writeText(group.bankAccountNumber);
+      const copyText = `${group.bankName ? group.bankName + ' ' : ''}${group.bankAccountNumber}${group.bankAccountHolder ? ' (예금주: ' + group.bankAccountHolder + ')' : ''}`;
+      await navigator.clipboard.writeText(copyText);
       setAccountCopied(true);
-      setTimeout(() => setAccountCopied(false), 2000);
+      setMessage('계좌 정보가 복사되었습니다!');
+      setTimeout(() => setAccountCopied(false), 2500);
+      setTimeout(() => setMessage(''), 3000);
     } catch {
       setError('계좌번호 복사에 실패했습니다.');
     }
@@ -1702,6 +1705,50 @@ export default function GroupDetail() {
                         {group.officerFeeExempt && (
                           <span className="compact-dues-notice-badge">운영진 면제</span>
                         )}
+                      </div>
+                    )}
+
+                    {hasBankAccount && (
+                      <div style={{
+                        marginTop: '10px',
+                        padding: '12px 14px',
+                        background: 'rgba(16, 185, 129, 0.08)',
+                        border: '1.5px solid rgba(16, 185, 129, 0.25)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px'
+                      }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#059669', marginBottom: '2px' }}>
+                            💵 회비 입금 계좌
+                          </div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--ink-dark)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {group.bankName && <span>{group.bankName} </span>}
+                            <span>{group.bankAccountNumber}</span>
+                            {group.bankAccountHolder && <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}> ({group.bankAccountHolder})</span>}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCopyAccountNumber}
+                          style={{
+                            padding: '8px 12px',
+                            background: '#10b981',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)',
+                            flexShrink: 0
+                          }}
+                        >
+                          {accountCopied ? '복사됨! ✅' : '계좌 복사 📋'}
+                        </button>
                       </div>
                     )}
 

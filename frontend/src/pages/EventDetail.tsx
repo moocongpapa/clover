@@ -30,6 +30,10 @@ export default function EventDetailPage() {
   const [commentText, setCommentText] = useState('');
   const [addingComment, setAddingComment] = useState(false);
   const [error, setError] = useState('');
+  const [showCalendarMenu, setShowCalendarMenu] = useState(false);
+  const [locationCopied, setLocationCopied] = useState(false);
+  const [teamsCopied, setTeamsCopied] = useState(false);
+  const [nudging, setNudging] = useState(false);
 
   useEffect(() => {
     if (error) {
@@ -217,6 +221,99 @@ export default function EventDetailPage() {
     }
   };
 
+  const formatToIcsDate = (dateStr: string, timeStr?: string | null) => {
+    const parts = (dateStr || '').split('-');
+    if (parts.length < 3) return '';
+    const [y, m, d] = parts;
+    const [hh, mm] = (timeStr || '00:00').split(':');
+    return `${y}${m.padStart(2, '0')}${d.padStart(2, '0')}T${(hh || '00').padStart(2, '0')}${(mm || '00').padStart(2, '0')}00`;
+  };
+
+  const getGoogleCalendarUrl = (ev: EventDetail, groupName?: string) => {
+    const title = encodeURIComponent(groupName ? `[${groupName}] ${ev.title}` : ev.title);
+    const start = formatToIcsDate(ev.date, ev.startTime);
+    const end = ev.endTime ? formatToIcsDate(ev.date, ev.endTime) : formatToIcsDate(ev.date, ev.startTime);
+    const details = encodeURIComponent(ev.description || '');
+    const location = encodeURIComponent(ev.location || '');
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${location}`;
+  };
+
+  const exportIcsFile = (ev: EventDetail, groupName?: string) => {
+    const title = groupName ? `[${groupName}] ${ev.title}` : ev.title;
+    const start = formatToIcsDate(ev.date, ev.startTime);
+    const end = ev.endTime ? formatToIcsDate(ev.date, ev.endTime) : formatToIcsDate(ev.date, ev.startTime);
+
+    const icsLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Clover Club//KR',
+      'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `UID:clover-event-${ev.id}@clover.app`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+      `DTSTART:${start}`,
+      `DTEND:${end}`,
+      `SUMMARY:${title}`,
+      `DESCRIPTION:${(ev.description || '').replace(/\n/g, '\\n')}`,
+      `LOCATION:${ev.location || ''}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ];
+
+    const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${ev.title.replace(/\s+/g, '_')}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyLocation = () => {
+    if (!event?.location) return;
+    navigator.clipboard.writeText(event.location).then(() => {
+      setLocationCopied(true);
+      setTimeout(() => setLocationCopied(false), 2000);
+    });
+  };
+
+  const handleCopyTeams = () => {
+    if (!activeSplit || !event) return;
+    const dateFormatted = formatEventSchedule(event.date, event.startTime, event.endTime);
+    let text = `🏆 [${group?.name || '모임'}] ${event.title} 조 편성 결과\n`;
+    text += `📅 일시: ${dateFormatted}\n`;
+    if (event.location) text += `📍 장소: ${event.location}\n`;
+    text += `\n`;
+
+    activeSplit.teams.forEach((t) => {
+      const label = formatTeamLabel(t.label);
+      const memberNames = t.members.map((m) => formatMemberDisplayName(m)).join(', ');
+      text += `⚽ ${label} (${t.members.length}명): ${memberNames || '없음'}\n`;
+    });
+
+    navigator.clipboard.writeText(text.trim()).then(() => {
+      setTeamsCopied(true);
+      setTimeout(() => setTeamsCopied(false), 2500);
+    });
+  };
+
+  const handleNudgeUnvoted = async () => {
+    if (!id || !votes || votes.nonVoters.length === 0) return;
+    if (!confirm(`미투표 회원 ${votes.nonVoters.length}명에게 참석 투표 독려 알림을 발송하시겠습니까?`)) return;
+    setNudging(true);
+    try {
+      const res = await api.nudgeUnvoted(id);
+      alert(`미투표 회원 ${res.sentCount}명에게 투표 독려 알림을 발송했습니다!`);
+    } catch (err: any) {
+      alert(err.message || '알림 발송 실패');
+    } finally {
+      setNudging(false);
+    }
+  };
+
   if (error && !event) return <p className="form-error">{error}</p>;
   if (!event || !votes || !teams) return <p className="loading-text">불러오는 중…</p>;
 
@@ -324,10 +421,162 @@ export default function EventDetailPage() {
         <p className="event-detail-header__desc">{event.description}</p>
 
         <div className="event-detail-meta">
-          <p className="event-detail-meta__line">
-            {formatEventSchedule(event.date, event.startTime, event.endTime)}
-          </p>
-          <p className="event-detail-meta__line">{event.location}</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <p className="event-detail-meta__line" style={{ margin: 0 }}>
+              📅 {formatEventSchedule(event.date, event.startTime, event.endTime)}
+            </p>
+            {event.status === 'ACTIVE' && (
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCalendarMenu(!showCalendarMenu)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '5px 10px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    background: 'var(--grey-100)',
+                    color: 'var(--ink)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📅 캘린더 등록 ▾
+                </button>
+                {showCalendarMenu && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: '100%',
+                      marginTop: '4px',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '10px',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                      padding: '4px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px',
+                      zIndex: 50,
+                      minWidth: '170px',
+                    }}
+                  >
+                    <a
+                      href={getGoogleCalendarUrl(event, group?.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setShowCalendarMenu(false)}
+                      style={{
+                        padding: '8px 10px',
+                        fontSize: '12.5px',
+                        fontWeight: '600',
+                        color: 'var(--ink)',
+                        textDecoration: 'none',
+                        borderRadius: '6px',
+                        textAlign: 'left',
+                        display: 'block',
+                      }}
+                    >
+                      구글 캘린더 추가 ↗
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        exportIcsFile(event, group?.name);
+                        setShowCalendarMenu(false);
+                      }}
+                      style={{
+                        padding: '8px 10px',
+                        fontSize: '12.5px',
+                        fontWeight: '600',
+                        color: 'var(--ink)',
+                        background: 'none',
+                        border: 'none',
+                        borderRadius: '6px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'block',
+                        width: '100%',
+                      }}
+                    >
+                      Apple / 기본 캘린더 (.ics) 📥
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <p className="event-detail-meta__line" style={{ margin: 0 }}>
+              📍 {event.location || '장소 미정'}
+            </p>
+            {event.location && event.location !== '미정' && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                <a
+                  href={`https://map.kakao.com/link/search/${encodeURIComponent(event.location)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    background: '#FEE500',
+                    color: '#191919',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                  }}
+                >
+                  카카오맵 ↗
+                </a>
+                <a
+                  href={`https://map.naver.com/v5/search/${encodeURIComponent(event.location)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    background: '#03C75A',
+                    color: '#ffffff',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                  }}
+                >
+                  네이버 지도 ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={handleCopyLocation}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    background: 'var(--grey-100)',
+                    color: 'var(--ink)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {locationCopied ? '주소 복사됨! ✅' : '주소 복사 📋'}
+                </button>
+              </div>
+            )}
+          </div>
           {event.createdBy && (
             <div className="event-detail-creator">
               <span className="event-detail-creator__label">등록자:</span>
@@ -416,9 +665,34 @@ export default function EventDetailPage() {
           ))}
         </div>
 
-        <div className="vote-section__subhead vote-section__subhead--nonvoters">
-          <h3>미투표</h3>
-          <span className="vote-section__total">{votes.nonVoters.length}명</span>
+        <div className="vote-section__subhead vote-section__subhead--nonvoters" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <h3 style={{ margin: 0 }}>미투표</h3>
+            <span className="vote-section__total">{votes.nonVoters.length}명</span>
+          </div>
+          {teams.canManage && votes.nonVoters.length > 0 && !locked && (
+            <button
+              type="button"
+              onClick={handleNudgeUnvoted}
+              disabled={nudging}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: '700',
+                background: 'rgba(239, 68, 68, 0.1)',
+                color: '#ef4444',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {nudging ? '알림 발송 중…' : '📢 미투표 회원 독려 알림'}
+            </button>
+          )}
         </div>
 
         {votes.nonVoters.length === 0 ? (
@@ -599,6 +873,28 @@ export default function EventDetailPage() {
                     </div>
                   </article>
                 ))}
+              </div>
+              <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={handleCopyTeams}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '10px 18px',
+                    background: '#e0f2fe',
+                    color: '#0284c7',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '10px',
+                    fontSize: '13.5px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  📋 {teamsCopied ? '단톡방 공유 텍스트 복사 완료! ✅' : '조 편성 결과 단톡방 공유 복사'}
+                </button>
               </div>
             </>
           )}

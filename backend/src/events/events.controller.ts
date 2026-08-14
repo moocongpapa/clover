@@ -119,4 +119,10 @@ export class EventsController {
   delete(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.eventsService.delete(id, user.id);
   }
+
+  @Post('events/:id/nudge-unvoted')
+  @UseGuards(JwtAuthGuard)
+  nudgeUnvoted(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.eventsService.nudgeUnvoted(id, user.id);
+  }
 }

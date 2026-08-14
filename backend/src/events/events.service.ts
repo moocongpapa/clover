@@ -591,4 +591,58 @@ export class EventsService {
 
     return { ok: true };
   }
+
+  async nudgeUnvoted(eventId: string, userId: string) {
+    const event = await this.requireOfficerForEvent(eventId, userId);
+
+    if (event.status !== 'ACTIVE') {
+      throw new BadRequestException('진행 중인 투표에만 독려 알림을 보낼 수 있습니다.');
+    }
+
+    const groupMembers = await this.prisma.groupMember.findMany({
+      where: {
+        groupId: event.groupId,
+        status: 'APPROVED',
+      },
+      select: { userId: true },
+    });
+
+    const votes = await this.prisma.vote.findMany({
+      where: { eventId },
+      select: { userId: true },
+    });
+
+    const votedSet = new Set(votes.map((v) => v.userId));
+    const unvotedMembers = groupMembers.filter((m) => !votedSet.has(m.userId));
+
+    if (unvotedMembers.length === 0) {
+      return { sentCount: 0, totalUnvoted: 0, message: '모든 회원이 투표를 완료했습니다.' };
+    }
+
+    const group = await this.prisma.group.findUnique({
+      where: { id: event.groupId },
+      select: { name: true },
+    });
+
+    const message = `[투표 독려 📢]
+「${group?.name || '모임'}」 '${event.title}'
+일정의 참석 투표가 진행 중입니다. 참석 여부를 지금 투표해주세요!`;
+
+    let sentCount = 0;
+    for (const member of unvotedMembers) {
+      try {
+        await this.notifications.sendEventNotification(
+          member.userId,
+          event.id,
+          'REMINDER',
+          message,
+        );
+        sentCount++;
+      } catch (err: any) {
+        this.logger.warn(`Failed to send vote reminder to ${member.userId}: ${err.message}`);
+      }
+    }
+
+    return { sentCount, totalUnvoted: unvotedMembers.length };
+  }
 }

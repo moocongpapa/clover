@@ -531,6 +531,24 @@ function HomeDashboard() {
   const needsVote = upcoming.filter((e) => !e.myVote && !e.voteLocked);
   const voted = upcoming.filter((e) => e.myVote || e.voteLocked);
 
+  // Next upcoming urgent event for the hero D-Day card (sorted by earliest date/time)
+  const nextUrgentEvent = upcoming.length > 0 ? upcoming[0] : null;
+
+  const getDDayInfo = (dateStr: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const parts = (dateStr || '').split('-');
+    if (parts.length < 3) return { label: 'D-Day', isUrgent: false };
+    const target = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return { label: '🔥 오늘 D-Day', isUrgent: true };
+    if (diffDays === 1) return { label: '⚡ 내일 D-1', isUrgent: true };
+    if (diffDays === 2) return { label: '📅 D-2', isUrgent: false };
+    if (diffDays > 0) return { label: `📅 D-${diffDays}`, isUrgent: false };
+    return { label: '종료', isUrgent: false };
+  };
+
   // Past events filtering
   const allPastEvents = filteredEvents
     .filter((e) => !isUpcoming(e))
@@ -551,6 +569,93 @@ function HomeDashboard() {
 
   return (
     <div className="home-dashboard">
+      {/* 🌟 Next Upcoming Event D-Day Highlight Widget */}
+      {nextUrgentEvent && (
+        <div
+          className="home-dday-hero"
+          onClick={() => navigate(`/events/${nextUrgentEvent.id}`)}
+          style={{
+            margin: '0 0 20px 0',
+            padding: '16px 18px',
+            background: 'linear-gradient(135deg, #064e3b 0%, #065f46 60%, #047857 100%)',
+            borderRadius: '18px',
+            color: '#ffffff',
+            boxShadow: '0 8px 24px rgba(6, 78, 59, 0.22)',
+            cursor: 'pointer',
+            position: 'relative',
+            overflow: 'hidden',
+            transition: 'transform 0.15s ease'
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            right: '-20px',
+            bottom: '-20px',
+            width: '120px',
+            height: '120px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(52, 211, 153, 0.25) 0%, rgba(52, 211, 153, 0) 70%)',
+            pointerEvents: 'none'
+          }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '4px 10px',
+              background: getDDayInfo(nextUrgentEvent.date).isUrgent ? '#ef4444' : 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '999px',
+              fontSize: '12px',
+              fontWeight: 800,
+              letterSpacing: '-0.2px'
+            }}>
+              {getDDayInfo(nextUrgentEvent.date).label}
+            </span>
+            <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#a7f3d0' }}>
+              {nextUrgentEvent.group?.name || '모임'} 〉
+            </span>
+          </div>
+
+          <h3 style={{
+            fontSize: '17px',
+            fontWeight: 800,
+            margin: '0 0 8px 0',
+            color: '#ffffff',
+            letterSpacing: '-0.3px',
+            lineHeight: 1.3
+          }}>
+            {nextUrgentEvent.title}
+          </h3>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: '#d1fae5', flexWrap: 'wrap' }}>
+            <span>📅 {formatEventDate(nextUrgentEvent.date, nextUrgentEvent.startTime, nextUrgentEvent.endTime)}</span>
+            {nextUrgentEvent.location && <span>📍 {nextUrgentEvent.location}</span>}
+          </div>
+
+          <div style={{
+            marginTop: '12px',
+            paddingTop: '10px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '12.5px'
+          }}>
+            <span style={{
+              fontWeight: 700,
+              color: nextUrgentEvent.myVote ? '#6ee7b7' : '#fde047'
+            }}>
+              {nextUrgentEvent.myVote
+                ? `내 투표: ${VOTE_LABELS[nextUrgentEvent.myVote] || nextUrgentEvent.myVote} ✅`
+                : '⏳ 참석 투표가 필요합니다'}
+            </span>
+            <span style={{ fontWeight: 700, color: '#ffffff', opacity: 0.9 }}>
+              상세 보기 →
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Naver Band Style My Groups Grid */}
       <section className="home-groups-section">
         <div className="home-groups-header">

@@ -390,6 +390,11 @@ export const api = {
     request<{ ok: boolean }>(`/events/${id}`, {
       method: 'DELETE',
     }),
+  nudgeUnvoted: (eventId: string) =>
+    request<{ sentCount: number; totalUnvoted: number; message?: string }>(
+      `/events/${eventId}/nudge-unvoted`,
+      { method: 'POST' },
+    ),
 
   getEventTeams: (eventId: string) =>
     request<EventTeamsResult>(`/events/${eventId}/teams`),
