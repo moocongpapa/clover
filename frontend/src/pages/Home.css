@@ -1,9 +1,11 @@
 /* ── Guest Landing (Modern, Clean & Aesthetic) ── */
 
 .home-guest {
-  max-width: 900px;
+  max-width: 680px;
+  width: 100%;
   margin: 0 auto;
-  padding: 16px 12px 60px 12px;
+  padding: 12px 16px 60px;
+  box-sizing: border-box;
   position: relative;
   overflow: hidden;
 }
@@ -82,10 +84,18 @@
 
 .landing-hero-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
   width: 100%;
-  max-width: 320px;
+  max-width: 480px;
+  justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .landing-hero-actions {
+    flex-direction: column;
+    max-width: 100%;
+  }
 }
 
 .landing-btn-kakao {
@@ -96,12 +106,17 @@
   background: #fee500;
   color: #191919;
   font-weight: 800;
-  font-size: 16px;
-  padding: 15px 24px;
+  font-size: 15px;
+  padding: 14px 22px;
   border-radius: 14px;
   text-decoration: none;
+  border: none;
+  cursor: pointer;
   box-shadow: 0 4px 16px rgba(254, 229, 0, 0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+  flex: 1;
+  box-sizing: border-box;
 }
 
 .landing-btn-kakao:hover {
@@ -123,6 +138,8 @@
   text-decoration: none;
   border: 1px solid var(--border, #e5e8eb);
   transition: all 0.15s ease;
+  flex: 1;
+  box-sizing: border-box;
 }
 
 .landing-btn-explore:hover {
@@ -142,7 +159,7 @@
 
 .landing-demo-section {
   margin: 10px auto 44px;
-  max-width: 520px;
+  max-width: 100%;
   width: 100%;
 }
 

@@ -175,6 +175,21 @@ async function request<T>(
   return res.json();
 }
 
+export async function startKakaoLogin() {
+  try {
+    const res = await request<{ url: string | null }>('/auth/kakao/url');
+    if (res?.url) {
+      window.location.href = res.url;
+      return;
+    }
+  } catch {}
+  const restApiKey = '48b4025d5f4f3087b3435862d6d67491';
+  const redirectUri = `${window.location.origin}/login`;
+  window.location.href = `https://kauth.kakao.com/oauth/authorize?client_id=${restApiKey}&redirect_uri=${encodeURIComponent(
+    redirectUri,
+  )}&response_type=code`;
+}
+
 export const api = {
   getKakaoUrl: () => request<{ url: string | null }>('/auth/kakao/url'),
   kakaoCallback: (code: string, redirectUri?: string) =>

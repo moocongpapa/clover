@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import { startKakaoLogin } from '../api';
 import { useAuth } from '../context/AuthContext';
 import CloverLogo from './CloverLogo';
 import NotificationBell from './NotificationBell';
@@ -92,9 +93,14 @@ export default function Layout() {
             {user ? (
               <NotificationBell />
             ) : (
-              <Link to="/login" className="btn-primary btn-header-cta">
+              <button
+                type="button"
+                onClick={startKakaoLogin}
+                className="btn-primary btn-header-cta"
+                style={{ cursor: 'pointer' }}
+              >
                 시작하기
-              </Link>
+              </button>
             )}
           </div>
         </div>

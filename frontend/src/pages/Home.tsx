@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import {
   api,
+  startKakaoLogin,
   formatDateTime,
   formatEventTimeRange,
   formatTeamLabel,
@@ -248,12 +249,12 @@ function GuestLanding() {
         </p>
 
         <div className="landing-hero-actions">
-          <Link to="/login" className="landing-btn-kakao">
+          <button type="button" onClick={startKakaoLogin} className="landing-btn-kakao">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#000000">
               <path d="M12 3C6.477 3 2 6.477 2 10.772c0 2.766 1.848 5.19 4.646 6.57-.205.77-.754 2.802-.865 3.235-.138.544.198.536.417.391.172-.114 2.748-1.874 3.864-2.637.625.092 1.272.141 1.938.141 5.523 0 10-3.477 10-7.7c0-4.295-4.477-7.772-10-7.772z"/>
             </svg>
             <span>카카오로 1초 만에 시작하기</span>
-          </Link>
+          </button>
           <Link to="/groups" className="landing-btn-explore">
             <span>모임 둘러보기</span>
             <span className="landing-arrow">→</span>
