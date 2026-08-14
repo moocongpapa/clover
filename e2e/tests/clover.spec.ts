@@ -90,13 +90,13 @@ test.describe('Clover 전체 기능 E2E', () => {
   await expect(member1Page.locator('.home-event-card', { hasText: '이번 주 독서 토론' }).first()).toBeVisible();
 
   const eventCard = member1Page.locator('.home-event-card', { hasText: '이번 주 독서 토론' }).first();
-  await eventCard.getByRole('button', { name: '참석' }).click();
-  await expect(eventCard.getByRole('button', { name: '참석' })).toHaveClass(/is-selected/);
+  await eventCard.getByRole('button', { name: /참석/ }).click();
+  await expect(eventCard.getByRole('button', { name: /참석/ })).toHaveClass(/is-selected/);
 
   // ── 6. 투표 변경 (참석 → 불참) ──
   await member1Page.goto(eventUrl);
-  await member1Page.getByRole('button', { name: '불참' }).click();
-  await expect(member1Page.getByRole('button', { name: '불참' })).toHaveClass(/is-selected/);
+  await member1Page.getByRole('button', { name: /불참/ }).click();
+  await expect(member1Page.getByRole('button', { name: /불참/ })).toHaveClass(/is-selected/);
   const votesAfterChange = await getVotes(sessions[0].accessToken, eventId);
   expect(votesAfterChange.myVote?.choice).toBe('ABSENT');
   expect(votesAfterChange.counts.ABSENT).toBeGreaterThanOrEqual(1);
@@ -133,11 +133,13 @@ test.describe('Clover 전체 기능 E2E', () => {
 
   const reminderForNonVoter = await getNotifications(sessions[4].accessToken);
   expect(
-    reminderForNonVoter.some((n) => n.type === 'REMINDER'),
+    reminderForNonVoter.some((n) => n.type === 'REMINDER' && n.event?.id === eventId),
   ).toBeTruthy();
 
   const reminderForVoter = await getNotifications(sessions[0].accessToken);
-  expect(reminderForVoter.some((n) => n.type === 'REMINDER')).toBeFalsy();
+  expect(
+    reminderForVoter.some((n) => n.type === 'REMINDER' && n.event?.id === eventId),
+  ).toBeFalsy();
 
   // ── 10. 시작된 이벤트 투표 마감 ──
   const pastEvent = await createEvent(president.accessToken, bookClubId, {

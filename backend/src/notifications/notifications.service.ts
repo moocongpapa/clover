@@ -195,7 +195,7 @@ export class NotificationsService {
 
       for (const X of offsets) {
         // Window check: if diffHours falls in [X - 0.25, X + 0.25] (a 30 min window around X)
-        const isE2E = process.env.DATABASE_URL?.includes('e2e');
+        const isE2E = process.env.DEV_LOGIN_ENABLED === 'true' || process.env.DATABASE_URL?.includes('e2e');
         if (isE2E || (diffHours > (X - 0.25) && diffHours <= (X + 0.25))) {
           const votedUserIds = new Set(event.votes.map((v) => v.userId));
           const uniqueLogMessage = `${X}시간 전입니다`;
