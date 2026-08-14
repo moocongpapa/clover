@@ -7,6 +7,7 @@ import BankAccountFields, {
   readBankAccountFromForm,
 } from '../components/BankAccountFields';
 import GoogleMapSelector from '../components/GoogleMapSelector';
+import BackButton from '../components/BackButton';
 import { api, CATEGORY_OPTIONS, isStaffRole, normalizeCategory } from '../api';
 import './CreateGroup.css';
 
@@ -180,7 +181,7 @@ export default function EditGroup() {
 
   if (error && !group) {
     return (
-      <div>
+      <div style={{ maxWidth: '680px', width: '100%', margin: '0 auto', padding: '12px 16px', boxSizing: 'border-box' }}>
         <p className="form-error">{error}</p>
         {id && (
           <Link to={`/groups/${id}`} className="link-text">
@@ -194,10 +195,12 @@ export default function EditGroup() {
   if (!group) return <p className="loading-text">불러오는 중…</p>;
 
   return (
-    <div>
-      <p className="breadcrumb">
-        <Link to={`/groups/${group.id}`}>{group.name}</Link>
-      </p>
+    <div style={{ maxWidth: '680px', width: '100%', margin: '0 auto', padding: '8px 16px 40px', boxSizing: 'border-box' }}>
+      {/* Top Navigation Bar */}
+      <div className="detail-top-nav-bar" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+        <BackButton onClick={() => navigate(`/groups/${group.id}`)} label={group.name} />
+        <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--ink-dark, #191f28)', margin: 0 }}>모임 설정 수정</h1>
+      </div>
 
       <form className="form-card" onSubmit={handleSubmit}>
         {/* Top Header Card: Left Tactile Photo Picker + Right Group Name & Description */}
