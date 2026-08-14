@@ -30,7 +30,6 @@ export default function EventDetailPage() {
   const [commentText, setCommentText] = useState('');
   const [addingComment, setAddingComment] = useState(false);
   const [error, setError] = useState('');
-  const [showCalendarMenu, setShowCalendarMenu] = useState(false);
   const [locationCopied, setLocationCopied] = useState(false);
   const [teamsCopied, setTeamsCopied] = useState(false);
   const [nudging, setNudging] = useState(false);
@@ -238,40 +237,6 @@ export default function EventDetailPage() {
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${location}`;
   };
 
-  const exportIcsFile = (ev: EventDetail, groupName?: string) => {
-    const title = groupName ? `[${groupName}] ${ev.title}` : ev.title;
-    const start = formatToIcsDate(ev.date, ev.startTime);
-    const end = ev.endTime ? formatToIcsDate(ev.date, ev.endTime) : formatToIcsDate(ev.date, ev.startTime);
-
-    const icsLines = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Clover Club//KR',
-      'CALSCALE:GREGORIAN',
-      'BEGIN:VEVENT',
-      `UID:clover-event-${ev.id}@clover.app`,
-      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-      `DTSTART:${start}`,
-      `DTEND:${end}`,
-      `SUMMARY:${title}`,
-      `DESCRIPTION:${(ev.description || '').replace(/\n/g, '\\n')}`,
-      `LOCATION:${ev.location || ''}`,
-      'STATUS:CONFIRMED',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ];
-
-    const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${ev.title.replace(/\s+/g, '_')}.ics`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const handleCopyLocation = () => {
     if (!event?.location) return;
     navigator.clipboard.writeText(event.location).then(() => {
@@ -426,88 +391,31 @@ export default function EventDetailPage() {
               📅 {formatEventSchedule(event.date, event.startTime, event.endTime)}
             </p>
             {event.status === 'ACTIVE' && (
-              <div style={{ position: 'relative', display: 'inline-block' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCalendarMenu(!showCalendarMenu)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '5px 10px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    background: 'var(--grey-100)',
-                    color: 'var(--ink)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  📅 캘린더 등록 ▾
-                </button>
-                {showCalendarMenu && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: '100%',
-                      marginTop: '4px',
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '10px',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                      padding: '4px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '2px',
-                      zIndex: 50,
-                      minWidth: '170px',
-                    }}
-                  >
-                    <a
-                      href={getGoogleCalendarUrl(event, group?.name)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => setShowCalendarMenu(false)}
-                      style={{
-                        padding: '8px 10px',
-                        fontSize: '12.5px',
-                        fontWeight: '600',
-                        color: 'var(--ink)',
-                        textDecoration: 'none',
-                        borderRadius: '6px',
-                        textAlign: 'left',
-                        display: 'block',
-                      }}
-                    >
-                      구글 캘린더 추가 ↗
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        exportIcsFile(event, group?.name);
-                        setShowCalendarMenu(false);
-                      }}
-                      style={{
-                        padding: '8px 10px',
-                        fontSize: '12.5px',
-                        fontWeight: '600',
-                        color: 'var(--ink)',
-                        background: 'none',
-                        border: 'none',
-                        borderRadius: '6px',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        display: 'block',
-                        width: '100%',
-                      }}
-                    >
-                      Apple / 기본 캘린더 (.ics) 📥
-                    </button>
-                  </div>
-                )}
-              </div>
+              <a
+                href={getGoogleCalendarUrl(event, group?.name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="구글 캘린더에 일정 등록"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '5px 11px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  background: 'var(--surface, #ffffff)',
+                  color: 'var(--ink-dark, #191f28)',
+                  border: '1px solid var(--border, #e2e8f0)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+              >
+                📅 캘린더 등록
+              </a>
             )}
           </div>
 
