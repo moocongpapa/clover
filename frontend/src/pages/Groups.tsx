@@ -319,9 +319,16 @@ export default function Groups() {
       )}
 
       {/* Floating Action Button (+) */}
-      <Link to="/groups/new" className="fab-group-add-btn" title="모임 만들기" aria-label="모임 만들기">
-        ＋
-      </Link>
+      <div className="home-fab-container app-fab-fixed-container">
+        <Link
+          to="/groups/new"
+          className="home-fab-main-btn"
+          title="새 모임 만들기"
+          aria-label="새 모임 만들기"
+        >
+          +
+        </Link>
+      </div>
     </div>
   );
 }

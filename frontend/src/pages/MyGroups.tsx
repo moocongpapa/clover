@@ -82,10 +82,17 @@ export default function MyGroups() {
         </div>
       )}
 
-      <Link to="/groups/new" className="fab-create-group" title="모임 만들기">
-        <span>＋</span>
-        <span>모임 만들기</span>
-      </Link>
+      {/* Floating Action Button (+) */}
+      <div className="home-fab-container app-fab-fixed-container">
+        <Link
+          to="/groups/new"
+          className="home-fab-main-btn"
+          title="새 모임 만들기"
+          aria-label="새 모임 만들기"
+        >
+          +
+        </Link>
+      </div>
     </div>
   );
 }
