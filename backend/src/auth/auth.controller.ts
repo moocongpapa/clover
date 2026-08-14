@@ -75,4 +75,10 @@ export class AuthController {
   getUser(@Param('id') id: string) {
     return this.authService.getUser(id);
   }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  deleteAccount(@CurrentUser() user: AuthUser) {
+    return this.authService.deleteAccount(user.id);
+  }
 }

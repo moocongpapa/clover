@@ -235,6 +235,10 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+  deleteAccount: () =>
+    request<{ success: boolean }>('/auth/me', {
+      method: 'DELETE',
+    }),
 
   listGroups: (search?: string, category?: string) => {
     const params = new URLSearchParams();

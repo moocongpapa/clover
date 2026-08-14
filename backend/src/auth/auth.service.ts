@@ -380,6 +380,48 @@ export class AuthService {
     return { ok: true };
   }
 
+  async deleteAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        memberships: {
+          where: { role: 'PRESIDENT' },
+          include: {
+            group: {
+              include: {
+                members: { where: { status: 'APPROVED' } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    const presidentGroupsWithOthers = user.memberships.filter(
+      (m) => m.group.members.length > 1,
+    );
+
+    if (presidentGroupsWithOthers.length > 0) {
+      const groupNames = presidentGroupsWithOthers.map((m) => `「${m.group.name}」`).join(', ');
+      throw new BadRequestException(
+        `회장으로 운영 중인 모임(${groupNames})이 있습니다. 다른 운영진에게 회장 권한을 양도하거나 모임을 정리한 후 탈퇴해 주세요.`,
+      );
+    }
+
+    for (const m of user.memberships) {
+      if (m.group.members.length <= 1) {
+        await this.prisma.group.delete({ where: { id: m.groupId } }).catch(() => null);
+      }
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { success: true };
+  }
+
   getKakaoLoginUrl() {
     const restApiKey = this.config.get<string>('KAKAO_REST_API_KEY');
     const redirectUri = this.config.get<string>('KAKAO_REDIRECT_URI') || 'https://clover-gilt.vercel.app/login';

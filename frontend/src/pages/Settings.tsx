@@ -16,9 +16,14 @@ export default function Settings() {
   const { user, updateUser } = useAuth();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Local settings state
   const [nightMode, setNightMode] = useState<boolean>(
     localStorage.getItem('clover_night_notify') === 'true'
+  );
+  const [startTab, setStartTab] = useState<string>(
+    localStorage.getItem('clover_start_tab') || '/'
+  );
+  const [hapticEnabled, setHapticEnabled] = useState<boolean>(
+    localStorage.getItem('clover_haptic') !== 'false'
   );
   const [fontFamily, setFontFamily] = useState<string>(
     localStorage.getItem('clover_font_family') || 'Pretendard Variable, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif'
@@ -30,9 +35,13 @@ export default function Settings() {
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
   const [showListModal, setShowListModal] = useState<boolean>(false);
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState<boolean>(false);
+  const [deletingAccount, setDeletingAccount] = useState<boolean>(false);
   const [feedbackText, setFeedbackText] = useState<string>('');
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
   const [loadingList, setLoadingList] = useState<boolean>(false);
+
+  const { logout } = useAuth();
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -136,6 +145,38 @@ export default function Settings() {
         ? '🌙 야간 알림 제한(21:00~08:00)이 설정되었습니다.'
         : '야간 알림 제한이 해제되었습니다.'
     );
+  };
+
+  const handleStartTabChange = (val: string) => {
+    setStartTab(val);
+    localStorage.setItem('clover_start_tab', val);
+    triggerToast('🚀 앱 시작 기본 화면이 변경되었습니다.');
+  };
+
+  const handleHapticToggle = () => {
+    const nextVal = !hapticEnabled;
+    setHapticEnabled(nextVal);
+    localStorage.setItem('clover_haptic', String(nextVal));
+    if (nextVal && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(40);
+    }
+    triggerToast(nextVal ? '📳 터치 햅틱 반응이 켜졌습니다.' : '터치 햅틱 반응이 꺼졌습니다.');
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await api.deleteAccount();
+      triggerToast('탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.');
+      setTimeout(() => {
+        logout();
+        window.location.href = '/';
+      }, 1000);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || '회원 탈퇴 처리에 실패했습니다.');
+      setDeletingAccount(false);
+    }
   };
 
   const handleClearCache = () => {
@@ -353,6 +394,38 @@ export default function Settings() {
               })}
             </div>
           </div>
+
+          <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px', marginTop: '14px' }}>
+            <div className="settings-row__info">
+              <span className="settings-row__label">앱 시작 기본 화면</span>
+              <p className="settings-row__desc">Clover 접속 시 처음 보여줄 기본 탭을 설정합니다.</p>
+            </div>
+            <select
+              value={startTab}
+              onChange={(e) => handleStartTabChange(e.target.value)}
+              className="profile-field-input"
+              style={{ width: '100%', height: '44px', borderRadius: '12px', fontSize: '14px', fontWeight: '700', padding: '0 12px' }}
+            >
+              <option value="/">🏠 홈 (전체 대시보드 & 일정 요약)</option>
+              <option value="/my-groups">👥 내 모임 목록</option>
+              <option value="/calendar">📅 캘린더 일정</option>
+            </select>
+          </div>
+
+          <div className="settings-row" style={{ marginTop: '14px' }}>
+            <div className="settings-row__info">
+              <span className="settings-row__label">터치 햅틱 반응 (진동 피드백)</span>
+              <p className="settings-row__desc">투표 및 주요 버튼 클릭 시 손끝으로 가벼운 터치 진동을 전달합니다.</p>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={hapticEnabled}
+                onChange={handleHapticToggle}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
         </section>
 
         {/* 2. 편리한 앱 관리 & 캐시 정리 */}
@@ -394,7 +467,17 @@ export default function Settings() {
             </span>
           </div>
 
-
+          <div
+            className="settings-action-row"
+            onClick={() => setShowDeleteAccountModal(true)}
+            style={{ background: '#fef2f2', borderColor: '#fee2e2', cursor: 'pointer' }}
+          >
+            <div className="settings-row__info">
+              <span className="settings-row__label" style={{ color: '#ef4444' }}>회원 탈퇴</span>
+              <p className="settings-row__desc" style={{ color: '#991b1b' }}>계정 및 등록된 모든 개인 데이터를 영구 삭제합니다.</p>
+            </div>
+            <span className="action-row-arrow" style={{ color: '#ef4444' }}>🚪</span>
+          </div>
         </section>
 
         {/* 4. 앱 정보 및 고객 지원 */}
@@ -584,6 +667,55 @@ export default function Settings() {
                 onClick={() => setShowInstallModal(false)}
               >
                 확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteAccountModal && (
+        <div className="settings-modal-backdrop" onClick={() => !deletingAccount && setShowDeleteAccountModal(false)}>
+          <div className="settings-modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title" style={{ color: '#ef4444' }}>🚪 회원 탈퇴 안내</h3>
+            <div style={{ fontSize: '13.5px', color: 'var(--ink-dark, #191f28)', lineHeight: 1.6, padding: '6px 0' }}>
+              <p style={{ margin: '0 0 8px 0', fontWeight: 700, color: '#dc2626' }}>
+                탈퇴 시 계정 및 활동 정보가 영구적으로 삭제되며 복구할 수 없습니다.
+              </p>
+              <ul style={{ margin: '0 0 10px 0', paddingLeft: '20px', color: 'var(--ink-muted)' }}>
+                <li>가입된 모든 모임에서 탈퇴 처리됩니다.</li>
+                <li>작성하신 일정 투표 내역 및 댓글이 모두 정리됩니다.</li>
+                <li>모임의 회장인 경우, 다른 운영진에게 회장 권한을 먼저 위임해 주셔야 탈퇴가 가능합니다.</li>
+              </ul>
+              <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>
+                정말로 Clover 서비스를 탈퇴하시겠습니까?
+              </p>
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-modal-secondary"
+                disabled={deletingAccount}
+                onClick={() => setShowDeleteAccountModal(false)}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                style={{
+                  padding: '12px 20px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+                disabled={deletingAccount}
+                onClick={handleDeleteAccount}
+              >
+                {deletingAccount ? '탈퇴 처리 중…' : '네, 탈퇴합니다'}
               </button>
             </div>
           </div>
