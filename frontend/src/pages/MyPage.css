@@ -77,13 +77,39 @@
   flex-shrink: 0;
 }
 
-.my-profile-meta {
+.my-profile-meta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.my-profile-meta-item {
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-muted, #64748b);
-  margin: 0;
-  line-height: 1.4;
-  word-break: keep-all;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.35;
+}
+
+.my-profile-meta-phone {
+  font-weight: 700;
+  color: var(--ink-dark, #1e293b);
+  letter-spacing: 0.02em;
+  font-size: 13.5px;
+}
+
+.my-profile-meta-dot {
+  color: #94a3b8;
+  font-weight: 800;
+  padding: 0 1px;
+}
+
+.my-profile-meta-item--empty {
+  color: var(--ink-muted, #94a3b8);
+  font-style: italic;
 }
 
 .btn-edit-profile-chip {

@@ -81,9 +81,6 @@ export default function MyPage() {
   const genderLabel = user.gender === 'MALE' ? '남성' : user.gender === 'FEMALE' ? '여성' : null;
   const birthLabel = user.birthYear ? `${user.birthYear}년생` : user.birthDate ? `${user.birthDate}년생` : null;
 
-  const metaItems = [formattedPhone, birthLabel, genderLabel].filter(Boolean);
-  const profileMetaText = metaItems.length > 0 ? metaItems.join(' · ') : '기본 정보 미등록';
-
   const unpaidCount = duesList.filter((d) => !d.isPaid).length;
   const currentMonth = new Date().getMonth() + 1;
 
@@ -110,7 +107,23 @@ export default function MyPage() {
             <h1 className="my-profile-name">{user.displayName} 님</h1>
             <span className="my-kakao-badge">💬 카카오 연동</span>
           </div>
-          <p className="my-profile-meta">{profileMetaText}</p>
+          <div className="my-profile-meta-block">
+            {formattedPhone && (
+              <div className="my-profile-meta-item">
+                <span className="my-profile-meta-phone">{formattedPhone}</span>
+              </div>
+            )}
+            {(birthLabel || genderLabel) && (
+              <div className="my-profile-meta-item">
+                {birthLabel && <span>{birthLabel}</span>}
+                {birthLabel && genderLabel && <span className="my-profile-meta-dot">·</span>}
+                {genderLabel && <span>{genderLabel}</span>}
+              </div>
+            )}
+            {!formattedPhone && !birthLabel && !genderLabel && (
+              <div className="my-profile-meta-item my-profile-meta-item--empty">기본 정보 미등록</div>
+            )}
+          </div>
         </div>
 
         <Link to="/profile/edit" className="btn-edit-profile-chip">
