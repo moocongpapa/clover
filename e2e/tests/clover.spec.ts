@@ -35,7 +35,7 @@ test.describe('Clover 전체 기능 E2E', () => {
   const president = await devLogin('김회장');
   await loginWithToken(page, president.accessToken, president.user);
 
-  await page.locator('a[href="/groups/new"]').first().click();
+  await page.goto('/groups/new');
   await page.locator('#name').fill('E2E 독서모임');
   await page.locator('#description').fill('Playwright 테스트용 독서모임');
   await page.locator('#activitySido').selectOption('서울특별시');
@@ -206,9 +206,9 @@ test.describe('Clover 전체 기능 E2E', () => {
   await expect(page.getByText('이번 주 독서 토론 (시간 변경)').first()).toBeVisible();
 
   // ── 13. 내 모임 목록 ──
-  await page.goto('/');
-  await expect(page.locator('.grid-group-name', { hasText: 'E2E 독서모임' }).first()).toBeVisible();
-  await expect(page.locator('.grid-group-name', { hasText: 'E2E 개발스터디' }).first()).toBeVisible();
+  await page.goto('/my-groups');
+  await expect(page.locator('.my-group-card__name', { hasText: 'E2E 독서모임' }).first()).toBeVisible();
+  await expect(page.locator('.my-group-card__name', { hasText: 'E2E 개발스터디' }).first()).toBeVisible();
 
   await member1Ctx.close();
   await lockedPage.context().close();
