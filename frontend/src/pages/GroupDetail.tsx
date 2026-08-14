@@ -651,8 +651,8 @@ export default function GroupDetail() {
 
   return (
     <div className="group-detail">
-      {/* Header Bar */}
-      <div className="group-detail-header-bar">
+      {/* Top Navigation Bar */}
+      <div className="detail-top-nav-bar">
         <BackButton onClick={() => navigate('/')} label="홈" />
       </div>
 

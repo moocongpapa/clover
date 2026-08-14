@@ -3,8 +3,20 @@
   max-width: 680px;
   width: 100%;
   margin: 0 auto;
-  padding: 12px 16px 120px;
+  padding: 8px 16px 120px;
   box-sizing: border-box;
+}
+
+/* ── Unified Compact Top Navigation Bar ── */
+.detail-top-nav-bar,
+.group-detail-header-bar,
+.event-detail-group-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+  min-height: 32px;
+  width: 100%;
 }
 
 .group-hero {
@@ -719,45 +731,45 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  font-size: 14px;
   cursor: pointer;
   text-decoration: none;
-  border: 1px solid var(--border-subtle);
-  background: var(--surface);
-  transition: all var(--dur-base) var(--ease);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--surface, #ffffff);
+  transition: all var(--dur-base, 0.15s) var(--ease, ease);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .icon-action-btn--edit:hover {
-  background: var(--grey-100);
-  border-color: var(--grey-300);
+  background: var(--grey-100, #f1f5f9);
+  border-color: var(--grey-300, #cbd5e1);
   transform: translateY(-1px);
 }
 
 .icon-action-btn--cancel {
   color: #ef4444;
-  background: #fff5f5;
-  border-color: #fecdd3;
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
 .icon-action-btn--cancel:hover {
-  background: #ffe4e6;
-  border-color: #fda4af;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
   transform: translateY(-1px);
 }
 
 .icon-action-btn--delete {
   color: var(--red-600, #e53e3e);
-  background: #fff5f5;
-  border-color: #feb2b2;
+  background: rgba(229, 62, 62, 0.06);
+  border-color: rgba(229, 62, 62, 0.2);
 }
 
 .icon-action-btn--delete:hover {
-  background: #fed7d7;
-  border-color: #fc8181;
+  background: rgba(229, 62, 62, 0.12);
+  border-color: rgba(229, 62, 62, 0.35);
   transform: translateY(-1px);
 }
 

@@ -302,16 +302,16 @@ export default function EventDetailPage() {
 
   return (
     <div className="event-detail-page">
-      <div className="event-detail-group-nav">
-        <Link to={`/groups/${event.group.id}`} className="group-nav-link">
+      <div className="detail-top-nav-bar">
+        <Link to={`/groups/${event.group.id}`} className="unified-back-btn">
+          <span className="back-btn-icon">〈</span>
           <GroupAvatar
             src={event.group.profileImageUrl}
             name={event.group.name}
-            size={24}
-            radius={6}
+            size={18}
+            radius={5}
           />
-          <span className="group-nav-name">{event.group.name}</span>
-          <span className="group-nav-arrow">›</span>
+          <span className="back-btn-label">{event.group.name}</span>
         </Link>
       </div>
 

@@ -1,41 +1,46 @@
 .unified-back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full, 9999px);
-  padding: 6px 14px;
-  font-size: 13.5px;
+  gap: 5px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-soft, #e2e8f0);
+  border-radius: 9999px;
+  padding: 5px 12px;
+  height: 32px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--ink-dark);
+  color: var(--ink-dark, #191f28);
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all var(--dur-base) var(--ease);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all var(--dur-base, 0.15s) var(--ease, ease);
   user-select: none;
   line-height: 1;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
 .unified-back-btn:hover {
-  background: var(--grey-50);
-  border-color: var(--border-strong);
-  color: var(--accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background: var(--grey-50, #f9fafb);
+  border-color: var(--border-hover, #cbd5e1);
+  color: var(--accent, #10b981);
 }
 
 .unified-back-btn:active {
   transform: scale(0.96);
-  background: var(--grey-100);
+  background: var(--grey-100, #f1f5f9);
 }
 
 .back-btn-icon {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
+  color: var(--ink-muted, #64748b);
   line-height: 1;
   display: inline-block;
 }
 
 .back-btn-label {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
+  color: var(--ink-dark, #191f28);
+  line-height: 1;
 }
