@@ -430,14 +430,15 @@ export default function EditGroup() {
               </div>
             </div>
 
-            <div className="form-group">
+            <div className="form-group" style={{ opacity: monthlyFee === 0 ? 0.45 : 1, pointerEvents: monthlyFee === 0 ? 'none' : 'auto', transition: 'all 0.2s ease' }}>
               <label htmlFor="dueDay">매월 회비 마감일 (일)</label>
               <select
                 id="dueDay"
-                value={dueDay || ''}
+                value={monthlyFee === 0 ? '' : (dueDay || '')}
                 onChange={(e) => setDueDay(e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                disabled={monthlyFee === 0}
               >
-                <option value="">미설정</option>
+                <option value="">{monthlyFee === 0 ? '회비 없음 (미설정)' : '미설정'}</option>
                 {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
                   <option key={day} value={day}>
                     매월 {day}일 마감
@@ -520,6 +521,7 @@ export default function EditGroup() {
           bankName={group.bankName ?? ''}
           bankAccountNumber={group.bankAccountNumber ?? ''}
           bankAccountHolder={group.bankAccountHolder ?? ''}
+          disabled={monthlyFee === 0}
         />
 
         {error && <p className="form-error">{error}</p>}
