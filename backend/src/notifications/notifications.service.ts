@@ -156,7 +156,7 @@ export class NotificationsService {
   }
 
   @Cron('*/5 * * * *') // Run every 5 minutes
-  async sendReminderNotifications() {
+  async sendReminderNotifications(forceAllOffsets = false) {
     const now = new Date();
     
     // Find active events that are scheduled in the future (today or later)
@@ -195,8 +195,9 @@ export class NotificationsService {
 
       for (const X of offsets) {
         // Window check: if diffHours falls in [X - 0.25, X + 0.25] (a 30 min window around X)
-        const isE2E = process.env.DEV_LOGIN_ENABLED === 'true' || process.env.DATABASE_URL?.includes('e2e');
-        if (isE2E || (diffHours > (X - 0.25) && diffHours <= (X + 0.25))) {
+        // Or if forceAllOffsets is true (manual dev trigger endpoint)
+        const inWindow = diffHours > (X - 0.25) && diffHours <= (X + 0.25);
+        if (forceAllOffsets || inWindow) {
           const votedUserIds = new Set(event.votes.map((v) => v.userId));
           const uniqueLogMessage = `${X}시간 전입니다`;
           const message = `[투표 독려] 「${event.title}」 투표 마감 ${X}시간 전입니다! 아직 투표하지 않으신 분들은 참석 여부를 투표해 주세요.`;

@@ -93,7 +93,7 @@ export class NotificationsController {
     if (this.config.get<string>('DEV_LOGIN_ENABLED') !== 'true') {
       throw new ForbiddenException('개발 모드에서만 사용할 수 있습니다.');
     }
-    await this.notificationsService.sendReminderNotifications();
+    await this.notificationsService.sendReminderNotifications(true);
     return { ok: true };
   }
 
