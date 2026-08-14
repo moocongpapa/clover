@@ -24,10 +24,15 @@ export default function MyGroups() {
   return (
     <div className="my-groups-page">
       <div className="my-groups-header">
-        <h1 className="my-groups-title">내 가입 모임</h1>
-        {groups.length > 0 && (
-          <span className="my-groups-count-badge">{groups.length}개</span>
-        )}
+        <div className="my-groups-header-left">
+          <h1 className="my-groups-title">내 모임</h1>
+          {groups.length > 0 && (
+            <span className="my-groups-count-badge">{groups.length}개</span>
+          )}
+        </div>
+        <Link to="/groups" className="btn-find-groups-header">
+          <span>🔍</span> 모임 찾기
+        </Link>
       </div>
 
       {loading ? (

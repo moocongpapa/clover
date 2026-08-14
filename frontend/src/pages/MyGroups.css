@@ -11,6 +11,13 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  gap: 12px;
+}
+
+.my-groups-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .my-groups-title {
@@ -28,6 +35,30 @@
   background: rgba(16, 185, 129, 0.12);
   padding: 4px 10px;
   border-radius: 999px;
+}
+
+.btn-find-groups-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-dark, #191f28);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  white-space: nowrap;
+}
+
+.btn-find-groups-header:hover {
+  border-color: #10b981;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+  transform: translateY(-1px);
 }
 
 .my-groups-list {

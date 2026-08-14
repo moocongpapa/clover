@@ -716,69 +716,6 @@ function HomeDashboard() {
         )}
       </section>
 
-      {/* Naver Band Style My Groups Grid */}
-      <section className="home-groups-section">
-        <div className="home-groups-header">
-          <h2 className="home-section__title">내 모임</h2>
-          <div className="home-groups-header-actions">
-            <Link to="/groups" className="home-groups-action-link">모임 찾기</Link>
-          </div>
-        </div>
-        <div className="home-groups-grid">
-          {groups.length === 0 ? (
-            <div style={{ gridColumn: '1 / -1', padding: '24px 16px', textAlign: 'center', background: 'var(--surface-alt)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
-              <p style={{ margin: '0 0 10px 0', fontSize: '13.5px', color: 'var(--ink-muted)', fontWeight: 600 }}>
-                가입된 모임이 없습니다. 새 모임을 만들거나 찾아보세요!
-              </p>
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                <Link
-                  to="/groups/new"
-                  style={{
-                    padding: '8px 14px',
-                    background: '#10b981',
-                    color: '#ffffff',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    textDecoration: 'none'
-                  }}
-                >
-                  🌱 새 모임 만들기
-                </Link>
-                <Link
-                  to="/groups"
-                  style={{
-                    padding: '8px 14px',
-                    background: 'var(--grey-100)',
-                    color: 'var(--ink)',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    border: '1px solid var(--border)'
-                  }}
-                >
-                  🔍 모임 찾기
-                </Link>
-              </div>
-            </div>
-          ) : (
-            groups.map((group) => (
-              <Link key={group.id} to={`/groups/${group.id}`} className="grid-group-card">
-                <GroupAvatar
-                  src={group.profileImageUrl}
-                  name={group.name}
-                  size={76}
-                  radius={22}
-                  className="grid-group-avatar"
-                />
-                <span className="grid-group-name">{group.name}</span>
-              </Link>
-            ))
-          )}
-        </div>
-      </section>
-
       {/* Unified Single-Row Schedule Control Bar */}
       <div className="home-schedule-bar">
         {viewMode === 'list' ? (
