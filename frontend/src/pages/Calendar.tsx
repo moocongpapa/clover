@@ -221,7 +221,17 @@ export default function Calendar() {
       </div>
 
       {loading ? (
-        <p className="loading-text">불러오는 중…</p>
+        <div className="cal-list" style={{ marginTop: '16px' }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton-card" style={{ marginBottom: '10px' }}>
+              <div className="skeleton-pulse skeleton-avatar" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
+              <div className="skeleton-content">
+                <div className="skeleton-pulse skeleton-line skeleton-line--title" style={{ width: '45%' }} />
+                <div className="skeleton-pulse skeleton-line skeleton-line--desc" style={{ width: '75%' }} />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : events.length === 0 ? (
         <div className="empty-state">
           <p>예정된 이벤트가 없어요.</p>

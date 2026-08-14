@@ -698,6 +698,7 @@ export interface CalendarEvent {
     name: string;
     category: string;
     profileImageUrl?: string | null;
+    memberCount?: number;
   };
   createdBy?: User;
   myVote: VoteChoice | null;

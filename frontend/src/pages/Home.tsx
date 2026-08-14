@@ -67,6 +67,11 @@ function HomeVoteProgressBar({ event }: { event: CalendarEvent }) {
         {latePct > 0 && <div className="progress-bar-seg seg--late" style={{ width: `${latePct}%` }} />}
         {absentPct > 0 && <div className="progress-bar-seg seg--absent" style={{ width: `${absentPct}%` }} />}
       </div>
+      {typeof event.group.memberCount === 'number' && event.group.memberCount > 0 && (
+        <span className="home-vote-rate-text">
+          {event.group.memberCount}명 중 {total}명 투표 ({Math.round((total / event.group.memberCount) * 100)}%)
+        </span>
+      )}
     </div>
   );
 }

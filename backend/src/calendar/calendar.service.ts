@@ -27,6 +27,7 @@ export class CalendarService {
             name: true,
             category: true,
             profileImageUrl: true,
+            _count: { select: { members: { where: { status: MemberStatus.APPROVED } } } },
           },
         },
         createdBy: {
@@ -108,7 +109,13 @@ export class CalendarService {
       endTime: event.endTime,
       location: event.location,
       status: event.status,
-      group: event.group,
+      group: {
+        id: event.group.id,
+        name: event.group.name,
+        category: event.group.category,
+        profileImageUrl: event.group.profileImageUrl,
+        memberCount: event.group._count.members,
+      },
       createdBy: event.createdBy,
       myVote: event.votes[0]?.choice ?? null,
       voteCount: event._count.votes,

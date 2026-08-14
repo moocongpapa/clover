@@ -226,8 +226,36 @@ export default function GroupDetail() {
     }
   }, [activeTab, id, payYear, payMonth]);
 
-  if (error) return <p className="form-error">{error}</p>;
-  if (!group) return <p className="loading-text">불러오는 중…</p>;
+  if (error && !group) return <p className="form-error">{error}</p>;
+  if (!group) {
+    return (
+      <div className="group-detail" style={{ maxWidth: '680px', margin: '0 auto', padding: '12px 16px' }}>
+        <div className="skeleton-card" style={{ marginBottom: '16px' }}>
+          <div className="skeleton-pulse skeleton-avatar" style={{ width: '72px', height: '72px', borderRadius: '20px' }} />
+          <div className="skeleton-content">
+            <div className="skeleton-pulse skeleton-line skeleton-line--title" style={{ width: '60%' }} />
+            <div className="skeleton-pulse skeleton-line skeleton-line--desc" style={{ width: '85%' }} />
+            <div className="skeleton-tags">
+              <div className="skeleton-pulse skeleton-tag" />
+              <div className="skeleton-pulse skeleton-tag" />
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="skeleton-pulse" style={{ height: '36px', flex: 1, borderRadius: '10px' }} />
+          ))}
+        </div>
+        <div className="skeleton-card">
+          <div className="skeleton-content">
+            <div className="skeleton-pulse skeleton-line" style={{ width: '40%', height: '16px' }} />
+            <div className="skeleton-pulse skeleton-line" style={{ width: '90%' }} />
+            <div className="skeleton-pulse skeleton-line" style={{ width: '70%' }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const membership = group.myMembership;
   const isApproved = membership?.status === 'APPROVED';
