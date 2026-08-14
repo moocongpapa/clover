@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, ROLE_LABELS, type MyGroup } from '../api';
+import { api, CATEGORY_OPTIONS, type MyGroup } from '../api';
 import GroupAvatar from '../components/GroupAvatar';
 import './MyGroups.css';
 
@@ -45,40 +45,55 @@ export default function MyGroups() {
         </div>
       ) : (
         <div className="my-groups-list">
-          {groups.map((g) => (
-            <Link
-              key={g.id}
-              to={`/groups/${g.id}`}
-              className="my-group-card"
-            >
-              <div className="my-group-card__left">
-                <GroupAvatar src={g.profileImageUrl} name={g.name} size={60} radius={14} />
-                <div className="my-group-card__info">
-                  <div className="my-group-card__title-row">
-                    <h3 className="my-group-card__name">{g.name}</h3>
-                    <span className={`my-group-role-badge ${getRoleBadgeClass(g.myRole)}`}>
-                      {ROLE_LABELS[g.myRole] ?? '회원'}
-                    </span>
+          {groups.map((g) => {
+            const catEmoji = CATEGORY_OPTIONS.find((c) => c.value === g.category)?.emoji || '🌱';
+            const roleLabel = g.myRole === 'PRESIDENT' ? '👑 회장' : g.myRole === 'OFFICER' ? '⭐ 운영진' : '회원';
+            return (
+              <Link
+                key={g.id}
+                to={`/groups/${g.id}`}
+                className="my-group-card"
+              >
+                <div className="my-group-card__left">
+                  <div className="my-group-card__avatar-wrap">
+                    <GroupAvatar src={g.profileImageUrl} name={g.name} size={64} radius={18} />
                   </div>
-                  <p className="my-group-card__desc">{g.description}</p>
-                  <div className="my-group-card__meta-row">
-                    <span className="my-group-card__category">{g.category}</span>
-                    {g.activityRegion && (
-                      <>
-                        <span className="my-group-card__divider">·</span>
-                        <span>📍 {g.activityRegion}</span>
-                      </>
+                  <div className="my-group-card__info">
+                    <div className="my-group-card__title-row">
+                      <h3 className="my-group-card__name">{g.name}</h3>
+                      <span className={`my-group-role-badge ${getRoleBadgeClass(g.myRole)}`}>
+                        {roleLabel}
+                      </span>
+                    </div>
+
+                    {g.description && (
+                      <p className="my-group-card__desc">{g.description}</p>
                     )}
-                    <span className="my-group-card__divider">·</span>
-                    <span>회원 {g.memberCount}명</span>
+
+                    <div className="my-group-card__meta-tags">
+                      <span className="my-group-meta-pill my-group-meta-pill--category">
+                        {catEmoji} {g.category}
+                      </span>
+                      {g.activityRegion && (
+                        <span className="my-group-meta-pill my-group-meta-pill--region" title={g.activityRegion}>
+                          📍 {g.activityRegion}
+                        </span>
+                      )}
+                      <span className="my-group-meta-pill my-group-meta-pill--members">
+                        👥 {g.memberCount}명
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="my-group-card__right">
-                <span className="my-group-card__arrow">›</span>
-              </div>
-            </Link>
-          ))}
+
+                <div className="my-group-card__right">
+                  <div className="my-group-card__arrow-btn">
+                    <span className="my-group-card__arrow">›</span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
 
