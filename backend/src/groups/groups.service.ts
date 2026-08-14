@@ -399,12 +399,46 @@ export class GroupsService {
   }
 
   async joinByInviteCode(inviteCode: string, userId: string) {
-    const group = await this.prisma.group.findUnique({ where: { inviteCode } });
+    const group = await this.prisma.group.findUnique({
+      where: { inviteCode },
+      include: {
+        members: { where: { status: MemberStatus.APPROVED } },
+      },
+    });
     if (!group) {
       throw new NotFoundException('유효하지 않은 초대 링크입니다.');
     }
 
-    return this.requestJoin(group.id, userId);
+    if (group.members.length >= group.maxMembers) {
+      throw new BadRequestException('모임 정원이 초과되었습니다.');
+    }
+
+    const existing = await this.prisma.groupMember.findUnique({
+      where: { userId_groupId: { userId, groupId: group.id } },
+    });
+
+    let result;
+    if (existing) {
+      if (existing.status === MemberStatus.APPROVED) {
+        throw new BadRequestException('이미 가입된 모임입니다.');
+      }
+      result = await this.prisma.groupMember.update({
+        where: { id: existing.id },
+        data: { status: MemberStatus.APPROVED, role: MemberRole.MEMBER },
+      });
+    } else {
+      result = await this.prisma.groupMember.create({
+        data: {
+          userId,
+          groupId: group.id,
+          status: MemberStatus.APPROVED,
+          role: MemberRole.MEMBER,
+        },
+      });
+    }
+
+    await this.notifications.notifyJoinApproved(group.id, userId);
+    return result;
   }
 
   private async requestJoin(groupId: string, userId: string) {
