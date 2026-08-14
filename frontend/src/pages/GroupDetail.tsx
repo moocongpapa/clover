@@ -229,29 +229,47 @@ export default function GroupDetail() {
   if (error && !group) return <p className="form-error">{error}</p>;
   if (!group) {
     return (
-      <div className="group-detail" style={{ maxWidth: '680px', margin: '0 auto', padding: '12px 16px' }}>
-        <div className="skeleton-card" style={{ marginBottom: '16px' }}>
-          <div className="skeleton-pulse skeleton-avatar" style={{ width: '72px', height: '72px', borderRadius: '20px' }} />
-          <div className="skeleton-content">
-            <div className="skeleton-pulse skeleton-line skeleton-line--title" style={{ width: '60%' }} />
-            <div className="skeleton-pulse skeleton-line skeleton-line--desc" style={{ width: '85%' }} />
-            <div className="skeleton-tags">
-              <div className="skeleton-pulse skeleton-tag" />
-              <div className="skeleton-pulse skeleton-tag" />
+      <div className="group-detail">
+        {/* Header Hero Skeleton */}
+        <div className="group-hero-section" style={{ marginBottom: '16px', background: 'var(--surface)', padding: '16px', borderRadius: '20px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+            <div className="skeleton-pulse skeleton-avatar" style={{ width: '76px', height: '76px', borderRadius: '22px', flexShrink: 0 }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="skeleton-pulse skeleton-line" style={{ width: '55%', height: '22px' }} />
+              <div className="skeleton-pulse skeleton-line" style={{ width: '40%', height: '14px' }} />
+              <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                <div className="skeleton-pulse" style={{ width: '60px', height: '22px', borderRadius: '999px' }} />
+                <div className="skeleton-pulse" style={{ width: '50px', height: '22px', borderRadius: '999px' }} />
+              </div>
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="skeleton-pulse" style={{ height: '36px', flex: 1, borderRadius: '10px' }} />
+
+        {/* Tab Bar Skeleton */}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', background: 'var(--surface)', padding: '6px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="skeleton-pulse" style={{ height: '34px', flex: 1, borderRadius: '8px' }} />
           ))}
         </div>
-        <div className="skeleton-card">
-          <div className="skeleton-content">
-            <div className="skeleton-pulse skeleton-line" style={{ width: '40%', height: '16px' }} />
-            <div className="skeleton-pulse skeleton-line" style={{ width: '90%' }} />
-            <div className="skeleton-pulse skeleton-line" style={{ width: '70%' }} />
-          </div>
+
+        {/* Feed Posts Card Skeleton */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {[1, 2].map((i) => (
+            <div key={i} className="skeleton-card" style={{ padding: '16px' }}>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div className="skeleton-pulse" style={{ width: '38px', height: '38px', borderRadius: '50%' }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="skeleton-pulse skeleton-line" style={{ width: '35%', height: '14px' }} />
+                    <div className="skeleton-pulse skeleton-line" style={{ width: '25%', height: '11px' }} />
+                  </div>
+                </div>
+                <div className="skeleton-pulse skeleton-line" style={{ width: '80%', height: '16px', marginTop: '4px' }} />
+                <div className="skeleton-pulse skeleton-line" style={{ width: '95%', height: '13px' }} />
+                <div className="skeleton-pulse skeleton-line" style={{ width: '60%', height: '13px' }} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
