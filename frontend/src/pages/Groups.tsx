@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef, type MouseEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api, CATEGORY_OPTIONS, type Group } from '../api';
+import { api, startKakaoLogin, CATEGORY_OPTIONS, type Group } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
 import './Groups.css';
@@ -68,13 +68,17 @@ function GroupCard({
   const renderAction = () => {
     if (!user) {
       return (
-        <Link
-          to="/login"
+        <button
+          type="button"
           className="btn-sm btn-outline group-card__action"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startKakaoLogin();
+          }}
         >
           가입
-        </Link>
+        </button>
       );
     }
 
@@ -121,43 +125,42 @@ function GroupCard({
   })();
 
   return (
-    <article className="group-list-row-item">
-      <Link to={`/groups/${group.id}`} className="group-list-row-link">
-        {/* Left: Square Profile Image */}
-        <div className="group-list-thumb-wrapper">
+    <article className="group-card-item">
+      <Link to={`/groups/${group.id}`} className="group-card-link">
+        {/* Left: Square Thumbnail (당근 스타일 96x96) */}
+        <div className="group-card-thumb">
           <GroupAvatar
             src={group.profileImageUrl}
             name={group.name}
-            size={92}
-            radius={14}
-            className="group-list-thumb"
+            size={96}
+            radius={16}
+            className="group-card-avatar"
           />
         </div>
 
         {/* Right: Info */}
-        <div className="group-list-info">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div className="group-list-category-badge">
-              {group.category}
-            </div>
-            {renderAction()}
+        <div className="group-card-content">
+          <div className="group-card-top-row">
+            <span className="group-card-category-badge">{group.category}</span>
+            <div className="group-card-action-wrap">{renderAction()}</div>
           </div>
 
-          <h3 className="group-list-title">{group.name}</h3>
+          <h3 className="group-card-title">{group.name}</h3>
 
-          <p className="group-list-desc">{group.description}</p>
+          {group.description && (
+            <p className="group-card-desc">{group.description}</p>
+          )}
 
-          <div className="group-list-meta-line">
-            <span className="group-list-location">
+          <div className="group-card-meta">
+            <span className="group-card-location">
               📍 {locationText} {distanceStr ? `(${distanceStr})` : ''}
             </span>
-            <span className="group-list-meta-divider">·</span>
-            <span className="group-list-status">회원 모집중</span>
-            <span className="group-list-count">({group._count?.members ?? 0}명)</span>
+            <span className="group-card-dot">·</span>
+            <span className="group-card-members">멤버 {group._count?.members ?? 0}명</span>
           </div>
         </div>
       </Link>
-      {error && <p className="group-card__error" style={{ margin: '4px 16px 8px', fontSize: '11px', color: '#ef4444' }}>{error}</p>}
+      {error && <p className="group-card-error-text">{error}</p>}
     </article>
   );
 }
