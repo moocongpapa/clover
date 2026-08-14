@@ -682,22 +682,25 @@ export default function GroupDetail() {
                   type="button"
                   className="group-detail-invite-btn"
                   onClick={handleCopyInvite}
+                  title="초대 링크 복사 (승인 없이 바로 입장)"
                   style={{
-                    background: 'var(--grey-100)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
+                    background: copied ? '#10b981' : 'rgba(16, 185, 129, 0.12)',
+                    border: copied ? '1px solid #10b981' : '1px solid rgba(16, 185, 129, 0.25)',
+                    borderRadius: '999px',
+                    padding: '6px 14px',
                     fontSize: '13px',
-                    fontWeight: '700',
-                    color: 'var(--ink-dark)',
+                    fontWeight: 700,
+                    color: copied ? '#ffffff' : '#059669',
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    flexShrink: 0
+                    gap: '5px',
+                    flexShrink: 0,
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    boxShadow: copied ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
                   }}
                 >
-                  ✉️ {copied ? '링크 복사됨!' : '초대'}
+                  {copied ? '✅ 복사됨!' : '✉️ 초대'}
                 </button>
               </div>
             </div>
@@ -1480,41 +1483,6 @@ export default function GroupDetail() {
 
                 return (
                   <section className="section-block">
-                    {/* Invite Member Banner */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      background: 'var(--surface-alt, #f8fafc)',
-                      border: '1px solid var(--border, #e2e8f0)',
-                      borderRadius: '12px',
-                      padding: '10px 14px',
-                      marginBottom: '14px'
-                    }}>
-                      <div style={{ fontSize: '13px', color: 'var(--ink-dark)' }}>
-                        <span style={{ fontWeight: 700 }}>💌 친구 & 신규 회원 초대하기</span>
-                        <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--ink-muted)', marginTop: '2px' }}>
-                          초대 링크로 접속한 회원은 승인 대기 없이 바로 참여할 수 있습니다.
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleCopyInvite}
-                        style={{
-                          background: '#10b981',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '6px 12px',
-                          fontSize: '12.5px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {copied ? '✅ 복사됨!' : '✉️ 초대 링크 복사'}
-                      </button>
-                    </div>
 
                     <div className="member-list-filter-header">
                       <h2 className="tab-section-title" style={{ margin: 0 }}>
@@ -2025,44 +1993,6 @@ export default function GroupDetail() {
                   )}
                 </div>
 
-                {/* Invite Link Card */}
-                <div className="info-card" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h3 className="info-card-title" style={{ margin: 0, color: '#166534' }}>💌 모임 초대 링크</h3>
-                    <button
-                      type="button"
-                      className="btn-sm btn-primary"
-                      onClick={handleCopyInvite}
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: '12.5px',
-                        fontWeight: 700,
-                        background: '#16a34a',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {copied ? '✅ 복사 완료!' : '📋 초대 링크 복사'}
-                    </button>
-                  </div>
-                  <p style={{ fontSize: '12.5px', color: '#15803d', margin: '0 0 10px 0', lineHeight: 1.4 }}>
-                    초대 링크를 받은 사람은 승인 절차 없이 바로 모임에 입장할 수 있습니다.
-                  </p>
-                  <div style={{
-                    padding: '8px 12px',
-                    background: '#ffffff',
-                    border: '1px solid #86efac',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    color: '#166534',
-                    fontFamily: 'monospace',
-                    wordBreak: 'break-all'
-                  }}>
-                    {window.location.origin}/invite/{group.inviteCode}
-                  </div>
-                </div>
 
                 {/* Bank accounts information */}
                 {hasBankAccount && (
