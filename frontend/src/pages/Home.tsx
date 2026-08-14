@@ -489,9 +489,7 @@ function HomeDashboard() {
 
   const handleCreateEventClick = () => {
     setIsFabOpen(false);
-    if (officerGroups.length === 1) {
-      navigate(`/groups/${officerGroups[0].id}/events/new`);
-    } else if (officerGroups.length > 1) {
+    if (officerGroups.length >= 1) {
       setShowGroupSelectModal(true);
     } else {
       navigate('/groups/new');
