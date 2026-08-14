@@ -91,6 +91,8 @@ export default function CreateEvent() {
     );
   };
 
+  const [groupArenas, setGroupArenas] = useState<Array<{ id?: string; placeName?: string; address?: string }>>([]);
+
   useEffect(() => {
     if (!groupId) return;
 
@@ -106,6 +108,25 @@ export default function CreateEvent() {
         setPastEvents(sorted);
       })
       .catch(() => setPastEvents([]));
+
+    // Fetch group details to prefill primary arena/venue
+    api
+      .getGroup(groupId)
+      .then((g) => {
+        if (g.arenas && g.arenas.length > 0) {
+          setGroupArenas(g.arenas);
+          if (!isClone) {
+            const primary = g.arenas[0];
+            const defaultLoc = primary.placeName
+              ? primary.address
+                ? `${primary.placeName} (${primary.address})`
+                : primary.placeName
+              : primary.address || '';
+            setEventLocation((prev) => (prev ? prev : defaultLoc));
+          }
+        }
+      })
+      .catch(() => {});
 
     if (isClone) {
       api.getLatestEventTemplate(groupId)
@@ -623,19 +644,49 @@ export default function CreateEvent() {
                 outline: 'none'
               }}
             />
-            {/* Quick location presets */}
-            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+            {/* Quick group arena chips & location presets */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+              {groupArenas.map((arena, idx) => {
+                const arenaText = arena.placeName
+                  ? arena.address
+                    ? `${arena.placeName} (${arena.address})`
+                    : arena.placeName
+                  : arena.address || '';
+                const isSelected = eventLocation === arenaText || (arena.placeName && eventLocation === arena.placeName);
+                return (
+                  <button
+                    key={arena.id || idx}
+                    type="button"
+                    onClick={() => setEventLocation(arenaText)}
+                    style={{
+                      padding: '5px 11px',
+                      background: isSelected ? 'rgba(16, 185, 129, 0.12)' : 'var(--grey-100)',
+                      border: `1px solid ${isSelected ? '#10b981' : 'var(--border)'}`,
+                      borderRadius: '999px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: isSelected ? '#10b981' : 'var(--ink-dark)',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    🏟️ {arena.placeName || arena.address} {idx === 0 ? '(주요 구장)' : ''}
+                  </button>
+                );
+              })}
               <button
                 type="button"
                 onClick={() => setEventLocation('온라인 (Zoom / 디스코드)')}
                 style={{
                   padding: '4px 10px',
-                  background: 'var(--grey-100)',
-                  border: 'none',
+                  background: eventLocation === '온라인 (Zoom / 디스코드)' ? 'rgba(16, 185, 129, 0.12)' : 'var(--grey-100)',
+                  border: `1px solid ${eventLocation === '온라인 (Zoom / 디스코드)' ? '#10b981' : 'transparent'}`,
                   borderRadius: '999px',
                   fontSize: '12px',
                   fontWeight: '600',
-                  color: 'var(--ink-muted)',
+                  color: eventLocation === '온라인 (Zoom / 디스코드)' ? '#10b981' : 'var(--ink-muted)',
                   cursor: 'pointer'
                 }}
               >
@@ -646,16 +697,16 @@ export default function CreateEvent() {
                 onClick={() => setEventLocation('미정 (추후 공지)')}
                 style={{
                   padding: '4px 10px',
-                  background: 'var(--grey-100)',
-                  border: 'none',
+                  background: eventLocation === '미정 (추후 공지)' ? 'rgba(16, 185, 129, 0.12)' : 'var(--grey-100)',
+                  border: `1px solid ${eventLocation === '미정 (추후 공지)' ? '#10b981' : 'transparent'}`,
                   borderRadius: '999px',
                   fontSize: '12px',
                   fontWeight: '600',
-                  color: 'var(--ink-muted)',
+                  color: eventLocation === '미정 (추후 공지)' ? '#10b981' : 'var(--ink-muted)',
                   cursor: 'pointer'
                 }}
               >
-                +미정
+                +미정 (추후 공지)
               </button>
             </div>
           </div>
