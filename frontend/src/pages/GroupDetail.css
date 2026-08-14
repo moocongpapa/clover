@@ -1667,33 +1667,33 @@
 /* Tab Navigation */
 .group-detail-tab-navigation {
   display: flex;
-  overflow-x: auto;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
+  width: 100%;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--surface);
   position: sticky;
   top: 52px;
   z-index: 90;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
-}
-.group-detail-tab-navigation::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+  box-sizing: border-box;
 }
 
 .tab-navigation-btn {
-  flex: 0 0 auto;
-  padding: 0 16px;
-  height: 44px;
+  flex: 1 1 0px;
+  min-width: 0;
+  padding: 0 2px;
+  height: 46px;
   background: none;
   border: none;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--ink-muted);
   cursor: pointer;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   transition: color var(--dur-base) var(--ease);
+  white-space: nowrap;
 }
 
 .tab-navigation-btn.is-active {
@@ -1705,8 +1705,8 @@
   content: '';
   position: absolute;
   bottom: 0;
-  left: 20%;
-  right: 20%;
+  left: 15%;
+  right: 15%;
   height: 3px;
   background: var(--ink-dark);
   border-radius: 2px 2px 0 0;
