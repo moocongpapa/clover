@@ -537,16 +537,17 @@ function HomeDashboard() {
   const getDDayInfo = (dateStr: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const parts = (dateStr || '').split('-');
+    const cleanDateStr = (dateStr || '').split('T')[0];
+    const parts = cleanDateStr.split('-');
     if (parts.length < 3) return { label: 'D-Day', isUrgent: false };
     const target = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
     target.setHours(0, 0, 0, 0);
-    const diffDays = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return { label: '🔥 오늘 D-Day', isUrgent: true };
     if (diffDays === 1) return { label: '⚡ 내일 D-1', isUrgent: true };
     if (diffDays === 2) return { label: '📅 D-2', isUrgent: false };
-    if (diffDays > 0) return { label: `📅 D-${diffDays}`, isUrgent: false };
-    return { label: '종료', isUrgent: false };
+    if (diffDays > 2) return { label: `📅 D-${diffDays}`, isUrgent: false };
+    return { label: '진행 중', isUrgent: true };
   };
 
   // Past events filtering
