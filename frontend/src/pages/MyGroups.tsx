@@ -31,9 +31,22 @@ export default function MyGroups() {
       </div>
 
       {loading ? (
-        <p className="loading-text" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-          불러오는 중…
-        </p>
+        <div className="my-groups-list">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton-pulse skeleton-avatar" />
+              <div className="skeleton-content">
+                <div className="skeleton-pulse skeleton-line skeleton-line--title" />
+                <div className="skeleton-pulse skeleton-line skeleton-line--desc" />
+                <div className="skeleton-tags">
+                  <div className="skeleton-pulse skeleton-tag" />
+                  <div className="skeleton-pulse skeleton-tag" />
+                  <div className="skeleton-pulse skeleton-tag" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : groups.length === 0 ? (
         <div className="my-groups-empty">
           <span className="my-groups-empty__icon">👥</span>

@@ -30,6 +30,30 @@ function formatRelativeTime(isoStr: string): string {
   return `${m}월 ${d}일`;
 }
 
+function getDateGroup(isoStr: string): string {
+  const date = new Date(isoStr);
+  const now = new Date();
+
+  const isSameDay = (d1: Date, d2: Date) =>
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
+
+  if (isSameDay(date, now)) return '오늘';
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (isSameDay(date, yesterday)) return '어제';
+
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  if (date >= sevenDaysAgo) return '이번 주';
+
+  if (date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()) return '이번 달';
+
+  return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+}
+
 interface NotificationRowProps {
   item: NotificationItem;
   onDelete: (id: string) => void;
@@ -319,8 +343,16 @@ export default function Notifications() {
 
       {/* Content List */}
       {loading ? (
-        <div className="notifications-loading-wrap">
-          <p className="notifications-loading">소식을 불러오는 중…</p>
+        <div className="notifications-list">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="notification-skeleton">
+              <div className="skeleton-avatar skeleton-pulse" />
+              <div className="skeleton-lines">
+                <div className="skeleton-line skeleton-pulse" />
+                <div className="skeleton-line skeleton-pulse skeleton-line--short" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredList.length === 0 ? (
         <div className="notifications-empty">
@@ -330,12 +362,26 @@ export default function Notifications() {
         </div>
       ) : (
         <div className="notifications-list">
-          {filteredList.map((item) => (
-            <NotificationRow
-              key={item.id}
-              item={item}
-              onDelete={handleDeleteSingle}
-            />
+          {filteredList.reduce<{ group: string; items: NotificationItem[] }[]>((acc, item) => {
+            const group = getDateGroup(item.sentAt);
+            const lastGroup = acc[acc.length - 1];
+            if (lastGroup && lastGroup.group === group) {
+              lastGroup.items.push(item);
+            } else {
+              acc.push({ group, items: [item] });
+            }
+            return acc;
+          }, []).map(({ group, items }) => (
+            <div key={group} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="notification-date-header">{group}</div>
+              {items.map((item) => (
+                <NotificationRow
+                  key={item.id}
+                  item={item}
+                  onDelete={handleDeleteSingle}
+                />
+              ))}
+            </div>
           ))}
         </div>
       )}

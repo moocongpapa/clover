@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import {
   api,
@@ -475,6 +475,7 @@ function HomeDashboard() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
+  const [duesSummary, setDuesSummary] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<HomeTab>('upcoming');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -506,10 +507,12 @@ function HomeDashboard() {
     Promise.all([
       api.getCalendar(),
       api.myGroups(),
+      api.getMyDuesSummary ? api.getMyDuesSummary() : Promise.resolve([]),
     ])
-      .then(([calendarEvents, myGroups]) => {
+      .then(([calendarEvents, myGroups, myDues]) => {
         setEvents(calendarEvents);
         setGroups(myGroups);
+        if (myDues) setDuesSummary(myDues);
       })
       .finally(() => setLoading(false));
   };
@@ -567,7 +570,32 @@ function HomeDashboard() {
     past = past.filter((e) => new Date(e.date) >= oneMonthAgo);
   }
 
+  const unpaidDuesCount = useMemo(() => {
+    return duesSummary.filter(d => !d.isPaid && !d.isExempt).length;
+  }, [duesSummary]);
 
+  const actionItems = useMemo(() => {
+    const items = [];
+    if (needsVote.length > 0) {
+      items.push({
+        title: '참석 투표 필요',
+        desc: `${needsVote.length}개의 모임 일정이 투표를 기다리고 있어요.`,
+        iconClass: 'home-action-card__icon--vote',
+        emoji: '🗳️',
+        link: `/events/${needsVote[0].id}`,
+      });
+    }
+    if (unpaidDuesCount > 0) {
+      items.push({
+        title: '이번 달 회비 미납',
+        desc: `${unpaidDuesCount}개의 모임 회비가 아직 납부되지 않았어요.`,
+        iconClass: 'home-action-card__icon--dues',
+        emoji: '💰',
+        link: '/my',
+      });
+    }
+    return items;
+  }, [needsVote, unpaidDuesCount]);
   return (
     <div className="home-dashboard">
       {/* 🌟 Next Upcoming Event D-Day Highlight Widget */}
@@ -656,6 +684,32 @@ function HomeDashboard() {
           </div>
         </div>
       )}
+
+      {/* 지금 필요한 것 Action Cards */}
+      <section style={{ marginBottom: '24px' }}>
+        <h2 className="home-section__title" style={{ marginBottom: '12px', fontSize: '15px', color: 'var(--ink-dark)' }}>지금 필요한 것</h2>
+        {actionItems.length > 0 ? (
+          <div className="home-action-cards">
+            {actionItems.map((item, i) => (
+              <Link key={i} to={item.link} className="home-action-card">
+                <div className={`home-action-card__icon ${item.iconClass}`}>
+                  {item.emoji}
+                </div>
+                <div className="home-action-card__body">
+                  <p className="home-action-card__title">{item.title}</p>
+                  <p className="home-action-card__desc">{item.desc}</p>
+                </div>
+                <span className="home-action-card__arrow">›</span>
+              </Link>
+            ))}
+          </div>
+        ) : !loading && (
+          <div className="home-action-complete">
+            <span className="home-action-complete__emoji">✅</span>
+            <p className="home-action-complete__text">모든 할 일을 완료했어요!</p>
+          </div>
+        )}
+      </section>
 
       {/* Naver Band Style My Groups Grid */}
       <section className="home-groups-section">
