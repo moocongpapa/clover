@@ -3319,3 +3319,48 @@
 .media-lightbox-next {
   right: 16px;
 }
+
+/* ── Payments Section UI Enhancements ── */
+
+.payment-summary-text {
+  font-size: 14px;
+  font-weight: 800;
+  transition: color 0.3s ease;
+}
+
+.payment-summary-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--grey-200);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.payment-quick-links {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.payment-quick-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.payment-quick-btn:active {
+  transform: scale(0.96);
+}
+
+.payment-quick-btn:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}

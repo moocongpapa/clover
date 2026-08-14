@@ -1716,14 +1716,34 @@ export default function GroupDetail() {
                     const unpaidCount = paymentData.payments.filter((p: any) => !p.isPaid).length;
                     const pct = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
 
+                    let progressColor = '#ef4444'; // red
+                    let gradientColor = '#f87171'; // lighter red
+                    if (pct >= 100) {
+                      progressColor = '#10b981'; // green
+                      gradientColor = '#34d399';
+                    } else if (pct >= 80) {
+                      progressColor = '#10b981'; // green
+                      gradientColor = '#34d399';
+                    } else if (pct >= 50) {
+                      progressColor = '#f59e0b'; // yellow
+                      gradientColor = '#fbbf24';
+                    }
+
                     return (
                       <div className="compact-dues-progress-card" style={{ marginTop: '12px', padding: '12px 14px', background: 'var(--surface-alt)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                           <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--ink-dark)' }}>💰 {payYear}년 {payMonth}월 완납 현황</span>
-                          <span style={{ fontSize: '14px', fontWeight: 800, color: '#10b981' }}>{pct}%</span>
+                          <span className="payment-summary-text" style={{ fontSize: '14px', fontWeight: 800, color: progressColor }}>
+                            {totalCount}명 중 {paidCount}명 납부 ({pct}%)
+                          </span>
                         </div>
-                        <div style={{ width: '100%', height: '8px', background: 'var(--grey-200)', borderRadius: '999px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #10b981, #34d399)', borderRadius: '999px', transition: 'width 0.4s ease' }} />
+                        {pct >= 100 && (
+                          <div style={{ fontSize: '14px', fontWeight: 800, color: '#10b981', textAlign: 'center', marginBottom: '8px' }}>
+                            🎉 이번 달 전원 완납!
+                          </div>
+                        )}
+                        <div className="payment-summary-bar" style={{ width: '100%', height: '8px', background: 'var(--grey-200)', borderRadius: '999px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${progressColor}, ${gradientColor})`, borderRadius: '999px', transition: 'width 0.4s ease' }} />
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', fontWeight: 700 }}>
                           <span style={{ color: '#10b981' }}>✅ 완납 {paidCount}명</span>
@@ -1835,43 +1855,74 @@ export default function GroupDetail() {
                       ) : (
                         <div className="payments-grid">
                           {filteredPayments.map((p: any) => {
+                            const isMyUnpaid = p.userId === user?.id && !p.isPaid;
                             return (
-                              <div key={p.userId} className="payment-checklist-item">
-                                <div className="payment-member-info">
-                                  <span style={{ fontWeight: 700, fontSize: '14px' }}>
-                                    {formatMemberNameWithEmoji(p)}
-                                  </span>
-                                  {p.isExempt && <span className="payment-exempt-badge">면제</span>}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  {p.isPaid && p.paidByName && (
-                                    <span
-                                      className="payment-recorder-name"
-                                      style={{
-                                        fontSize: '11.5px',
-                                        color: 'var(--ink-muted, #64748b)',
-                                        fontWeight: 600,
-                                        whiteSpace: 'nowrap',
-                                      }}
-                                    >
-                                      {p.isExempt ? '임원면제' : `${p.paidByName} 확인`}
+                              <div key={p.userId} style={isMyUnpaid ? { display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--surface)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--border-subtle)', marginBottom: '8px', boxShadow: 'var(--shadow-1)' } : { marginBottom: '8px' }}>
+                                <div className="payment-checklist-item" style={isMyUnpaid ? { border: 'none', padding: 0, boxShadow: 'none', marginBottom: 0 } : {}}>
+                                  <div className="payment-member-info">
+                                    <span style={{ fontWeight: 700, fontSize: '14px' }}>
+                                      {formatMemberNameWithEmoji(p)}
                                     </span>
-                                  )}
-                                  {isOfficer ? (
+                                    {p.isExempt && <span className="payment-exempt-badge">면제</span>}
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {p.isPaid && p.paidByName && (
+                                      <span
+                                        className="payment-recorder-name"
+                                        style={{
+                                          fontSize: '11.5px',
+                                          color: 'var(--ink-muted, #64748b)',
+                                          fontWeight: 600,
+                                          whiteSpace: 'nowrap',
+                                        }}
+                                      >
+                                        {p.isExempt ? '임원면제' : `${p.paidByName} 확인`}
+                                      </span>
+                                    )}
+                                    {isOfficer ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTogglePayment(p.userId)}
+                                        disabled={p.isExempt}
+                                        className={`payment-toggle-btn${p.isPaid ? ' is-paid' : ''}`}
+                                      >
+                                        {p.isPaid ? '납부완료' : '미납'}
+                                      </button>
+                                    ) : (
+                                      <span style={{ fontSize: '13px', fontWeight: 700, color: p.isPaid ? 'var(--green-500)' : 'var(--red-500)' }}>
+                                        {p.isPaid ? '납부완료' : '미납'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                {isMyUnpaid && (
+                                  <div className="payment-quick-links">
                                     <button
                                       type="button"
-                                      onClick={() => handleTogglePayment(p.userId)}
-                                      disabled={p.isExempt}
-                                      className={`payment-toggle-btn${p.isPaid ? ' is-paid' : ''}`}
+                                      className="payment-quick-btn"
+                                      style={{ background: '#3182f6', color: '#fff' }}
+                                      onClick={() => {
+                                        const tossUrl = `supertoss://send?amount=${group.monthlyFee || 0}&bank=${encodeURIComponent(group.bankName || '')}&accountNo=${group.bankAccountNumber || ''}&origin=clover`;
+                                        window.location.href = tossUrl;
+                                        setTimeout(() => handleCopyAccountNumber(), 1200);
+                                      }}
                                     >
-                                      {p.isPaid ? '납부완료' : '미납'}
+                                      토스로 보내기
                                     </button>
-                                  ) : (
-                                    <span style={{ fontSize: '13px', fontWeight: 700, color: p.isPaid ? 'var(--green-500)' : 'var(--red-500)' }}>
-                                      {p.isPaid ? '납부완료' : '미납'}
-                                    </span>
-                                  )}
-                                </div>
+                                    <button
+                                      type="button"
+                                      className="payment-quick-btn"
+                                      style={{ background: '#fee500', color: '#191919' }}
+                                      onClick={() => {
+                                        const kakaoUrl = `kakaotalk://pay/money/to/bank?amount=${group.monthlyFee || 0}`;
+                                        window.location.href = kakaoUrl;
+                                        setTimeout(() => handleCopyAccountNumber(), 1200);
+                                      }}
+                                    >
+                                      카카오페이로 보내기
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
