@@ -1,4 +1,4 @@
-import { type FormEvent, useRef, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import RegionSelector, {
   type RegionSelection,
@@ -19,6 +19,18 @@ export default function CreateGroup() {
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<Array<{ value: string; emoji: string }>>([...CATEGORY_OPTIONS]);
+
+  useEffect(() => {
+    api
+      .getActiveCategories()
+      .then((list) => {
+        if (list && list.length > 0) {
+          setCategoryOptions(list);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Form states
   const [category, setCategory] = useState('풋살/축구');
@@ -230,7 +242,7 @@ export default function CreateGroup() {
               onChange={(e) => setCategory(e.target.value)}
               required
             >
-              {CATEGORY_OPTIONS.map((c) => (
+              {categoryOptions.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.emoji} {c.value}
                 </option>

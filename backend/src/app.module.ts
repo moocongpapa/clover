@@ -15,6 +15,7 @@ import { RegionsModule } from './regions/regions.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { ChatModule } from './chat/chat.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { FeedbackModule } from './feedback/feedback.module';
     AnnouncementsModule,
     ChatModule,
     FeedbackModule,
+    AdminModule,
   ],
   providers: [
     {

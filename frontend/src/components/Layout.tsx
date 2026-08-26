@@ -3,6 +3,7 @@ import { startKakaoLogin } from '../api';
 import { useAuth } from '../context/AuthContext';
 import CloverLogo from './CloverLogo';
 import NotificationBell from './NotificationBell';
+import SystemAnnouncementBanner from './SystemAnnouncementBanner';
 import './Layout.css';
 
 export default function Layout() {
@@ -28,6 +29,8 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
+      <SystemAnnouncementBanner />
+
       {isKakaoInApp && (
         <div style={{
           background: '#fee500',
@@ -60,6 +63,7 @@ export default function Layout() {
           </button>
         </div>
       )}
+
       <header className="site-header">
         <div className="site-header-inner">
           <Link to="/" className="brand">
@@ -86,6 +90,11 @@ export default function Layout() {
               <NavLink to="/my" className={navClass}>
                 MY
               </NavLink>
+              {user.role === 'ADMIN' && (
+                <NavLink to="/admin" className={navClass} style={{ color: 'var(--accent, #10b981)', fontWeight: 800 }}>
+                  ⚙️ 관리자
+                </NavLink>
+              )}
             </nav>
           )}
 

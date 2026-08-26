@@ -210,6 +210,23 @@ export default function MyPage() {
 
       {/* Main Menu Groups */}
       <div className="my-menu-container">
+        {user.role === 'ADMIN' && (
+          <div className="my-menu-group" style={{ border: '1.5px solid var(--accent, #10b981)', background: 'rgba(16, 185, 129, 0.03)' }}>
+            <h2 className="my-menu-group__title" style={{ color: 'var(--accent, #10b981)' }}>운영자 권한</h2>
+            <Link to="/admin" className="my-menu-item">
+              <div className="my-menu-item__left">
+                <span className="my-menu-icon" style={{ color: 'var(--accent, #10b981)' }}>
+                  ⚙️
+                </span>
+                <span className="my-menu-label" style={{ fontWeight: 800, color: 'var(--accent, #10b981)' }}>
+                  관리자 콘솔 바로가기
+                </span>
+              </div>
+              <span className="my-menu-arrow" style={{ color: 'var(--accent, #10b981)', fontWeight: 800 }}>›</span>
+            </Link>
+          </div>
+        )}
+
         <div className="my-menu-group">
           <h2 className="my-menu-group__title">서비스 & 설정</h2>
           <Link to="/settings" className="my-menu-item">

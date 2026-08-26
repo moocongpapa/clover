@@ -33,6 +33,10 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('유효하지 않은 사용자입니다.');
       }
 
+      if (user.isBlocked) {
+        throw new UnauthorizedException('이용이 정지된 계정입니다. 관리자에게 문의하세요.');
+      }
+
       request.user = user;
       return true;
     } catch {

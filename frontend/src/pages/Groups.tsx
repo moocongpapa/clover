@@ -169,6 +169,7 @@ export default function Groups() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [categoryOptions, setCategoryOptions] = useState<Array<{ value: string; emoji: string }>>([...CATEGORY_OPTIONS]);
   const [loading, setLoading] = useState(true);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showSearchInput, setShowSearchInput] = useState(false);
@@ -176,6 +177,17 @@ export default function Groups() {
 
   const [visibleCount, setVisibleCount] = useState(15);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    api
+      .getActiveCategories()
+      .then((list) => {
+        if (list && list.length > 0) {
+          setCategoryOptions(list);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Automatically fetch geolocation on mount for 20km fixed filtering
   useEffect(() => {
@@ -286,14 +298,15 @@ export default function Groups() {
         >
           전체
         </button>
-        {CATEGORY_OPTIONS.map((c) => (
+        {categoryOptions.map((c) => (
           <button
             key={c.value}
             type="button"
             className={`category-underline-tab ${category === c.value ? 'is-active' : ''}`}
             onClick={() => setCategory(c.value)}
           >
-            {c.value}
+            <span className="category-tab-emoji">{c.emoji}</span>
+            <span>{c.value}</span>
           </button>
         ))}
       </nav>

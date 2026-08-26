@@ -1,0 +1,138 @@
+/* ═══════════════════════════════════════════
+   Clover Admin Console Styles
+   ═══════════════════════════════════════════ */
+.admin-shell {
+  min-height: 100vh;
+  background: var(--bg-base, #f8fafc);
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface, #ffffff);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.admin-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--ink-dark, #191f28);
+}
+
+.admin-logo-badge {
+  font-size: 18px;
+}
+
+.admin-logo-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.admin-logo-tag {
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.admin-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-back-to-app-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent, #10b981);
+  text-decoration: none;
+  background: rgba(16, 185, 129, 0.08);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  transition: all 0.15s ease;
+}
+
+.admin-back-to-app-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.admin-nav-bar {
+  background: var(--surface, #ffffff);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.admin-nav-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-nav-tabs {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  gap: 4px;
+}
+
+.admin-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-muted, #64748b);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.admin-nav-tab:hover {
+  color: var(--ink-dark, #191f28);
+}
+
+.admin-nav-tab.is-active {
+  color: var(--accent, #10b981);
+  border-bottom-color: var(--accent, #10b981);
+  font-weight: 800;
+}
+
+.admin-main-container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+@media (min-width: 768px) {
+  .admin-main-container {
+    padding: 28px 24px 80px;
+  }
+}

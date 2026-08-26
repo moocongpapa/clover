@@ -34,6 +34,19 @@ export default function EditGroup() {
   const [officerFeeExempt, setOfficerFeeExempt] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
 
+  const [categoryOptions, setCategoryOptions] = useState<Array<{ value: string; emoji: string }>>([...CATEGORY_OPTIONS]);
+
+  useEffect(() => {
+    api
+      .getActiveCategories()
+      .then((list) => {
+        if (list && list.length > 0) {
+          setCategoryOptions(list);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const [region, setRegion] = useState<RegionSelection>({
     activitySido: '',
     activitySigungu: '',
@@ -310,7 +323,7 @@ export default function EditGroup() {
               onChange={(e) => setCategory(e.target.value)}
               required
             >
-              {CATEGORY_OPTIONS.map((c) => (
+              {categoryOptions.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.emoji} {c.value}
                 </option>

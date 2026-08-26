@@ -536,7 +536,178 @@ export const api = {
       body: JSON.stringify({ content }),
     }),
   getFeedbacks: () => request<any[]>('/feedback'),
+
+  // ── Public System Data ──
+  getActiveCategories: () => request<CategoryItem[]>('/public/categories'),
+  getActiveSystemAnnouncements: () => request<SystemAnnouncementItem[]>('/public/system-announcements'),
+  getPublicSettings: () => request<Record<string, string>>('/public/settings'),
+
+  // ── Admin Endpoints ──
+  admin: {
+    getDashboard: () => request<DashboardStats>('/admin/dashboard'),
+
+    // Users
+    getUsers: (params?: { search?: string; role?: string; isBlocked?: boolean; page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.search) q.set('search', params.search);
+      if (params?.role) q.set('role', params.role);
+      if (params?.isBlocked !== undefined) q.set('isBlocked', String(params.isBlocked));
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return request<AdminUserListResponse>(`/admin/users?${q.toString()}`);
+    },
+    getUserDetail: (id: string) => request<any>(`/admin/users/${id}`),
+    updateUser: (id: string, data: { role?: string; isBlocked?: boolean; displayName?: string }) =>
+      request<any>(`/admin/users/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    // Groups
+    getGroups: (params?: { search?: string; category?: string; isPublic?: boolean; page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.search) q.set('search', params.search);
+      if (params?.category) q.set('category', params.category);
+      if (params?.isPublic !== undefined) q.set('isPublic', String(params.isPublic));
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return request<AdminGroupListResponse>(`/admin/groups?${q.toString()}`);
+    },
+    updateGroup: (id: string, data: { isPublic?: boolean; category?: string; maxMembers?: number }) =>
+      request<any>(`/admin/groups/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deleteGroup: (id: string) => request<{ ok: boolean; message?: string }>(`/admin/groups/${id}`, { method: 'DELETE' }),
+
+    // Categories
+    getCategories: () => request<CategoryItem[]>('/admin/categories'),
+    createCategory: (data: { value: string; emoji: string; sortOrder?: number; isActive?: boolean }) =>
+      request<CategoryItem>('/admin/categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateCategory: (id: string, data: { value?: string; emoji?: string; sortOrder?: number; isActive?: boolean }) =>
+      request<CategoryItem>(`/admin/categories/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deleteCategory: (id: string) => request<{ ok: boolean }>(`/admin/categories/${id}`, { method: 'DELETE' }),
+    reorderCategories: (categoryIds: string[]) =>
+      request<CategoryItem[]>('/admin/categories/reorder', {
+        method: 'PATCH',
+        body: JSON.stringify({ categoryIds }),
+      }),
+
+    // Feedback
+    getFeedbacks: (params?: { status?: string; page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.set('status', params.status);
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return request<AdminFeedbackListResponse>(`/admin/feedback?${q.toString()}`);
+    },
+    updateFeedbackStatus: (id: string, status: string) =>
+      request<any>(`/admin/feedback/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+    deleteFeedback: (id: string) => request<{ ok: boolean }>(`/admin/feedback/${id}`, { method: 'DELETE' }),
+
+    // Announcements
+    getAnnouncements: () => request<SystemAnnouncementItem[]>('/admin/announcements'),
+    createAnnouncement: (data: { title: string; content: string; isActive?: boolean; priority?: number }) =>
+      request<SystemAnnouncementItem>('/admin/announcements', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateAnnouncement: (id: string, data: { title?: string; content?: string; isActive?: boolean; priority?: number }) =>
+      request<SystemAnnouncementItem>(`/admin/announcements/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deleteAnnouncement: (id: string) => request<{ ok: boolean }>(`/admin/announcements/${id}`, { method: 'DELETE' }),
+
+    // Settings
+    getSettings: () => request<Record<string, string>>('/admin/settings'),
+    setSetting: (key: string, value: string) =>
+      request<any>('/admin/settings', {
+        method: 'POST',
+        body: JSON.stringify({ key, value }),
+      }),
+
+    // Broadcast
+    broadcastPush: (data: { title: string; message: string }) =>
+      request<{ ok: boolean; sentCount: number }>('/admin/broadcast', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
 };
+
+export interface CategoryItem {
+  id: string;
+  value: string;
+  emoji: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface SystemAnnouncementItem {
+  id: string;
+  title: string;
+  content: string;
+  isActive: boolean;
+  priority: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DashboardStats {
+  summary: {
+    totalUsers: number;
+    usersToday: number;
+    users7d: number;
+    users30d: number;
+    totalGroups: number;
+    groupsToday: number;
+    publicGroups: number;
+    totalEvents: number;
+    activeEvents: number;
+    totalVotes: number;
+    pendingFeedback: number;
+  };
+  trend7Days: { date: string; users: number; groups: number }[];
+  recentUsers: any[];
+  recentGroups: any[];
+  recentFeedbacks: any[];
+}
+
+export interface AdminUserListResponse {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  users: any[];
+}
+
+export interface AdminGroupListResponse {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  groups: any[];
+}
+
+export interface AdminFeedbackListResponse {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  feedbacks: any[];
+}
 
 export type VoteChoice = 'ATTEND' | 'ABSENT' | 'LATE';
 

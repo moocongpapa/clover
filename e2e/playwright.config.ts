@@ -1,4 +1,26 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Load backend/.env if DATABASE_URL is not set
+if (!process.env.DATABASE_URL) {
+  try {
+    const envPath = path.resolve(__dirname, '../backend/.env');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+          const [key, ...rest] = trimmed.split('=');
+          const val = rest.join('=').replace(/^["']|["']$/g, '');
+          if (!process.env[key]) {
+            process.env[key] = val;
+          }
+        }
+      }
+    }
+  } catch {}
+}
 
 process.env.API_URL = process.env.API_URL ?? 'http://localhost:3001';
 process.env.BASE_URL = process.env.BASE_URL ?? 'http://localhost:5175';
@@ -37,8 +59,6 @@ export default defineConfig({
       timeout: 180_000,
       env: {
         ...process.env,
-        DATABASE_URL:
-          process.env.DATABASE_URL || '',
         PORT: '3001',
         DEV_LOGIN_ENABLED: 'true',
         FRONTEND_URL: BASE_URL,

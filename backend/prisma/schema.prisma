@@ -71,6 +71,7 @@ model User {
   createdTeamSplits   EventTeamSplit[] @relation("TeamSplitCreator")
   teamAssignments     EventTeamAssignment[]
   role                String           @default("MEMBER")
+  isBlocked           Boolean          @default(false)
   announcements       Announcement[]
   officerHistories    OfficerHistory[]
   payments            FeePayment[]
@@ -319,3 +320,31 @@ model Feedback {
   status    String   @default("PENDING")
   createdAt DateTime @default(now())
 }
+
+model Category {
+  id        String   @id @default(cuid())
+  value     String   @unique
+  emoji     String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemAnnouncement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  isActive  Boolean  @default(true)
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+

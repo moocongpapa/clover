@@ -23,6 +23,17 @@ import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import MyPage from './pages/MyPage';
 
+// Admin Console
+import AdminRoute from './components/AdminRoute';
+import AdminLayout from './components/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminCategories from './pages/admin/AdminCategories';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminGroups from './pages/admin/AdminGroups';
+import AdminFeedback from './pages/admin/AdminFeedback';
+import AdminAnnouncements from './pages/admin/AdminAnnouncements';
+import AdminSettings from './pages/admin/AdminSettings';
+
 // Load saved settings immediately on boot
 const savedFont = localStorage.getItem('clover_font_family');
 if (savedFont) {
@@ -195,6 +206,24 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+          </Route>
+
+          {/* ── Admin Console Routes ── */}
+          <Route
+            path="admin"
+            element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="groups" element={<AdminGroups />} />
+            <Route path="feedback" element={<AdminFeedback />} />
+            <Route path="announcements" element={<AdminAnnouncements />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>
