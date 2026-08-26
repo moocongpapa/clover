@@ -3,11 +3,20 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
+
+  // Security headers
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Allow inline scripts for React SPA
+      crossOriginEmbedderPolicy: false, // Allow embedding images from external CDNs
+    }),
+  );
 
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
@@ -35,7 +44,7 @@ async function bootstrap() {
           );
         callback(null, isAllowed);
       } catch {
-        callback(null, true);
+        callback(null, false);
       }
     },
     credentials: true,

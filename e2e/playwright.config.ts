@@ -38,8 +38,7 @@ export default defineConfig({
       env: {
         ...process.env,
         DATABASE_URL:
-          process.env.DATABASE_URL ||
-          'postgresql://postgres.acdcwhbddgwxufhhtrwi:yuha1004%21%40%23@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+          process.env.DATABASE_URL || '',
         PORT: '3001',
         DEV_LOGIN_ENABLED: 'true',
         FRONTEND_URL: BASE_URL,
