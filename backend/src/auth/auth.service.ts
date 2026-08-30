@@ -97,6 +97,8 @@ export class AuthService {
       return this.issueToken(user);
     }
 
+    const clientSecret = this.config.get<string>('KAKAO_CLIENT_SECRET');
+
     let tokenRes: { data: KakaoTokenResponse };
     try {
       tokenRes = await axios.post<KakaoTokenResponse>(
@@ -108,6 +110,7 @@ export class AuthService {
             client_id: restApiKey,
             redirect_uri: redirectUri,
             code,
+            ...(clientSecret ? { client_secret: clientSecret } : {}),
           },
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         },
