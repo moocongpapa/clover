@@ -3,7 +3,9 @@ import { getMessaging, getToken } from 'firebase/messaging';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
+  apiKey:
+    import.meta.env.VITE_FIREBASE_API_KEY ||
+    'AIzaSyAijEwQvY8vgIKxLP9SWLkPZ1XEVzI4Dlk',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'clover-e3338.firebaseapp.com',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'clover-e3338',
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'clover-e3338.firebasestorage.app',

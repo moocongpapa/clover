@@ -1,0 +1,23 @@
+name: Render Keep Alive
+
+on:
+  schedule:
+    # Run every 10 minutes (cron runs in UTC)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Clover Backend on Render
+        run: |
+          echo "Pinging Clover backend to keep Render awake..."
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" https://clover-backend-vm9k.onrender.com/health)
+          echo "$RESPONSE"
+          STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ Keep-alive ping successful (HTTP 200)"
+          else
+            echo "⚠️ Ping returned status: $STATUS"
+          fi
