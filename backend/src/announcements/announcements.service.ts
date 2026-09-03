@@ -29,7 +29,7 @@ export class AnnouncementsService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isPinned: 'desc' } as any, { createdAt: 'desc' }],
     });
   }
 
@@ -55,7 +55,7 @@ export class AnnouncementsService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isPinned: 'desc' } as any, { createdAt: 'desc' }],
     });
   }
 
@@ -182,6 +182,18 @@ export class AnnouncementsService {
 
     await this.prisma.announcement.delete({ where: { id } });
     return { ok: true, message: '게시글이 삭제되었습니다.' };
+  }
+
+  async togglePin(id: string, userId: string) {
+    const ann = await this.prisma.announcement.findUnique({ where: { id } });
+    if (!ann) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    // Check permission - use the same assertCanManage pattern already in this file
+    await this.assertCanManage(ann, userId);
+    return (this.prisma.announcement as any).update({
+      where: { id },
+      data: { isPinned: !(ann as any).isPinned },
+      include: { author: { select: { id: true, displayName: true, profileImageUrl: true } } },
+    });
   }
 
   private async assertCanManage(

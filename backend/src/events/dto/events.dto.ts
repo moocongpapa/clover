@@ -40,6 +40,16 @@ export class CreateEventDto {
   @IsOptional()
   @IsString()
   reminderOffsets?: string; // 쉼표로 구분된 시간 오프셋 목록
+
+  @IsOptional()
+  @IsString()
+  repeatType?: 'none' | 'weekly' | 'biweekly';
+
+  @IsOptional()
+  @IsInt()
+  @Min(2)
+  @Max(8)
+  repeatCount?: number;
 }
 
 import { VoteChoice } from '@prisma/client';

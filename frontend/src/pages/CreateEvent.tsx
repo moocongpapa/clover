@@ -66,6 +66,8 @@ export default function CreateEvent() {
   const [endTime, setEndTime] = useState('22:00');
   const [eventLocation, setEventLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [repeatType, setRepeatType] = useState<'none' | 'weekly' | 'biweekly'>('none');
+  const [repeatCount, setRepeatCount] = useState(4);
 
   // Reminder offsets checklist (defaults to 24 and 1)
   const [selectedOffsets, setSelectedOffsets] = useState<number[]>([24, 1]);
@@ -205,6 +207,7 @@ export default function CreateEvent() {
         location: eventLocation.trim() || '미정',
         description: description.trim() || '일정에 참석 여부를 투표해 주세요!',
         reminderOffsets: selectedOffsets.join(','),
+        ...(repeatType !== 'none' && { repeatType, repeatCount }),
       });
       navigate(`/events/${event.id}`);
     } catch (err) {
@@ -740,6 +743,72 @@ export default function CreateEvent() {
             />
           </div>
         </div>
+
+              {/* 반복 일정 설정 */}
+              <div className="form-section" style={{ marginTop: '24px' }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  🔁 반복 일정
+                  <label className="toggle-switch" style={{ marginLeft: 'auto' }}>
+                    <input
+                      type="checkbox"
+                      checked={repeatType !== 'none'}
+                      onChange={(e) => setRepeatType(e.target.checked ? 'weekly' : 'none')}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                </label>
+                {repeatType !== 'none' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '14px', background: 'var(--grey-50, #f8fafc)', borderRadius: '14px', border: '1px solid var(--border-soft)' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className={`feed-filter-chip ${repeatType === 'weekly' ? 'is-active' : ''}`}
+                        onClick={() => setRepeatType('weekly')}
+                        style={{ flex: 1 }}
+                      >
+                        매주
+                      </button>
+                      <button
+                        type="button"
+                        className={`feed-filter-chip ${repeatType === 'biweekly' ? 'is-active' : ''}`}
+                        onClick={() => setRepeatType('biweekly')}
+                        style={{ flex: 1 }}
+                      >
+                        격주
+                      </button>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '13px', color: 'var(--ink-muted)', marginBottom: '6px', display: 'block' }}>
+                        반복 횟수: {repeatCount}회
+                      </label>
+                      <input
+                        type="range"
+                        min={2}
+                        max={8}
+                        value={repeatCount}
+                        onChange={(e) => setRepeatCount(Number(e.target.value))}
+                        style={{ width: '100%', accentColor: 'var(--accent)' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--ink-muted)', marginTop: '2px' }}>
+                        <span>2회</span>
+                        <span>8회</span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--accent)', background: 'var(--accent-soft)', padding: '10px 12px', borderRadius: '10px' }}>
+                      📅 {(() => {
+                        if (!date) return '날짜를 먼저 선택해주세요';
+                        const baseDate = new Date(date + 'T00:00:00');
+                        const intervalDays = repeatType === 'biweekly' ? 14 : 7;
+                        const dates = Array.from({ length: repeatCount }, (_, i) => {
+                          const d = new Date(baseDate.getTime() + intervalDays * i * 86400000);
+                          return `${d.getMonth() + 1}/${d.getDate()}`;
+                        });
+                        return `${dates.join(', ')} (${repeatCount}회) 일정이 등록됩니다`;
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
 
         {/* Card 3: Kakao Reminder Settings */}
         <div style={{

@@ -36,6 +36,15 @@ export class EventsController {
     return this.eventsService.listByGroup(groupId, user.id);
   }
 
+  @Get('groups/:groupId/attendance-stats')
+  @UseGuards(JwtAuthGuard)
+  async getAttendanceStats(
+    @Param('groupId') groupId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.eventsService.getAttendanceStats(groupId, user.id);
+  }
+
   @Post('groups/:groupId/events')
   @UseGuards(JwtAuthGuard)
   create(

@@ -54,6 +54,12 @@ export class AnnouncementsController {
     return this.service.update(id, user.id, dto);
   }
 
+  @Patch(':id/pin')
+  @UseGuards(JwtAuthGuard)
+  async togglePin(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.service.togglePin(id, user.id);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   async delete(

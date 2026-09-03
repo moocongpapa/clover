@@ -114,6 +114,7 @@ export interface Announcement {
   id: string;
   title: string;
   content: string;
+  isPinned?: boolean;
   createdAt: string;
   updatedAt: string;
   authorId: string;
@@ -245,6 +246,12 @@ export const api = {
     }),
   listMyAnnouncements: () =>
     request<Announcement[]>('/announcements/mine'),
+  togglePinAnnouncement: (id: string) =>
+    request<Announcement>(`/announcements/${id}/pin`, {
+      method: 'PATCH',
+    }),
+  getAttendanceStats: (groupId: string) =>
+    request<{ events: number; members: Array<{ userId: string; user: User; attended: number; late: number; absent: number; noVote: number; total: number; rate: number }> }>(`/groups/${groupId}/attendance-stats`),
   updateProfile: (data: {
     displayName?: string;
     profileImageUrl?: string | null;

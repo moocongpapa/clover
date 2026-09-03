@@ -104,6 +104,30 @@ export class EventsService {
     });
 
     await this.notifications.notifyGroupMembers(event.id, 'CREATED');
+
+    // Handle recurring events
+    if (dto.repeatType && dto.repeatType !== 'none' && dto.repeatCount && dto.repeatCount > 1) {
+      const intervalDays = dto.repeatType === 'biweekly' ? 14 : 7;
+      const baseDate = parseEventDate(dto.date);
+      
+      for (let i = 1; i < dto.repeatCount; i++) {
+        const nextDate = new Date(baseDate.getTime() + intervalDays * i * 24 * 60 * 60 * 1000);
+        await this.prisma.event.create({
+          data: {
+            groupId,
+            title: dto.title,
+            date: nextDate,
+            startTime: dto.startTime,
+            endTime: dto.endTime ?? null,
+            location: dto.location,
+            description: dto.description,
+            reminderOffsets: dto.reminderOffsets ?? '24,1',
+            createdById: userId,
+          },
+        });
+      }
+    }
+
     return event;
   }
 
@@ -644,5 +668,61 @@ export class EventsService {
     }
 
     return { sentCount, totalUnvoted: unvotedMembers.length };
+  }
+
+  async getAttendanceStats(groupId: string, userId: string) {
+    // Verify membership
+    await this.groupsService.requireApprovedMember(groupId, userId);
+    
+    // Get last 20 completed (past) events
+    const pastEvents = await this.prisma.event.findMany({
+      where: {
+        groupId,
+        status: 'ACTIVE',
+        date: { lt: new Date() },
+      },
+      orderBy: { date: 'desc' },
+      take: 20,
+      include: {
+        votes: { select: { userId: true, choice: true } },
+      },
+    });
+    
+    if (pastEvents.length === 0) return { events: 0, members: [] };
+    
+    // Get all approved members
+    const members = await this.prisma.groupMember.findMany({
+      where: { groupId, status: 'APPROVED' },
+      include: {
+        user: { select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true } },
+      },
+    });
+    
+    // Compute stats per member
+    const stats = members.map((m) => {
+      let attended = 0, late = 0, absent = 0, noVote = 0;
+      for (const ev of pastEvents) {
+        const vote = ev.votes.find((v) => v.userId === m.userId);
+        if (!vote) { noVote++; }
+        else if (vote.choice === 'ATTEND') { attended++; }
+        else if (vote.choice === 'LATE') { late++; }
+        else { absent++; }
+      }
+      const total = pastEvents.length;
+      const rate = total > 0 ? Math.round(((attended + late) / total) * 100) : 0;
+      return {
+        userId: m.userId,
+        user: m.user,
+        attended,
+        late,
+        absent,
+        noVote,
+        total,
+        rate,
+      };
+    });
+    
+    stats.sort((a, b) => b.rate - a.rate);
+    return { events: pastEvents.length, members: stats };
   }
 }

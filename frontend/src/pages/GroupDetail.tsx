@@ -31,7 +31,7 @@ declare global {
 // Feature Flag: Gallery tab enabled
 const SHOW_GALLERY = true;
 
-type GroupTab = 'posts' | 'events' | 'gallery' | 'members' | 'payments' | 'officers' | 'info';
+type GroupTab = 'posts' | 'events' | 'gallery' | 'members' | 'payments' | 'info';
 
 export default function GroupDetail() {
   const { id } = useParams<{ id: string }>();
@@ -80,6 +80,7 @@ export default function GroupDetail() {
   const [activeTab, setActiveTab] = useState<GroupTab>('posts');
   const [eventSubTab, setEventSubTab] = useState<'upcoming' | 'past'>('upcoming');
   const [memberFilter, setMemberFilter] = useState<'all' | 'officer' | 'member' | 'injured'>('all');
+  const [attendanceStats, setAttendanceStats] = useState<Record<string, { rate: number; attended: number; total: number }>>({});
 
   // New Feed States
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
@@ -92,46 +93,9 @@ export default function GroupDetail() {
   const [editPostContent, setEditPostContent] = useState('');
   const [savingPostEdit, setSavingPostEdit] = useState(false);
 
-  // Reaction Buttons (좋아요, 최고, 싫어요, 체크)
-  const REACTION_OPTIONS = [
-    { type: 'LIKE', emoji: '❤️', label: '좋아요' },
-    { type: 'BEST', emoji: '👍', label: '최고' },
-    { type: 'DISLIKE', emoji: '👎', label: '싫어요' },
-    { type: 'CHECK', emoji: '✅', label: '체크' },
-  ] as const;
-
-  const [reactionsMap, setReactionsMap] = useState<
-    Record<string, Record<string, { count: number; active: boolean }>>
-  >({});
-
   const [announcementCommentsMap, setAnnouncementCommentsMap] = useState<
     Record<string, Array<{ id: string; author: string; time: string; content: string }>>
   >({});
-
-  const handleToggleReaction = (itemId: string, reactionType: string) => {
-    setReactionsMap((prev) => {
-      const currentItemMap = prev[itemId] || {
-        LIKE: { count: 0, active: false },
-        BEST: { count: 0, active: false },
-        DISLIKE: { count: 0, active: false },
-        CHECK: { count: 0, active: false },
-      };
-      const currentReaction = currentItemMap[reactionType] || { count: 0, active: false };
-      const nextActive = !currentReaction.active;
-      const nextCount = Math.max(0, currentReaction.count + (nextActive ? 1 : -1));
-
-      return {
-        ...prev,
-        [itemId]: {
-          ...currentItemMap,
-          [reactionType]: {
-            count: nextCount,
-            active: nextActive,
-          },
-        },
-      };
-    });
-  };
 
   const getAnnouncementComments = (announcementId: string) => {
     return announcementCommentsMap[announcementId] || [];
@@ -204,6 +168,14 @@ export default function GroupDetail() {
         setMediaFiles(med);
       })
       .catch((e) => setError(e.message));
+
+    api.getAttendanceStats(id).then((stats: any) => {
+      const map: Record<string, { rate: number; attended: number; total: number }> = {};
+      stats.members.forEach((m: any) => {
+        map[m.userId] = { rate: m.rate, attended: m.attended + m.late, total: m.total };
+      });
+      setAttendanceStats(map);
+    }).catch(() => {});
   };
 
   useEffect(load, [id]);
@@ -620,6 +592,17 @@ export default function GroupDetail() {
     }
   };
 
+  const handleTogglePin = async (id: string) => {
+    try {
+      const updated = await api.togglePinAnnouncement(id);
+      setAnnouncements((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, isPinned: updated.isPinned } : a))
+      );
+    } catch (err) {
+      console.error('Pin toggle failed', err);
+    }
+  };
+
   const handleUploadMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !id) return;
@@ -967,13 +950,7 @@ export default function GroupDetail() {
             >
               회비
             </button>
-            <button
-              type="button"
-              className={`tab-navigation-btn${activeTab === 'officers' ? ' is-active' : ''}`}
-              onClick={() => setActiveTab('officers')}
-            >
-              이력
-            </button>
+
             <button
               type="button"
               className={`tab-navigation-btn${activeTab === 'info' ? ' is-active' : ''}`}
@@ -1192,6 +1169,17 @@ export default function GroupDetail() {
                             if (!canManage) return null;
                             return (
                               <div className="feed-card-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                                {isOfficer && (
+                                  <button
+                                    type="button"
+                                    className="btn-sm btn-outline"
+                                    onClick={() => handleTogglePin(item.id)}
+                                    title={item.raw.isPinned ? '고정 해제' : '상단 고정'}
+                                    style={{ fontSize: '12px' }}
+                                  >
+                                    {item.raw.isPinned ? '📌 해제' : '📌 고정'}
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditAnnouncement(item.raw)}
@@ -1231,7 +1219,10 @@ export default function GroupDetail() {
 
                         {/* Post Body Content */}
                         <div className="feed-card-body">
-                          <h3 className="feed-announcement-title">{item.title}</h3>
+                          <h3 className="feed-announcement-title">
+                            {item.raw.isPinned && <span style={{ marginRight: '4px' }}>📌</span>}
+                            {item.title}
+                          </h3>
                           <p className="feed-card-text">{item.content}</p>
                         </div>
 
@@ -1242,31 +1233,7 @@ export default function GroupDetail() {
                           </span>
                         </div>
 
-                        {/* Direct 4-Emoji Reaction Bar */}
-                        <div className="feed-reaction-bar">
-                          {REACTION_OPTIONS.map(({ type, emoji }) => {
-                            const itemMap = reactionsMap[item.id] || {
-                              LIKE: { count: 0, active: false },
-                              BEST: { count: 0, active: false },
-                              DISLIKE: { count: 0, active: false },
-                              CHECK: { count: 0, active: false },
-                            };
-                            const reaction = itemMap[type] || { count: 0, active: false };
-                            return (
-                              <button
-                                key={type}
-                                type="button"
-                                className={`feed-reaction-btn${reaction.active ? ' is-active' : ''}`}
-                                onClick={() => handleToggleReaction(item.id, type)}
-                              >
-                                <span className="feed-reaction-emoji">{emoji}</span>
-                                {reaction.count > 0 && (
-                                  <span className="feed-reaction-count">{reaction.count}</span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
+
 
                         {/* Inline Comments Thread */}
                         <div className="feed-comments-thread">
@@ -1726,6 +1693,21 @@ export default function GroupDetail() {
                               <span className={`member-item-card__badge ${badgeClass}`}>
                                 {ROLE_LABELS[m.role]}
                               </span>
+                              {attendanceStats[m.userId] && (
+                                <span style={{
+                                  fontSize: '11px',
+                                  padding: '2px 8px',
+                                  borderRadius: '10px',
+                                  marginLeft: '6px',
+                                  fontWeight: 600,
+                                  background: attendanceStats[m.userId].rate >= 80 ? '#dcfce7' :
+                                              attendanceStats[m.userId].rate >= 50 ? '#fef9c3' : '#fee2e2',
+                                  color: attendanceStats[m.userId].rate >= 80 ? '#16a34a' :
+                                         attendanceStats[m.userId].rate >= 50 ? '#ca8a04' : '#dc2626',
+                                }}>
+                                  출석 {attendanceStats[m.userId].rate}%
+                                </span>
+                              )}
                             </div>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
                               {m.userStatus && (
@@ -2105,33 +2087,6 @@ export default function GroupDetail() {
             </div>
           )}
 
-          {/* 6. 이력 탭 (Officer Histories View) */}
-          {activeTab === 'officers' && (
-            <div className="tab-content-officers">
-              <div className="officers-history-section">
-                <h2 className="tab-section-title">역대 운영진 이력</h2>
-                {group.officerHistories && group.officerHistories.length === 0 ? (
-                  <p className="empty-inline">이력이 존재하지 않습니다.</p>
-                ) : (
-                  <div className="officer-history-list">
-                    {group.officerHistories.map((h: any) => (
-                      <div key={h.id} className="officer-history-item">
-                        <span className="officer-history-period">
-                          {formatHistoryDate(h.startDate)} ~ {h.endDate ? formatHistoryDate(h.endDate) : '현재'}
-                        </span>
-                        <div className="officer-history-details">
-                          <span className="officer-history-role">
-                            {roleEmoji(h.role)} {ROLE_LABELS[h.role]}
-                          </span>
-                          <span>{formatMemberNameWithEmoji(h.user)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* 7. 정보 탭 (Info / Settings View) */}
           {activeTab === 'info' && (
@@ -2211,6 +2166,27 @@ export default function GroupDetail() {
                       <span>✏️ 모임 설정 수정 (정보/계좌 등)</span>
                       <span className="arrow-indicator">〉</span>
                     </Link>
+                  </div>
+                )}
+                {/* Officer History (merged from former standalone tab) */}
+                {group.officerHistories && group.officerHistories.length > 0 && (
+                  <div className="info-card">
+                    <h3 className="info-card-title">📋 역대 운영진</h3>
+                    <div className="officer-history-list">
+                      {group.officerHistories.map((h: any) => (
+                        <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-soft)' }}>
+                          <span style={{ fontSize: '13px', color: 'var(--ink-muted)' }}>
+                            {formatHistoryDate(h.startDate)} ~ {h.endDate ? formatHistoryDate(h.endDate) : '현재'}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
+                            <span style={{ fontWeight: 600 }}>{h.user?.displayName || '알 수 없음'}</span>
+                            <span style={{ color: 'var(--ink-muted)', fontSize: '12px' }}>
+                              ({h.role === 'PRESIDENT' ? '회장' : h.role === 'VICE_PRESIDENT' ? '부회장' : h.role === 'SECRETARY' ? '총무' : '운영진'})
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
