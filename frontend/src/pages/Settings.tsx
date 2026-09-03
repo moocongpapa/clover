@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestFcmToken } from '../firebase';
 import { api } from '../api';
@@ -13,6 +14,7 @@ interface FeedbackItem {
 }
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -510,12 +512,20 @@ export default function Settings() {
             <span className="action-row-arrow">🔍</span>
           </div>
 
-          <div className="settings-action-row" onClick={() => setShowTermsModal(true)}>
+          <div className="settings-action-row" onClick={() => navigate('/terms')}>
             <div className="settings-row__info">
-              <span className="settings-row__label">서비스 이용약관 및 개인정보 처리방침</span>
-              <p className="settings-row__desc">개인정보 보호 정책 및 이용 규칙을 확인합니다.</p>
+              <span className="settings-row__label">서비스 이용약관</span>
+              <p className="settings-row__desc">모임 관리 및 회비 정산 보조 이용 규칙을 확인합니다.</p>
             </div>
-            <span className="action-row-arrow">📄</span>
+            <span className="action-row-arrow">›</span>
+          </div>
+
+          <div className="settings-action-row" onClick={() => navigate('/privacy')}>
+            <div className="settings-row__info">
+              <span className="settings-row__label">개인정보 처리방침</span>
+              <p className="settings-row__desc">개인정보 보호 정책 및 권리 행사 절차를 확인합니다.</p>
+            </div>
+            <span className="action-row-arrow">›</span>
           </div>
         </section>
       </div>

@@ -38,6 +38,28 @@ export default function MyPage() {
   const [editMyPostContent, setEditMyPostContent] = useState('');
   const [savingMyPostEdit, setSavingMyPostEdit] = useState(false);
 
+  // Account Deletion States
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    setDeleteError(null);
+    try {
+      await api.deleteAccount();
+      setToastMsg('탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.');
+      setTimeout(() => {
+        logout();
+        navigate('/');
+      }, 1000);
+    } catch (err: any) {
+      console.error(err);
+      setDeleteError(err.message || '회원 탈퇴 처리에 실패했습니다.');
+      setDeletingAccount(false);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     api
@@ -340,17 +362,48 @@ export default function MyPage() {
             onClick={() => setShowLogoutConfirm(true)}
           >
             <div className="my-menu-item__left">
-              <span className="my-menu-icon" style={{ color: '#ef4444' }}>
+              <span className="my-menu-icon" style={{ color: '#64748b' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                   <polyline points="16 17 21 12 16 7" />
                   <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
               </span>
-              <span className="my-menu-label" style={{ color: '#ef4444' }}>로그아웃</span>
+              <span className="my-menu-label" style={{ color: '#475569' }}>로그아웃</span>
+            </div>
+            <span className="my-menu-arrow">›</span>
+          </button>
+          <button
+            type="button"
+            className="my-menu-item my-menu-item--delete"
+            onClick={() => {
+              setDeleteError(null);
+              setShowDeleteConfirm(true);
+            }}
+          >
+            <div className="my-menu-item__left">
+              <span className="my-menu-icon" style={{ color: '#ef4444' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </span>
+              <span className="my-menu-label" style={{ color: '#ef4444' }}>회원 탈퇴</span>
             </div>
             <span className="my-menu-arrow" style={{ color: '#ef4444' }}>›</span>
           </button>
+        </div>
+
+        {/* Legal & Policy Footer */}
+        <div className="my-legal-footer">
+          <div className="my-legal-links">
+            <Link to="/terms">이용약관</Link>
+            <span className="my-legal-dot">·</span>
+            <Link to="/privacy">개인정보처리방침</Link>
+            <span className="my-legal-dot">·</span>
+            <Link to="/settings">고객문의</Link>
+          </div>
+          <p className="my-legal-copy">© 2026 Clover. All rights reserved.</p>
         </div>
       </div>
 
@@ -655,6 +708,41 @@ export default function MyPage() {
                 onClick={handleLogout}
               >
                 로그아웃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account Deletion Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="my-modal-backdrop" onClick={() => !deletingAccount && setShowDeleteConfirm(false)}>
+          <div className="my-modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title" style={{ color: '#ef4444' }}>⚠️ 회원 탈퇴</h3>
+            <p className="modal-desc" style={{ textAlign: 'left', lineHeight: 1.55 }}>
+              정말 탈퇴하시겠습니까? 탈퇴 시 등록된 프로필, 투표 내역, 사진 등 <strong>모든 개인정보가 즉시 영구 파기</strong>되며 복구할 수 없습니다.
+            </p>
+            {deleteError && (
+              <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '10px 12px', borderRadius: '10px', fontSize: '12.5px', marginBottom: '14px', lineHeight: 1.45, textAlign: 'left' }}>
+                ⚠️ {deleteError}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-modal-secondary"
+                disabled={deletingAccount}
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className="btn-modal-danger"
+                disabled={deletingAccount}
+                onClick={handleDeleteAccount}
+              >
+                {deletingAccount ? '탈퇴 처리 중…' : '네, 탈퇴합니다'}
               </button>
             </div>
           </div>

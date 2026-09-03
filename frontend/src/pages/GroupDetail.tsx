@@ -20,6 +20,7 @@ import {
 } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
+import ReportModal from '../components/ReportModal';
 import './GroupDetail.css';
 
 declare global {
@@ -107,6 +108,14 @@ export default function GroupDetail() {
   const [eventSubTab, setEventSubTab] = useState<'upcoming' | 'past'>('upcoming');
   const [memberFilter, setMemberFilter] = useState<'all' | 'officer' | 'member' | 'injured'>('all');
   const [attendanceStats, setAttendanceStats] = useState<Record<string, { rate: number; attended: number; total: number }>>({});
+
+  // Content Moderation / Report States
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{
+    type: '모임' | '게시글' | '일정' | '회원';
+    id: string;
+    title: string;
+  }>({ type: '모임', id: '', title: '' });
 
   // New Feed States
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
@@ -705,8 +714,33 @@ export default function GroupDetail() {
   return (
     <div className="group-detail">
       {/* Top Navigation Bar */}
-      <div className="detail-top-nav-bar">
+      <div className="detail-top-nav-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <BackButton onClick={() => navigate('/')} label="홈" />
+        <button
+          type="button"
+          onClick={() => {
+            setReportTarget({
+              type: '모임',
+              id: group.id,
+              title: group.name,
+            });
+            setShowReportModal(true);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '12.5px',
+            color: 'var(--ink-muted, #64748b)',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+          title="부적절한 모임 신고"
+        >
+          🚨 <span style={{ textDecoration: 'underline' }}>신고</span>
+        </button>
       </div>
 
       {/* Group Info Section */}
@@ -1192,7 +1226,34 @@ export default function GroupDetail() {
                           {(() => {
                             const isAuthor = user && item.author?.id === user.id;
                             const canManage = isAuthor || isOfficer || user?.role === 'ADMIN';
-                            if (!canManage) return null;
+                            if (!canManage) {
+                              return (
+                                <div className="feed-card-actions" style={{ marginLeft: 'auto' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setReportTarget({
+                                        type: '게시글',
+                                        id: item.id,
+                                        title: item.title,
+                                      });
+                                      setShowReportModal(true);
+                                    }}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      fontSize: '11.5px',
+                                      color: 'var(--ink-muted, #94a3b8)',
+                                      cursor: 'pointer',
+                                      padding: '4px',
+                                    }}
+                                    title="게시글 신고"
+                                  >
+                                    🚨 신고
+                                  </button>
+                                </div>
+                              );
+                            }
                             return (
                               <div className="feed-card-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
                                 {isOfficer && (
@@ -2430,6 +2491,15 @@ export default function GroupDetail() {
           </div>
         </div>
       )}
+      {/* Content Moderation Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetType={reportTarget.type}
+        targetId={reportTarget.id}
+        targetTitle={reportTarget.title}
+        onSuccess={() => setMessage('신고가 성공적으로 접수되었습니다. 관리자가 검토 후 조치합니다.')}
+      />
     </div>
   );
 }

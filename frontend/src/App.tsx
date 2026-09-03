@@ -22,6 +22,8 @@ import CreateAnnouncement from './pages/CreateAnnouncement';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import MyPage from './pages/MyPage';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 
 // Admin Console
 import AdminRoute from './components/AdminRoute';
@@ -206,6 +208,8 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="terms" element={<Terms />} />
+            <Route path="privacy" element={<Privacy />} />
           </Route>
 
           {/* ── Admin Console Routes ── */}
