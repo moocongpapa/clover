@@ -8,7 +8,7 @@ export class AnnouncementsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(groupId?: string) {
-    return this.prisma.announcement.findMany({
+    const list = await this.prisma.announcement.findMany({
       where: groupId ? { groupId } : {},
       include: {
         author: {
@@ -29,12 +29,30 @@ export class AnnouncementsService {
           },
         },
       },
-      orderBy: [{ isPinned: 'desc' } as any, { createdAt: 'desc' }],
+      orderBy: { createdAt: 'desc' },
     });
+
+    if (list.length === 0) return [];
+    try {
+      const ids = list.map((a) => a.id);
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
+        `SELECT id, "isPinned" FROM "Announcement" WHERE id IN (${ids.map((_, i) => '$' + (i + 1)).join(',')})`,
+        ...ids,
+      );
+      const pinMap = new Map(rows.map((r) => [r.id, Boolean(r.isPinned)]));
+      return list
+        .map((a) => ({
+          ...a,
+          isPinned: pinMap.get(a.id) ?? false,
+        }))
+        .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+    } catch {
+      return list;
+    }
   }
 
   async listMy(userId: string) {
-    return this.prisma.announcement.findMany({
+    const list = await this.prisma.announcement.findMany({
       where: { authorId: userId },
       include: {
         author: {
@@ -55,8 +73,26 @@ export class AnnouncementsService {
           },
         },
       },
-      orderBy: [{ isPinned: 'desc' } as any, { createdAt: 'desc' }],
+      orderBy: { createdAt: 'desc' },
     });
+
+    if (list.length === 0) return [];
+    try {
+      const ids = list.map((a) => a.id);
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
+        `SELECT id, "isPinned" FROM "Announcement" WHERE id IN (${ids.map((_, i) => '$' + (i + 1)).join(',')})`,
+        ...ids,
+      );
+      const pinMap = new Map(rows.map((r) => [r.id, Boolean(r.isPinned)]));
+      return list
+        .map((a) => ({
+          ...a,
+          isPinned: pinMap.get(a.id) ?? false,
+        }))
+        .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+    } catch {
+      return list;
+    }
   }
 
   async getById(id: string) {
@@ -86,7 +122,19 @@ export class AnnouncementsService {
     if (!announcement) {
       throw new NotFoundException('게시글을 찾을 수 없습니다.');
     }
-    return announcement;
+
+    try {
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
+        'SELECT "isPinned" FROM "Announcement" WHERE id = $1',
+        id,
+      );
+      return {
+        ...announcement,
+        isPinned: Boolean(rows[0]?.isPinned),
+      };
+    } catch {
+      return announcement;
+    }
   }
 
   async create(userId: string, dto: CreateAnnouncementDto) {
@@ -189,11 +237,11 @@ export class AnnouncementsService {
     if (!ann) throw new NotFoundException('게시글을 찾을 수 없습니다.');
     // Check permission - use the same assertCanManage pattern already in this file
     await this.assertCanManage(ann, userId);
-    return (this.prisma.announcement as any).update({
-      where: { id },
-      data: { isPinned: !(ann as any).isPinned },
-      include: { author: { select: { id: true, displayName: true, profileImageUrl: true } } },
-    });
+    await this.prisma.$executeRawUnsafe(
+      'UPDATE "Announcement" SET "isPinned" = NOT "isPinned", "updatedAt" = NOW() WHERE id = $1',
+      id,
+    );
+    return this.getById(id);
   }
 
   private async assertCanManage(
