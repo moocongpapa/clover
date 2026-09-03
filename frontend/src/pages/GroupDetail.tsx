@@ -16,6 +16,7 @@ import {
   ROLE_SORT_ORDER,
   type Event,
   type VoteChoice,
+  type Announcement,
 } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';

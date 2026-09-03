@@ -234,6 +234,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateAnnouncement: (id: string, data: { title?: string; content?: string }) =>
+    request<Announcement>(`/announcements/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteAnnouncement: (id: string) =>
+    request<{ ok: boolean; message?: string }>(`/announcements/${id}`, {
+      method: 'DELETE',
+    }),
+  listMyAnnouncements: () =>
+    request<Announcement[]>('/announcements/mine'),
   updateProfile: (data: {
     displayName?: string;
     profileImageUrl?: string | null;
@@ -530,24 +541,6 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ fcmToken }),
     }),
-  listAnnouncements: (groupId?: string) =>
-    request<Announcement[]>(groupId ? `/announcements?groupId=${groupId}` : '/announcements'),
-  createAnnouncement: (data: { title: string; content: string; groupId?: string }) =>
-    request<Announcement>('/announcements', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  updateAnnouncement: (id: string, data: { title?: string; content?: string }) =>
-    request<Announcement>(`/announcements/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    }),
-  deleteAnnouncement: (id: string) =>
-    request<{ ok: boolean; message?: string }>(`/announcements/${id}`, {
-      method: 'DELETE',
-    }),
-  listMyAnnouncements: () =>
-    request<Announcement[]>('/announcements/mine'),
   sendFeedback: (content: string) =>
     request<any>('/feedback', {
       method: 'POST',
