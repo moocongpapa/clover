@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api, safeImageUrl, formatPhoneNumber } from '../api';
+import { api, safeImageUrl, formatPhoneNumber, type Announcement } from '../api';
 import GroupAvatar from '../components/GroupAvatar';
 import './MyPage.css';
 
@@ -28,6 +28,15 @@ export default function MyPage() {
   const [loadingDues, setLoadingDues] = useState<boolean>(true);
   const [selectedPayGroup, setSelectedPayGroup] = useState<DueSummaryItem | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // My Posts Management Modal States
+  const [showMyPostsModal, setShowMyPostsModal] = useState(false);
+  const [myPosts, setMyPosts] = useState<Announcement[]>([]);
+  const [loadingMyPosts, setLoadingMyPosts] = useState(false);
+  const [editingMyPost, setEditingMyPost] = useState<Announcement | null>(null);
+  const [editMyPostTitle, setEditMyPostTitle] = useState('');
+  const [editMyPostContent, setEditMyPostContent] = useState('');
+  const [savingMyPostEdit, setSavingMyPostEdit] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -64,7 +73,6 @@ export default function MyPage() {
     const tossUrl = `supertoss://send?bank=${encodeURIComponent(item.bankName)}&accountNo=${item.bankAccountNumber}`;
     window.location.href = tossUrl;
     setTimeout(() => {
-      // Fallback if Toss app not installed
       handleCopyAccount(item);
     }, 1200);
   };
@@ -75,6 +83,57 @@ export default function MyPage() {
     setTimeout(() => {
       handleCopyAccount(item);
     }, 1200);
+  };
+
+  const handleOpenMyPosts = async () => {
+    setShowMyPostsModal(true);
+    setLoadingMyPosts(true);
+    try {
+      const posts = await api.listMyAnnouncements();
+      setMyPosts(posts);
+    } catch (err: any) {
+      console.error('Failed to load my posts:', err);
+    } finally {
+      setLoadingMyPosts(false);
+    }
+  };
+
+  const handleOpenEditMyPost = (post: Announcement) => {
+    setEditingMyPost(post);
+    setEditMyPostTitle(post.title);
+    setEditMyPostContent(post.content);
+  };
+
+  const handleSaveMyPostEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMyPost || !editMyPostTitle.trim() || !editMyPostContent.trim()) return;
+    setSavingMyPostEdit(true);
+    try {
+      await api.updateAnnouncement(editingMyPost.id, {
+        title: editMyPostTitle.trim(),
+        content: editMyPostContent.trim(),
+      });
+      setEditingMyPost(null);
+      const posts = await api.listMyAnnouncements();
+      setMyPosts(posts);
+      triggerToast('✅ 게시글이 수정되었습니다.');
+    } catch (err: any) {
+      alert(err.message || '게시글 수정 실패');
+    } finally {
+      setSavingMyPostEdit(false);
+    }
+  };
+
+  const handleDeleteMyPost = async (post: Announcement) => {
+    if (!window.confirm(`정말 "${post.title}" 게시글을 삭제하시겠습니까?`)) return;
+    try {
+      await api.deleteAnnouncement(post.id);
+      const posts = await api.listMyAnnouncements();
+      setMyPosts(posts);
+      triggerToast('🗑️ 게시글이 삭제되었습니다.');
+    } catch (err: any) {
+      alert(err.message || '게시글 삭제 실패');
+    }
   };
 
   const formattedPhone = user.phoneNumber ? formatPhoneNumber(user.phoneNumber) : null;
@@ -178,23 +237,22 @@ export default function MyPage() {
                     <div className="dues-item-info">
                       <span className="dues-group-name">{item.groupName}</span>
                       <span className="dues-date-label">
-                        {item.month}월 정기 회비
-                        {item.monthlyFee ? ` (${item.monthlyFee.toLocaleString()}원` : ''}
-                        {item.dueDay ? `${item.monthlyFee ? ' · ' : ' ('}${item.dueDay === 31 ? '매월 말일' : `매월 ${item.dueDay}일`} 마감` : ''}
-                        {item.monthlyFee || item.dueDay ? ')' : ''}
+                        {item.dueDay ? `매월 ${item.dueDay}일 마감` : '마감일 미지정'}
                       </span>
                     </div>
                   </div>
-
                   <div className="dues-item-right">
+                    <span className="dues-fee-amount">
+                      {item.monthlyFee ? `${item.monthlyFee.toLocaleString()}원` : '회비 없음'}
+                    </span>
                     {item.isPaid ? (
-                      <span className="dues-status-tag dues-status-tag--paid">
-                        {item.isExempt ? '임원 면제' : '납부 완료 🟢'}
-                      </span>
+                      <span className="dues-status-chip is-paid">납부 완료</span>
+                    ) : item.isExempt ? (
+                      <span className="dues-status-chip is-exempt">면제</span>
                     ) : (
                       <button
                         type="button"
-                        className="btn-pay-direct"
+                        className="btn-pay-quick"
                         onClick={() => setSelectedPayGroup(item)}
                       >
                         💸 1초 간편 송금
@@ -226,6 +284,37 @@ export default function MyPage() {
             </Link>
           </div>
         )}
+
+        {/* My Content Management Menu Group */}
+        <div className="my-menu-group">
+          <h2 className="my-menu-group__title">내 활동 & 작성글</h2>
+          <button
+            type="button"
+            className="my-menu-item"
+            onClick={handleOpenMyPosts}
+            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            <div className="my-menu-item__left">
+              <span className="my-menu-icon">📝</span>
+              <span className="my-menu-label">내가 쓴 글 관리</span>
+            </div>
+            <span className="my-menu-arrow">›</span>
+          </button>
+          <Link to="/calendar" className="my-menu-item">
+            <div className="my-menu-item__left">
+              <span className="my-menu-icon">📅</span>
+              <span className="my-menu-label">내 일정 및 투표 현황</span>
+            </div>
+            <span className="my-menu-arrow">›</span>
+          </Link>
+          <Link to="/announcements" className="my-menu-item">
+            <div className="my-menu-item__left">
+              <span className="my-menu-icon">📢</span>
+              <span className="my-menu-label">전체 공지사항</span>
+            </div>
+            <span className="my-menu-arrow">›</span>
+          </Link>
+        </div>
 
         <div className="my-menu-group">
           <h2 className="my-menu-group__title">서비스 & 설정</h2>
@@ -264,6 +353,224 @@ export default function MyPage() {
           </button>
         </div>
       </div>
+
+      {/* My Posts Management Modal */}
+      {showMyPostsModal && (
+        <div
+          className="my-modal-backdrop"
+          onClick={() => {
+            setShowMyPostsModal(false);
+            setEditingMyPost(null);
+          }}
+        >
+          <div
+            className="my-modal-card"
+            style={{ maxWidth: '520px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="modal-title" style={{ margin: 0, fontSize: '18px' }}>📝 내가 쓴 글 관리</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMyPostsModal(false);
+                  setEditingMyPost(null);
+                }}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--ink-muted)' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingMyPosts ? (
+              <p style={{ textAlign: 'center', padding: '30px 0', color: 'var(--ink-muted)' }}>글 목록을 불러오는 중…</p>
+            ) : myPosts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-muted)' }}>
+                <p style={{ fontSize: '32px', margin: '0 0 8px 0' }}>📄</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>작성하신 게시글이나 공지가 없습니다.</p>
+              </div>
+            ) : (
+              <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' }}>
+                {myPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    style={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '14px',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          {post.group?.name ? (
+                            <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--accent)', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                              {post.group.name}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                              전체 공지
+                            </span>
+                          )}
+                          <span style={{ fontSize: '11.5px', color: 'var(--ink-muted)' }}>
+                            {new Date(post.createdAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '14.5px', fontWeight: 700, color: 'var(--ink-dark)' }}>
+                          {post.title}
+                        </h4>
+                        <p style={{ margin: 0, fontSize: '13px', color: 'var(--ink-muted)', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {post.content}
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditMyPost(post)}
+                          style={{
+                            background: 'var(--surface-input, var(--surface))',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            padding: '6px 8px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                          }}
+                          title="수정"
+                        >
+                          ✏️ 수정
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMyPost(post)}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.08)',
+                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                            color: '#ef4444',
+                            borderRadius: '8px',
+                            padding: '6px 8px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                          }}
+                          title="삭제"
+                        >
+                          🗑️ 삭제
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit My Post Sub-Modal */}
+      {editingMyPost && (
+        <div
+          className="my-modal-backdrop"
+          style={{ zIndex: 1100 }}
+          onClick={() => setEditingMyPost(null)}
+        >
+          <div
+            className="my-modal-card"
+            style={{ maxWidth: '480px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="modal-title" style={{ margin: 0, fontSize: '17px' }}>✏️ 글 수정하기</h3>
+              <button
+                type="button"
+                onClick={() => setEditingMyPost(null)}
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMyPostEdit}>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>제목</label>
+                <input
+                  type="text"
+                  value={editMyPostTitle}
+                  onChange={(e) => setEditMyPostTitle(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border)',
+                    fontSize: '14px',
+                    background: 'var(--surface-input, var(--surface))',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>내용</label>
+                <textarea
+                  value={editMyPostContent}
+                  onChange={(e) => setEditMyPostContent(e.target.value)}
+                  required
+                  rows={6}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border)',
+                    fontSize: '14px',
+                    background: 'var(--surface-input, var(--surface))',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingMyPost(null)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                  }}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMyPostEdit}
+                  className="btn-primary"
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {savingMyPostEdit ? '저장 중…' : '수정 완료'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 1-Click Pay Modal */}
       {selectedPayGroup && (

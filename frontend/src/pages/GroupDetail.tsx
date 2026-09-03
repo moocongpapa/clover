@@ -85,6 +85,12 @@ export default function GroupDetail() {
   const [feedFilter, setFeedFilter] = useState<'all' | 'announcements'>('all');
   const [showWriteMenu, setShowWriteMenu] = useState(false);
 
+  // Post Edit States
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [editPostTitle, setEditPostTitle] = useState('');
+  const [editPostContent, setEditPostContent] = useState('');
+  const [savingPostEdit, setSavingPostEdit] = useState(false);
+
   // Reaction Buttons (좋아요, 최고, 싫어요, 체크)
   const REACTION_OPTIONS = [
     { type: 'LIKE', emoji: '❤️', label: '좋아요' },
@@ -576,6 +582,43 @@ export default function GroupDetail() {
     }
   };
 
+  const handleOpenEditAnnouncement = (ann: Announcement) => {
+    setEditingAnnouncement(ann);
+    setEditPostTitle(ann.title);
+    setEditPostContent(ann.content);
+  };
+
+  const handleSaveEditAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAnnouncement || !editPostTitle.trim() || !editPostContent.trim() || !id) return;
+    setSavingPostEdit(true);
+    try {
+      await api.updateAnnouncement(editingAnnouncement.id, {
+        title: editPostTitle.trim(),
+        content: editPostContent.trim(),
+      });
+      setEditingAnnouncement(null);
+      const ann = await api.listAnnouncements(id);
+      setAnnouncements(ann);
+    } catch (err: any) {
+      alert(err.message || '게시글 수정 실패');
+    } finally {
+      setSavingPostEdit(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (ann: Announcement) => {
+    if (!id) return;
+    if (!window.confirm(`정말 "${ann.title}" 게시글을 삭제하시겠습니까?`)) return;
+    try {
+      await api.deleteAnnouncement(ann.id);
+      const annList = await api.listAnnouncements(id);
+      setAnnouncements(annList);
+    } catch (err: any) {
+      alert(err.message || '게시글 삭제 실패');
+    }
+  };
+
   const handleUploadMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !id) return;
@@ -1035,6 +1078,77 @@ export default function GroupDetail() {
                 </div>
               )}
 
+              {/* Edit post modal popup */}
+              {editingAnnouncement && (
+                <div
+                  className="post-write-modal-backdrop"
+                  onClick={() => {
+                    setEditingAnnouncement(null);
+                    setEditPostTitle('');
+                    setEditPostContent('');
+                  }}
+                >
+                  <div className="post-write-modal-card" onClick={(e) => e.stopPropagation()}>
+                    <div className="post-write-modal-header">
+                      <h3 className="post-write-modal-title">✏️ 게시글 수정</h3>
+                      <button
+                        type="button"
+                        className="post-write-modal-close"
+                        onClick={() => {
+                          setEditingAnnouncement(null);
+                          setEditPostTitle('');
+                          setEditPostContent('');
+                        }}
+                        title="닫기"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveEditAnnouncement} className="post-write-modal-body">
+                      <div className="form-group" style={{ marginBottom: '14px' }}>
+                        <label className="post-write-field-label">제목</label>
+                        <input
+                          type="text"
+                          value={editPostTitle}
+                          onChange={(e) => setEditPostTitle(e.target.value)}
+                          required
+                          autoComplete="off"
+                          className="post-write-input"
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label className="post-write-field-label">내용</label>
+                        <textarea
+                          value={editPostContent}
+                          onChange={(e) => setEditPostContent(e.target.value)}
+                          required
+                          rows={6}
+                          className="post-write-textarea"
+                        />
+                      </div>
+
+                      <div className="post-write-modal-actions">
+                        <button
+                          type="button"
+                          className="post-write-btn-cancel"
+                          onClick={() => {
+                            setEditingAnnouncement(null);
+                            setEditPostTitle('');
+                            setEditPostContent('');
+                          }}
+                        >
+                          취소
+                        </button>
+                        <button type="submit" disabled={savingPostEdit} className="post-write-btn-submit">
+                          {savingPostEdit ? '저장 중…' : '수정 완료'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
               {/* Feed Items List */}
               {filteredFeedItems.length === 0 ? (
                 <p className="feed-empty-text">작성된 글이 없습니다.</p>
@@ -1071,6 +1185,47 @@ export default function GroupDetail() {
                               )}
                             </div>
                           </div>
+                          {(() => {
+                            const isAuthor = user && item.author?.id === user.id;
+                            const canManage = isAuthor || isOfficer || user?.role === 'ADMIN';
+                            if (!canManage) return null;
+                            return (
+                              <div className="feed-card-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditAnnouncement(item.raw)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    opacity: 0.8,
+                                  }}
+                                  title="게시글 수정"
+                                  aria-label="게시글 수정"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAnnouncement(item.raw)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    opacity: 0.8,
+                                  }}
+                                  title="게시글 삭제"
+                                  aria-label="게시글 삭제"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {/* Post Body Content */}

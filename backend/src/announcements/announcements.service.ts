@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAnnouncementDto } from './announcements.dto';
+import { CreateAnnouncementDto, UpdateAnnouncementDto } from './announcements.dto';
+import { isOfficer } from '../common/utils/group.utils';
 
 @Injectable()
 export class AnnouncementsService {
@@ -9,6 +10,32 @@ export class AnnouncementsService {
   async list(groupId?: string) {
     return this.prisma.announcement.findMany({
       where: groupId ? { groupId } : {},
+      include: {
+        author: {
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            role: true,
+            gender: true,
+            birthYear: true,
+          },
+        },
+        group: {
+          select: {
+            id: true,
+            name: true,
+            profileImageUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async listMy(userId: string) {
+    return this.prisma.announcement.findMany({
+      where: { authorId: userId },
       include: {
         author: {
           select: {
@@ -57,7 +84,7 @@ export class AnnouncementsService {
     });
 
     if (!announcement) {
-      throw new NotFoundException('공지사항을 찾을 수 없습니다.');
+      throw new NotFoundException('게시글을 찾을 수 없습니다.');
     }
     return announcement;
   }
@@ -101,5 +128,83 @@ export class AnnouncementsService {
         },
       },
     });
+  }
+
+  async update(id: string, userId: string, dto: UpdateAnnouncementDto) {
+    const announcement = await this.prisma.announcement.findUnique({
+      where: { id },
+    });
+
+    if (!announcement) {
+      throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    }
+
+    await this.assertCanManage(announcement, userId);
+
+    return this.prisma.announcement.update({
+      where: { id },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title } : {}),
+        ...(dto.content !== undefined ? { content: dto.content } : {}),
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            role: true,
+            gender: true,
+            birthYear: true,
+          },
+        },
+        group: {
+          select: {
+            id: true,
+            name: true,
+            profileImageUrl: true,
+          },
+        },
+      },
+    });
+  }
+
+  async delete(id: string, userId: string) {
+    const announcement = await this.prisma.announcement.findUnique({
+      where: { id },
+    });
+
+    if (!announcement) {
+      throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    }
+
+    await this.assertCanManage(announcement, userId);
+
+    await this.prisma.announcement.delete({ where: { id } });
+    return { ok: true, message: '게시글이 삭제되었습니다.' };
+  }
+
+  private async assertCanManage(
+    announcement: { id: string; authorId: string; groupId: string | null },
+    userId: string,
+  ) {
+    // 1. If author, allowed
+    if (announcement.authorId === userId) return;
+
+    // 2. If app ADMIN, allowed
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user && user.role === 'ADMIN') return;
+
+    // 3. If group post, check if user is a group officer
+    if (announcement.groupId) {
+      const membership = await this.prisma.groupMember.findUnique({
+        where: { userId_groupId: { userId, groupId: announcement.groupId } },
+      });
+      if (membership && membership.status === 'APPROVED' && isOfficer(membership.role)) {
+        return;
+      }
+    }
+
+    throw new ForbiddenException('게시글을 수정하거나 삭제할 권한이 없습니다.');
   }
 }

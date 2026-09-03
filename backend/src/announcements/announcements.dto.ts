@@ -13,3 +13,13 @@ export class CreateAnnouncementDto {
   @IsString()
   groupId?: string;
 }
+
+export class UpdateAnnouncementDto {
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  content?: string;
+}
