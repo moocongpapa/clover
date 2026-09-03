@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
@@ -17,6 +18,12 @@ import { Delete } from '@nestjs/common';
 @Controller()
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
+
+  @Get('events/places/search')
+  @UseGuards(JwtAuthGuard)
+  searchPlaces(@Query('query') query: string) {
+    return this.eventsService.searchPlaces(query);
+  }
 
   @Get('groups/:groupId/events/latest')
   @UseGuards(JwtAuthGuard)

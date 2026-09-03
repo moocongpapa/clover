@@ -252,6 +252,15 @@ export const api = {
     }),
   getAttendanceStats: (groupId: string) =>
     request<{ events: number; members: Array<{ userId: string; user: User; attended: number; late: number; absent: number; noVote: number; total: number; rate: number }> }>(`/groups/${groupId}/attendance-stats`),
+  searchPlaces: (query: string) =>
+    request<Array<{
+      id: string;
+      placeName: string;
+      address: string;
+      category?: string;
+      phone?: string;
+      url?: string;
+    }>>(`/events/places/search?query=${encodeURIComponent(query)}`),
   updateProfile: (data: {
     displayName?: string;
     profileImageUrl?: string | null;

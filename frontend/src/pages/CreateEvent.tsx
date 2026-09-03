@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { api, type Event } from '../api';
 import BackButton from '../components/BackButton';
+import PlaceSearchModal from '../components/PlaceSearchModal';
 import '../pages/Groups.css';
 
 // 30-minute interval time options from 06:00 to 23:30 (and 00:00~05:30)
@@ -65,6 +66,7 @@ export default function CreateEvent() {
   const [startTime, setStartTime] = useState('19:30');
   const [endTime, setEndTime] = useState('22:00');
   const [eventLocation, setEventLocation] = useState('');
+  const [showPlaceModal, setShowPlaceModal] = useState(false);
   const [description, setDescription] = useState('');
   const [repeatType, setRepeatType] = useState<'none' | 'weekly' | 'biweekly'>('none');
   const [repeatCount, setRepeatCount] = useState(4);
@@ -745,30 +747,93 @@ export default function CreateEvent() {
         }}>
           {/* Location */}
           <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)', marginBottom: '6px' }}>
-              장소 <span style={{ color: '#ef4444' }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={eventLocation}
-              onChange={(e) => setEventLocation(e.target.value)}
-              placeholder="예: 펜타시티 풋살파크 A구장"
-              required
-              style={{
-                width: '100%',
-                height: '46px',
-                padding: '0 14px',
-                background: 'var(--grey-50)',
-                border: '1.5px solid var(--border)',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: '600',
-                color: 'var(--ink-dark)',
-                outline: 'none'
-              }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)' }}>
+                장소 <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPlaceModal(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: 'var(--accent, #10b981)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: '8px',
+                  padding: '4px 10px',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                🔍 카카오 장소 검색
+              </button>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                value={eventLocation}
+                onChange={(e) => setEventLocation(e.target.value)}
+                placeholder="예: 펜타시티 풋살파크 A구장 (직접 입력 또는 검색)"
+                required
+                style={{
+                  width: '100%',
+                  height: '46px',
+                  padding: '0 40px 0 14px',
+                  background: 'var(--grey-50)',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: '12px',
+                  fontSize: '14.5px',
+                  fontWeight: '600',
+                  color: 'var(--ink-dark)',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPlaceModal(true)}
+                title="카카오 장소 검색"
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  color: 'var(--accent, #10b981)'
+                }}
+              >
+                🔍
+              </button>
+            </div>
+
             {/* Quick group arena chips & location presets */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setShowPlaceModal(true)}
+                style={{
+                  padding: '5px 11px',
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px dashed var(--accent, #10b981)',
+                  borderRadius: '999px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  color: 'var(--accent, #10b981)',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                🔍 새 장소 검색…
+              </button>
               {groupArenas.map((arena, idx) => {
                 const arenaText = arena.placeName
                   ? arena.address
@@ -813,7 +878,7 @@ export default function CreateEvent() {
                   cursor: 'pointer'
                 }}
               >
-                +온라인 모임
+                💻 온라인 (Zoom)
               </button>
               <button
                 type="button"
@@ -974,6 +1039,13 @@ export default function CreateEvent() {
           </button>
         </div>
       </form>
+
+      <PlaceSearchModal
+        isOpen={showPlaceModal}
+        onClose={() => setShowPlaceModal(false)}
+        onSelectPlace={(placeText) => setEventLocation(placeText)}
+        initialKeyword={eventLocation}
+      />
     </div>
   );
 }

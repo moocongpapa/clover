@@ -725,4 +725,33 @@ export class EventsService {
     stats.sort((a, b) => b.rate - a.rate);
     return { events: pastEvents.length, members: stats };
   }
+
+  async searchPlaces(query: string) {
+    if (!query || !query.trim()) return [];
+    const kakaoKey = process.env.KAKAO_REST_API_KEY || '48b4025d5f4f3087b3435862d6d67491';
+    try {
+      const res = await fetch(
+        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query.trim())}&size=10`,
+        {
+          headers: { Authorization: `KakaoAK ${kakaoKey}` },
+        },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.documents)) {
+          return data.documents.map((doc: any) => ({
+            id: doc.id,
+            placeName: doc.place_name,
+            address: doc.road_address_name || doc.address_name,
+            category: doc.category_name,
+            phone: doc.phone,
+            url: doc.place_url,
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn('Kakao local search failed:', err);
+    }
+    return [];
+  }
 }
