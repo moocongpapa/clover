@@ -38,13 +38,135 @@ export default function PlaceSearchModal({
   // Map Picker State
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
+  const pinMarkerRef = useRef<L.Marker | null>(null);
+  const userGpsMarkerRef = useRef<L.Marker | null>(null);
   const [mapSelectedCoords, setMapSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [mapAddress, setMapAddress] = useState('');
   const [mapPlaceName, setMapPlaceName] = useState('');
   const [reverseGeocoding, setReverseGeocoding] = useState(false);
+  const [gpsLocating, setGpsLocating] = useState(false);
+  const [gpsStatusText, setGpsStatusText] = useState('📡 내 위치 찾는 중…');
 
-  // Initialize or resize Leaflet Map when Tab switches to 'map'
+  // Custom Pin Icon
+  const createPinIcon = () =>
+    L.divIcon({
+      className: 'clover-map-picker-pin',
+      html: `
+        <div style="
+          width: 36px;
+          height: 36px;
+          background: #10B981;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          border: 3px solid #ffffff;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+          font-size: 18px;
+          transform: translate(-50%, -50%);
+        ">
+          📍
+        </div>
+      `,
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+    });
+
+  // Custom Blue GPS Marker Icon
+  const createGpsUserIcon = () =>
+    L.divIcon({
+      className: 'clover-user-gps-marker',
+      html: `
+        <div style="
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: #2563EB;
+          border: 3px solid #ffffff;
+          box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.4), 0 2px 8px rgba(0,0,0,0.3);
+          transform: translate(-50%, -50%);
+        "></div>
+      `,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+    });
+
+  // Fetch address for specific coordinates
+  const fetchAddressForCoords = async (lat: number, lng: number, autoName = false) => {
+    setReverseGeocoding(true);
+    try {
+      const geo = await api.reverseGeocode(lat, lng);
+      if (geo && geo.address) {
+        setMapAddress(geo.address);
+        if (geo.buildingName) {
+          setMapPlaceName(geo.buildingName);
+        } else if (autoName || !mapPlaceName) {
+          setMapPlaceName('내 현재 위치 주변');
+        }
+      } else {
+        setMapAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      }
+    } catch {
+      setMapAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    } finally {
+      setReverseGeocoding(false);
+    }
+  };
+
+  // Locate User GPS
+  const locateUserGps = (map: L.Map, autoSelect = false) => {
+    if (!('geolocation' in navigator)) {
+      setGpsStatusText('지도를 터치해 위치를 지정하세요');
+      return;
+    }
+
+    setGpsLocating(true);
+    setGpsStatusText('📡 내 위치 찾는 중…');
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        setGpsLocating(false);
+        const { latitude, longitude } = pos.coords;
+        setGpsStatusText('🎯 내 현재 위치로 이동됨');
+
+        map.setView([latitude, longitude], 16, { animate: true });
+
+        // Place or update blue GPS dot
+        if (userGpsMarkerRef.current) {
+          userGpsMarkerRef.current.setLatLng([latitude, longitude]);
+        } else {
+          userGpsMarkerRef.current = L.marker([latitude, longitude], {
+            icon: createGpsUserIcon(),
+          }).addTo(map);
+          userGpsMarkerRef.current.bindPopup('<strong style="font-size:12px; color:#1e40af;">📍 내 현재 위치</strong>');
+        }
+
+        // If nothing was selected yet, auto-select current position
+        if (autoSelect || !mapSelectedCoords) {
+          setMapSelectedCoords({ lat: latitude, lng: longitude });
+
+          if (pinMarkerRef.current) {
+            pinMarkerRef.current.setLatLng([latitude, longitude]);
+          } else {
+            pinMarkerRef.current = L.marker([latitude, longitude], {
+              icon: createPinIcon(),
+            }).addTo(map);
+          }
+
+          await fetchAddressForCoords(latitude, longitude, true);
+        }
+      },
+      (err) => {
+        setGpsLocating(false);
+        console.warn('GPS location error:', err.message);
+        setGpsStatusText('💡 지도를 터치해 원하는 위치를 지정하세요');
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  };
+
+  // Initialize Leaflet Map when Tab switches to 'map'
   useEffect(() => {
     if (!isOpen || tab !== 'map') return;
 
@@ -60,83 +182,34 @@ export default function PlaceSearchModal({
           attributionControl: false,
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // 100% Hangul / Korean Map Tiles (OpenStreetMap Korea)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          subdomains: 'abcd',
+          attribution: '© OpenStreetMap contributors',
         }).addTo(map);
-
-        const customMarkerIcon = L.divIcon({
-          className: 'clover-map-picker-pin',
-          html: `
-            <div style="
-              width: 34px;
-              height: 34px;
-              background: #10B981;
-              color: white;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              border-radius: 50%;
-              border: 3px solid #ffffff;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-              font-size: 16px;
-              transform: translate(-50%, -50%);
-            ">
-              📍
-            </div>
-          `,
-          iconSize: [34, 34],
-          iconAnchor: [17, 17],
-        });
 
         // Map Click Handler
         map.on('click', async (e: L.LeafletMouseEvent) => {
           const { lat, lng } = e.latlng;
           setMapSelectedCoords({ lat, lng });
 
-          if (markerRef.current) {
-            markerRef.current.setLatLng([lat, lng]);
+          if (pinMarkerRef.current) {
+            pinMarkerRef.current.setLatLng([lat, lng]);
           } else {
-            markerRef.current = L.marker([lat, lng], { icon: customMarkerIcon }).addTo(map);
+            pinMarkerRef.current = L.marker([lat, lng], { icon: createPinIcon() }).addTo(map);
           }
 
-          setReverseGeocoding(true);
-          try {
-            const geo = await api.reverseGeocode(lat, lng);
-            if (geo && geo.address) {
-              setMapAddress(geo.address);
-              if (geo.buildingName) {
-                setMapPlaceName(geo.buildingName);
-              } else if (!mapPlaceName) {
-                setMapPlaceName('지도에서 찍은 장소');
-              }
-            } else {
-              setMapAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-            }
-          } catch (err) {
-            setMapAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-          } finally {
-            setReverseGeocoding(false);
-          }
+          await fetchAddressForCoords(lat, lng);
         });
 
         mapInstanceRef.current = map;
 
-        // Try getting current GPS location
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const { latitude, longitude } = pos.coords;
-              map.setView([latitude, longitude], 15);
-            },
-            () => {},
-            { timeout: 5000 }
-          );
-        }
+        // Auto-locate GPS immediately upon entering map tab
+        locateUserGps(map, true);
       } else {
         mapInstanceRef.current.invalidateSize();
       }
-    }, 100);
+    }, 80);
 
     return () => clearTimeout(timer);
   }, [isOpen, tab]);
@@ -182,18 +255,9 @@ export default function PlaceSearchModal({
     onClose();
   };
 
-  const handleGpsCurrentLocation = () => {
-    if (navigator.geolocation && mapInstanceRef.current) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          mapInstanceRef.current?.setView([latitude, longitude], 16, { animate: true });
-        },
-        () => {
-          alert('현재 위치 정보를 가져올 수 없습니다.');
-        },
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
+  const handleRecenterGps = () => {
+    if (mapInstanceRef.current) {
+      locateUserGps(mapInstanceRef.current, false);
     }
   };
 
@@ -231,9 +295,14 @@ export default function PlaceSearchModal({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '20px' }}>📍</span>
-            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: 'var(--ink-dark)' }}>
-              모임 장소 설정
-            </h3>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: 'var(--ink-dark)' }}>
+                모임 장소 설정
+              </h3>
+              <span style={{ fontSize: '11px', color: 'var(--accent, #10b981)', fontWeight: '700' }}>
+                🇰🇷 100% 한글 지도 & 카카오 로컬 연동
+              </span>
+            </div>
           </div>
           <button
             type="button"
@@ -302,7 +371,7 @@ export default function PlaceSearchModal({
               transition: 'all 0.15s ease',
             }}
           >
-            🗺️ 지도에서 직접 찍기
+            🗺️ 한글 지도에서 직접 찍기
           </button>
         </div>
 
@@ -490,7 +559,7 @@ export default function PlaceSearchModal({
                       cursor: 'pointer',
                     }}
                   >
-                    🗺️ 지도에서 직접 위치 찍어서 등록하기
+                    🗺️ 한글 지도에서 직접 위치 찍어서 등록하기
                   </button>
                 </div>
               ) : (
@@ -510,7 +579,7 @@ export default function PlaceSearchModal({
                       cursor: 'pointer',
                     }}
                   >
-                    🗺️ 지도에서 직접 위치 찍기
+                    🗺️ 한글 지도에서 직접 위치 찍기
                   </button>
                 </div>
               )}
@@ -528,46 +597,51 @@ export default function PlaceSearchModal({
               {/* GPS Button */}
               <button
                 type="button"
-                onClick={handleGpsCurrentLocation}
-                title="내 위치로 이동"
+                onClick={handleRecenterGps}
+                title="내 현재 위치로 지도 이동"
                 style={{
                   position: 'absolute',
                   right: '10px',
                   top: '10px',
                   zIndex: 1000,
-                  width: '38px',
                   height: '38px',
+                  padding: '0 10px',
                   background: '#ffffff',
                   border: '1px solid var(--border)',
                   borderRadius: '10px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  fontSize: '18px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  color: 'var(--ink-dark)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  gap: '4px',
                 }}
               >
-                🎯
+                🎯 {gpsLocating ? '위치 찾는 중…' : '내 위치'}
               </button>
 
-              {/* Helper badge */}
+              {/* Status Badge */}
               <div
                 style={{
                   position: 'absolute',
                   top: '10px',
                   left: '10px',
                   zIndex: 1000,
-                  background: 'rgba(0, 0, 0, 0.7)',
+                  background: 'rgba(0, 0, 0, 0.75)',
                   color: '#ffffff',
-                  padding: '4px 10px',
+                  padding: '5px 11px',
                   borderRadius: '8px',
-                  fontSize: '11.5px',
-                  fontWeight: '600',
+                  fontSize: '12px',
+                  fontWeight: '700',
                   pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
-                지도를 클릭하여 핀을 꽂아주세요 📍
+                {gpsStatusText}
               </div>
             </div>
 
@@ -585,18 +659,18 @@ export default function PlaceSearchModal({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: '700', color: 'var(--accent, #10b981)' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--accent, #10b981)' }}>
                     선택된 위치
                   </span>
                   {reverseGeocoding && (
-                    <span style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>주소 조회 중…</span>
+                    <span style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>카카오 주소 변환 중…</span>
                   )}
                 </div>
 
                 {/* Editable Place Name */}
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', color: 'var(--ink-muted)', marginBottom: '3px' }}>
-                    장소명 (직접 수정 가능)
+                    장소명 (원하는 이름으로 직접 수정 가능)
                   </label>
                   <input
                     type="text"
@@ -619,7 +693,7 @@ export default function PlaceSearchModal({
                   />
                 </div>
 
-                <div style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
+                <div style={{ fontSize: '12.5px', color: 'var(--ink-muted)' }}>
                   📍 {mapAddress || '지도를 클릭해 주소를 불러옵니다'}
                 </div>
 

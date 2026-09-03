@@ -227,10 +227,10 @@ export default function GoogleMapSelector({
         attributionControl: false,
       });
 
-      // High quality, fast tile layer for Korea
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      // 100% Hangul / Korean Map Tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd',
+        attribution: '© OpenStreetMap contributors',
       }).addTo(map);
 
       // Handle map click to place custom pin and reverse geocode with Kakao
