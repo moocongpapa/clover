@@ -305,6 +305,15 @@
   margin: 0;
 }
 
+.section-block--join-requests {
+  background: rgba(245, 158, 11, 0.04);
+  border: 1.5px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-xl, 18px);
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.06);
+}
+
 .member-item-card {
   display: flex;
   align-items: center;

@@ -526,6 +526,8 @@ export class GroupsService {
 
     if (dto.status === MemberStatus.APPROVED) {
       await this.notifications.notifyJoinApproved(groupId, targetUserId);
+    } else if (dto.status === MemberStatus.REJECTED) {
+      await this.notifications.notifyJoinRejected(groupId, targetUserId);
     }
 
     return updated;

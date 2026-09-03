@@ -984,6 +984,9 @@ export interface NotificationItem {
 }
 
 export function notificationLink(item: NotificationItem): string {
+  if (item.type === 'JOIN_REQUEST' && item.group?.id) {
+    return `/groups/${item.group.id}?tab=members`;
+  }
   if (item.event?.id) return `/events/${item.event.id}`;
   if (item.group?.id) return `/groups/${item.group.id}`;
   return '/';

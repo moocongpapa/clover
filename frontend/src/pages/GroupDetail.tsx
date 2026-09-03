@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import {
   api,
@@ -77,7 +77,33 @@ export default function GroupDetail() {
   }, [selectedMediaIndex, mediaFiles.length]);
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<GroupTab>('posts');
+  const [searchParams] = useSearchParams();
+  const tabFromQuery = searchParams.get('tab') as GroupTab | null;
+  const [activeTab, setActiveTab] = useState<GroupTab>(
+    tabFromQuery && ['posts', 'events', 'gallery', 'members', 'payments', 'info'].includes(tabFromQuery)
+      ? tabFromQuery
+      : 'posts'
+  );
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab') as GroupTab | null;
+    if (tabParam && ['posts', 'events', 'gallery', 'members', 'payments', 'info'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'members') {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('join-requests');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, group?.pendingRequests?.length]);
+
   const [eventSubTab, setEventSubTab] = useState<'upcoming' | 'past'>('upcoming');
   const [memberFilter, setMemberFilter] = useState<'all' | 'officer' | 'member' | 'injured'>('all');
   const [attendanceStats, setAttendanceStats] = useState<Record<string, { rate: number; attended: number; total: number }>>({});
@@ -1537,8 +1563,13 @@ export default function GroupDetail() {
 
               {/* 2. Join Requests (Officers only) */}
               {isOfficer && group.pendingRequests.length > 0 && (
-                <section className="section-block">
-                  <h2 className="tab-section-title">가입 신청 ({group.pendingRequests.length})</h2>
+                <section id="join-requests" className="section-block section-block--join-requests">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <h2 className="tab-section-title" style={{ margin: 0 }}>가입 신청 ({group.pendingRequests.length})</h2>
+                    <span style={{ fontSize: '11.5px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+                      ⏳ 승인 대기
+                    </span>
+                  </div>
                   <p className="section-desc">회장/운영진이 승인·거절할 수 있어요.</p>
                   <ul className="member-list">
                     {group.pendingRequests.map((m: any) => (

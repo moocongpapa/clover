@@ -181,6 +181,7 @@ export class NotificationsService {
         groupId,
         undefined,
         'JOIN_REQUEST',
+        `/groups/${groupId}?tab=members`,
       );
       await this.createInAppNotification({
         userId: officer.userId,
@@ -209,10 +210,38 @@ export class NotificationsService {
       groupId,
       undefined,
       'JOIN_APPROVED',
+      `/groups/${groupId}`,
     );
     await this.createInAppNotification({
       userId: memberUserId,
       type: NotificationType.JOIN_APPROVED,
+      message: inAppMessage,
+      groupId,
+    });
+  }
+
+  async notifyJoinRejected(groupId: string, memberUserId: string) {
+    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    const member = await this.prisma.user.findUnique({ where: { id: memberUserId } });
+    if (!group || !member) return;
+
+    const pushTitle = `[${group.name}] 가입 신청 결과 안내 ℹ️`;
+    const pushBody = `아쉽게도 「${group.name}」 모임 가입 신청이 승인되지 않았습니다.`;
+    const inAppMessage = `[${group.name}] 가입 신청 결과: 「${group.name}」 모임 가입 신청이 승인되지 않았습니다.`;
+
+    await this.sendExternalIfConfigured(
+      member,
+      inAppMessage,
+      pushTitle,
+      pushBody,
+      groupId,
+      undefined,
+      'JOIN_REQUEST',
+      '/groups',
+    );
+    await this.createInAppNotification({
+      userId: memberUserId,
+      type: NotificationType.JOIN_REQUEST,
       message: inAppMessage,
       groupId,
     });
@@ -559,9 +588,11 @@ export class NotificationsService {
     groupId?: string,
     eventId?: string,
     type?: string,
+    customUrl?: string,
   ) {
     const pushTitle = customTitle || 'Clover 알림';
     const pushBody = customBody || message;
+    const targetUrl = customUrl || (eventId ? `/events/${eventId}` : groupId ? `/groups/${groupId}` : '/');
 
     // 1. FCM Web Push Notification
     let fcmSuccess = false;
@@ -581,7 +612,7 @@ export class NotificationsService {
               groupId: groupId || '',
               eventId: eventId || '',
               tag: notificationTag,
-              url: eventId ? `/events/${eventId}` : groupId ? `/groups/${groupId}` : '/',
+              url: targetUrl,
             },
             webpush: {
               headers: {
@@ -592,6 +623,7 @@ export class NotificationsService {
                 renotify: false, // Prevents duplicate renotification vibration/banner
                 icon: '/icons/icon-192x192.png',
                 badge: '/icons/badge.png',
+                data: { url: targetUrl },
               },
             },
           });
@@ -633,7 +665,10 @@ export class NotificationsService {
           ? 'https://kapi.kakao.com/v2/api/talk/memo/default/send'
           : 'https://kapi.kakao.com/v1/api/talk/friends/message/default/send';
 
-        const linkUrl = this.getFrontendLink();
+        const baseFrontendUrl = this.getFrontendLink();
+        const linkUrl = targetUrl.startsWith('http')
+          ? targetUrl
+          : `${baseFrontendUrl}${targetUrl.startsWith('/') ? targetUrl : '/' + targetUrl}`;
         const fullKakaoText = `${pushTitle}\n\n${pushBody}\n\n지금 바로 클로버에서 확인해보세요!`;
 
         const params = new URLSearchParams();
