@@ -4,6 +4,13 @@ import { api, CATEGORY_OPTIONS, type MyGroup } from '../api';
 import GroupAvatar from '../components/GroupAvatar';
 import './MyGroups.css';
 
+function formatShortRegion(region?: string | null) {
+  if (!region) return '';
+  const parts = region.trim().split(/\s+/);
+  if (parts.length <= 2) return region;
+  return parts.slice(-3).join(' ');
+}
+
 export default function MyGroups() {
   const [groups, setGroups] = useState<MyGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +34,7 @@ export default function MyGroups() {
         <div className="my-groups-header-left">
           <h1 className="my-groups-title">내 모임</h1>
           {groups.length > 0 && (
-            <span className="my-groups-count-badge">{groups.length}개</span>
+            <span className="my-groups-count-badge">{groups.length}</span>
           )}
         </div>
         <Link to="/groups" className="btn-find-groups-header">
@@ -44,7 +51,6 @@ export default function MyGroups() {
                 <div className="skeleton-pulse skeleton-line skeleton-line--title" />
                 <div className="skeleton-pulse skeleton-line skeleton-line--desc" />
                 <div className="skeleton-tags">
-                  <div className="skeleton-pulse skeleton-tag" />
                   <div className="skeleton-pulse skeleton-tag" />
                   <div className="skeleton-pulse skeleton-tag" />
                 </div>
@@ -65,49 +71,64 @@ export default function MyGroups() {
         <div className="my-groups-list">
           {groups.map((g) => {
             const catEmoji = CATEGORY_OPTIONS.find((c) => c.value === g.category)?.emoji || '🌱';
-            const roleLabel = g.myRole === 'PRESIDENT' ? '👑 회장' : g.myRole === 'OFFICER' ? '⭐ 운영진' : '회원';
-            return (
-              <Link
-                key={g.id}
-                to={`/groups/${g.id}`}
-                className="my-group-card"
-              >
-                <div className="my-group-card__left">
-                  <div className="my-group-card__avatar-wrap">
-                    <GroupAvatar src={g.profileImageUrl} name={g.name} size={64} radius={18} />
-                  </div>
-                  <div className="my-group-card__info">
-                    <div className="my-group-card__title-row">
-                      <h3 className="my-group-card__name">{g.name}</h3>
-                      <span className={`my-group-role-badge ${getRoleBadgeClass(g.myRole)}`}>
-                        {roleLabel}
-                      </span>
-                    </div>
+            const roleLabel =
+              g.myRole === 'PRESIDENT'
+                ? '👑 회장'
+                : g.myRole === 'OFFICER'
+                ? '⭐ 운영진'
+                : '🌱 회원';
+            const shortRegion = formatShortRegion(g.activityRegion);
 
+            return (
+              <Link key={g.id} to={`/groups/${g.id}`} className="my-group-card">
+                {/* Top Header Row inside Card */}
+                <div className="my-group-card__header">
+                  <span className="my-group-category-pill">
+                    {catEmoji} {g.category}
+                  </span>
+                  <span className={`my-group-role-badge ${getRoleBadgeClass(g.myRole)}`}>
+                    {roleLabel}
+                  </span>
+                </div>
+
+                {/* Main Body */}
+                <div className="my-group-card__body">
+                  <GroupAvatar
+                    src={g.profileImageUrl}
+                    name={g.name}
+                    size={56}
+                    radius={16}
+                    className="my-group-card__avatar"
+                  />
+                  <div className="my-group-card__content">
+                    <h3 className="my-group-card__name">{g.name}</h3>
                     {g.description && (
                       <p className="my-group-card__desc">{g.description}</p>
                     )}
-
-                    <div className="my-group-card__meta-tags">
-                      <span className="my-group-meta-pill my-group-meta-pill--category">
-                        {catEmoji} {g.category}
-                      </span>
-                      {g.activityRegion && (
-                        <span className="my-group-meta-pill my-group-meta-pill--region" title={g.activityRegion}>
-                          📍 {g.activityRegion}
+                    <div className="my-group-card__meta-line">
+                      {shortRegion && (
+                        <span className="my-group-meta-loc" title={g.activityRegion || undefined}>
+                          📍 {shortRegion}
                         </span>
                       )}
-                      <span className="my-group-meta-pill my-group-meta-pill--members">
-                        👥 {g.memberCount}명
+                      {shortRegion && <span className="my-group-meta-sep">·</span>}
+                      <span className="my-group-meta-members">
+                        👥 멤버 {g.memberCount}명
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="my-group-card__right">
-                  <div className="my-group-card__arrow-btn">
-                    <span className="my-group-card__arrow">›</span>
-                  </div>
+                {/* Bottom Footer Strip */}
+                <div className="my-group-card__footer">
+                  <span className="my-group-card__footer-hint">
+                    {g.myRole === 'PRESIDENT'
+                      ? '👑 회장으로 모임 관리 중'
+                      : '모임 홈 바로가기'}
+                  </span>
+                  <span className="my-group-card__footer-action">
+                    입장하기 <span className="my-group-card__arrow">›</span>
+                  </span>
                 </div>
               </Link>
             );

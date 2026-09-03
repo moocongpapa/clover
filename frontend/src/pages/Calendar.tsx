@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, formatEventTimeRange, VOTE_LABELS, type CalendarEvent } from '../api';
+import { api, type CalendarEvent } from '../api';
+import EventCard from '../components/EventCard';
+import './Home.css';
 import './Calendar.css';
 
 type ViewMode = 'list' | 'month';
@@ -73,12 +75,16 @@ export default function Calendar() {
   });
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  useEffect(() => {
+  const loadEvents = useCallback(() => {
     api
       .getCalendar()
       .then(setEvents)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
@@ -142,101 +148,57 @@ export default function Calendar() {
     ? (eventsByDate.get(toDateKey(selectedDate)) ?? [])
     : [];
 
-  const renderListItem = (ev: CalendarEvent) => {
-    const d = new Date(ev.date);
-    return (
-      <Link key={ev.id} to={`/events/${ev.id}`} className="cal-list-item">
-        <div className="cal-list-date">
-          <span className="cal-list-day">{d.getDate()}</span>
-          <span className="cal-list-month">{d.getMonth() + 1}월</span>
-        </div>
-        <div className="cal-list-body">
-          <strong>{ev.title}</strong>
-          <span className="cal-list-meta">
-            {ev.group.name} · {formatEventTimeRange(ev.startTime, ev.endTime)} · {ev.location}
-          </span>
-          <div className="cal-list-tags">
-            {ev.status === 'CANCELLED' && (
-              <span className="badge badge--danger">취소됨</span>
-            )}
-            {ev.myVote ? (
-              <span className={`badge badge--vote badge--${ev.myVote.toLowerCase()}`}>
-                {VOTE_LABELS[ev.myVote]}
-              </span>
-            ) : ev.status !== 'CANCELLED' ? (
-              <span className="badge badge--warn">미투표</span>
-            ) : null}
-          </div>
-        </div>
-      </Link>
-    );
-  };
-
-  const renderMonthEventChip = (ev: CalendarEvent) => (
-    <Link
-      key={ev.id}
-      to={`/events/${ev.id}`}
-      className={`cal-month-event${ev.status === 'CANCELLED' ? ' is-cancelled' : ''}${!ev.myVote && ev.status !== 'CANCELLED' ? ' needs-vote' : ''}`}
-      title={ev.title}
-    >
-      <span className="cal-month-event__dot" />
-      <span className="cal-month-event__title">{ev.title}</span>
-    </Link>
-  );
-
   return (
     <div className="calendar-page">
-      {/* Compact Unified Header Row: Sub Tabs + View Toggles */}
-      <div className="cal-header-compact-row">
+      {/* Unified Single-Row Schedule Control Bar (Matching Home.tsx) */}
+      <div className="home-schedule-bar" style={{ marginBottom: '16px' }}>
         {viewMode === 'list' ? (
-          <div className="cal-compact-tabs">
+          <div className="home-schedule-subtabs">
             <button
               type="button"
-              className={`cal-compact-tab-btn ${listTab === 'upcoming' ? 'is-active' : ''}`}
+              className={`home-schedule-tab-btn ${listTab === 'upcoming' ? 'is-active' : ''}`}
               onClick={() => setListTab('upcoming')}
             >
-              예정 / 진행 <span className="cal-tab-count">({upcoming.length})</span>
+              진행 중 일정{upcoming.length > 0 ? ` (${upcoming.length})` : ''}
             </button>
             <button
               type="button"
-              className={`cal-compact-tab-btn ${listTab === 'past' ? 'is-active' : ''}`}
+              className={`home-schedule-tab-btn ${listTab === 'past' ? 'is-active' : ''}`}
               onClick={() => setListTab('past')}
             >
-              지난 일정 <span className="cal-tab-count">({past.length})</span>
+              지난 일정{past.length > 0 ? ` (${past.length})` : ''}
             </button>
           </div>
         ) : (
-          <div className="cal-compact-month-title">
-            <span>{currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월</span>
+          <div className="home-schedule-subtabs">
+            <h2 className="home-section__title" style={{ margin: 0, fontSize: '14.5px', color: 'var(--ink-dark)' }}>
+              {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
+            </h2>
           </div>
         )}
 
-        <div className="cal-view-toggle" role="group" aria-label="캘린더 보기 방식">
+        <div className="home-view-toggle-group">
           <button
             type="button"
-            className={`cal-view-toggle__btn${viewMode === 'list' ? ' is-active' : ''}`}
+            className={`home-view-toggle-item ${viewMode === 'list' ? 'is-active' : ''}`}
             onClick={() => setViewMode('list')}
-            aria-pressed={viewMode === 'list'}
-            aria-label="목록 보기"
-            title="목록 보기"
+            title="리스트 보기"
           >
-            📋
+            📋 리스트
           </button>
           <button
             type="button"
-            className={`cal-view-toggle__btn${viewMode === 'month' ? ' is-active' : ''}`}
+            className={`home-view-toggle-item ${viewMode === 'month' ? 'is-active' : ''}`}
             onClick={() => setViewMode('month')}
-            aria-pressed={viewMode === 'month'}
-            aria-label="달력 보기"
-            title="달력 보기"
+            title="캘린더 보기"
           >
-            📅
+            📅 캘린더
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="cal-list" style={{ marginTop: '16px' }}>
+        <div className="home-event-list" style={{ marginTop: '16px' }}>
           {[1, 2, 3].map((i) => (
             <div key={i} className="skeleton-card" style={{ marginBottom: '10px' }}>
               <div className="skeleton-pulse skeleton-avatar" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
@@ -256,15 +218,16 @@ export default function Calendar() {
         <>
           {listTab === 'upcoming' ? (
             <section className="cal-section">
-              <div className="cal-list">
+              <div className="home-event-list">
                 {upcoming.length === 0 ? (
-                  <div className="empty-inline-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div className="empty-inline-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 16px' }}>
                     <p className="empty-inline">예정된 이벤트가 없어요.</p>
                     {past.length > 0 && (
                       <button
                         type="button"
                         className="btn-view-past-events"
                         onClick={() => setListTab('past')}
+                        style={{ marginTop: '10px' }}
                       >
                         <span>📜 지난 일정 보기 ({past.length})</span>
                         <span style={{ fontSize: '12px' }}>→</span>
@@ -272,17 +235,33 @@ export default function Calendar() {
                     )}
                   </div>
                 ) : (
-                  upcoming.map(renderListItem)
+                  upcoming.map((ev) => (
+                    <EventCard
+                      key={ev.id}
+                      event={ev}
+                      votable={!ev.isPast}
+                      onVoted={loadEvents}
+                    />
+                  ))
                 )}
               </div>
             </section>
           ) : (
             <section className="cal-section">
-              <div className="cal-list">
+              <div className="home-event-list">
                 {past.length === 0 ? (
-                  <p className="empty-inline">최근 3개월 내 지난 일정이 없어요.</p>
+                  <div className="empty-inline-block" style={{ padding: '36px 16px', textAlign: 'center' }}>
+                    <p className="empty-inline">최근 3개월 내 지난 일정이 없어요.</p>
+                  </div>
                 ) : (
-                  past.map(renderListItem)
+                  past.map((ev) => (
+                    <EventCard
+                      key={ev.id}
+                      event={ev}
+                      votable={false}
+                      onVoted={loadEvents}
+                    />
+                  ))
                 )}
               </div>
             </section>
@@ -383,24 +362,33 @@ export default function Calendar() {
             </div>
           </div>
 
-          <section className="cal-day-panel">
-            <h3 className="cal-day-panel__title">
+          <section className="cal-day-panel" style={{ marginTop: '16px' }}>
+            <h3 className="cal-day-panel__title" style={{ fontSize: '15px', fontWeight: '800', marginBottom: '12px' }}>
               {selectedDate
                 ? selectedDate.toLocaleDateString('ko-KR', {
                     month: 'long',
                     day: 'numeric',
                     weekday: 'short',
-                  })
+                  }) + ' 일정'
                 : '날짜를 선택해 주세요'}
             </h3>
 
             {selectedDate && selectedEvents.length === 0 && (
-              <p className="empty-inline">이 날짜에 이벤트가 없어요.</p>
+              <div className="empty-inline-block" style={{ padding: '24px 16px', textAlign: 'center' }}>
+                <p className="empty-inline">이 날짜에 이벤트가 없어요.</p>
+              </div>
             )}
 
             {selectedEvents.length > 0 && (
-              <div className="cal-day-events">
-                {selectedEvents.map(renderMonthEventChip)}
+              <div className="home-event-list">
+                {selectedEvents.map((ev) => (
+                  <EventCard
+                    key={ev.id}
+                    event={ev}
+                    votable={!ev.isPast}
+                    onVoted={loadEvents}
+                  />
+                ))}
               </div>
             )}
           </section>
