@@ -66,6 +66,7 @@ export class NotificationsService {
   async notifyGroupMembers(
     eventId: string,
     type: Exclude<EventNotifyType, 'REMINDER'>,
+    actorUserId?: string,
   ) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
@@ -83,14 +84,38 @@ export class NotificationsService {
 
     if (!event) return;
 
-    const message = MESSAGE_TEMPLATES[type](event.title);
+    const groupName = event.group.name;
+    let pushTitle = `[${groupName}] 모임 알림`;
+    let pushBody = '';
+    let inAppMessage = '';
+
+    if (type === 'CREATED') {
+      pushTitle = `[${groupName}] 새 일정 등록 📅`;
+      pushBody = `「${event.title}」 일정이 등록되었습니다. 참석 여부를 투표해 주세요!`;
+      inAppMessage = `[${groupName}] 새 일정 등록: 「${event.title}」 일정이 등록되었습니다.`;
+    } else if (type === 'CHANGED') {
+      pushTitle = `[${groupName}] 일정 변경 안내 ✏️`;
+      pushBody = `「${event.title}」 일정이 변경되었습니다. 지금 확인하고 투표해 보세요!`;
+      inAppMessage = `[${groupName}] 일정 변경: 「${event.title}」 일정이 변경되었습니다.`;
+    }
 
     for (const member of event.group.members) {
-      await this.sendEventNotification(member.userId, eventId, type, message);
+      if (actorUserId && member.userId === actorUserId) {
+        continue;
+      }
+      await this.sendEventNotification(
+        member.userId,
+        eventId,
+        type,
+        inAppMessage,
+        event.groupId,
+        pushTitle,
+        pushBody,
+      );
     }
   }
 
-  async notifyEventCancelled(eventId: string, cancelReason?: string) {
+  async notifyEventCancelled(eventId: string, cancelReason?: string, actorUserId?: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: {
@@ -107,11 +132,25 @@ export class NotificationsService {
 
     if (!event) return;
 
+    const groupName = event.group.name;
     const reasonText = cancelReason ? ` (취소 사유: ${cancelReason})` : '';
-    const message = `이벤트가 취소되었습니다: ${event.title}${reasonText}`;
+    const pushTitle = `[${groupName}] 일정 취소 안내 ❌`;
+    const pushBody = `「${event.title}」 일정이 취소되었습니다.${reasonText}`;
+    const inAppMessage = `[${groupName}] 일정 취소: 「${event.title}」 일정이 취소되었습니다.${reasonText}`;
 
     for (const member of event.group.members) {
-      await this.sendEventNotification(member.userId, eventId, 'CANCELLED', message);
+      if (actorUserId && member.userId === actorUserId) {
+        continue;
+      }
+      await this.sendEventNotification(
+        member.userId,
+        eventId,
+        'CANCELLED',
+        inAppMessage,
+        event.groupId,
+        pushTitle,
+        pushBody,
+      );
     }
   }
 
@@ -124,17 +163,29 @@ export class NotificationsService {
 
     const members = await this.prisma.groupMember.findMany({
       where: { groupId, status: MemberStatus.APPROVED },
+      include: { user: true },
     });
     const officers = members.filter((m) => isOfficer(m.role));
 
-    const message = `${requester.displayName}님이 「${group.name}」 모임 가입을 요청했습니다`;
+    const pushTitle = `[${group.name}] 새 회원 가입 신청 🙋`;
+    const pushBody = `${requester.displayName}님이 모임 가입을 신청했습니다.`;
+    const inAppMessage = `[${group.name}] 가입 신청: ${requester.displayName}님이 모임 가입을 신청했습니다.`;
 
     for (const officer of officers) {
       if (officer.userId === requesterUserId) continue;
+      await this.sendExternalIfConfigured(
+        officer.user,
+        inAppMessage,
+        pushTitle,
+        pushBody,
+        groupId,
+        undefined,
+        'JOIN_REQUEST',
+      );
       await this.createInAppNotification({
         userId: officer.userId,
         type: NotificationType.JOIN_REQUEST,
-        message,
+        message: inAppMessage,
         groupId,
         actorUserId: requesterUserId,
       });
@@ -143,14 +194,26 @@ export class NotificationsService {
 
   async notifyJoinApproved(groupId: string, memberUserId: string) {
     const group = await this.prisma.group.findUnique({ where: { id: groupId } });
-    if (!group) return;
+    const member = await this.prisma.user.findUnique({ where: { id: memberUserId } });
+    if (!group || !member) return;
 
-    const message = `「${group.name}」 모임 가입이 승인되었습니다`;
+    const pushTitle = `[${group.name}] 모임 가입 승인 🎉`;
+    const pushBody = `「${group.name}」 모임 가입이 승인되었습니다! 환영합니다.`;
+    const inAppMessage = `[${group.name}] 가입 승인: 「${group.name}」 모임 가입이 승인되었습니다.`;
 
+    await this.sendExternalIfConfigured(
+      member,
+      inAppMessage,
+      pushTitle,
+      pushBody,
+      groupId,
+      undefined,
+      'JOIN_APPROVED',
+    );
     await this.createInAppNotification({
       userId: memberUserId,
       type: NotificationType.JOIN_APPROVED,
-      message,
+      message: inAppMessage,
       groupId,
     });
   }
@@ -200,7 +263,10 @@ export class NotificationsService {
         if (forceAllOffsets || inWindow) {
           const votedUserIds = new Set(event.votes.map((v) => v.userId));
           const uniqueLogMessage = `${X}시간 전입니다`;
-          const message = `[투표 독려] 「${event.title}」 투표 마감 ${X}시간 전입니다! 아직 투표하지 않으신 분들은 참석 여부를 투표해 주세요.`;
+          const groupName = event.group.name;
+          const pushTitle = `[${groupName}] 투표 마감 ${X}시간 전! ⏰`;
+          const pushBody = `「${event.title}」 아직 투표하지 않으셨다면 참석 여부를 알려주세요!`;
+          const inAppMessage = `[${groupName}] 투표 독려: 「${event.title}」 투표 마감 ${X}시간 전입니다! 참석 여부를 투표해 주세요.`;
 
           for (const member of event.group.members) {
             if (votedUserIds.has(member.userId)) continue;
@@ -220,7 +286,10 @@ export class NotificationsService {
               member.userId,
               event.id,
               'REMINDER',
-              message,
+              inAppMessage,
+              event.groupId,
+              pushTitle,
+              pushBody,
             );
           }
         }
@@ -255,11 +324,21 @@ export class NotificationsService {
       if (!upcomingEvent) {
         // Find officers
         const officers = group.members.filter(m => isOfficer(m.role));
-        const message = `[이벤트 등록 알림] 「${group.name}」 모임에 등록된 예정 이벤트가 없습니다. 다음 이벤트를 등록하여 회원들의 참여율을 높여보세요!`;
+        const pushTitle = `[${group.name}] 예정 일정 등록 안내 📅`;
+        const pushBody = `등록된 예정 이벤트가 없습니다. 다음 이벤트를 등록해 회원들의 참여를 이끌어보세요!`;
+        const message = `[${group.name}] 일정 등록 안내: 등록된 예정 이벤트가 없습니다. 다음 이벤트를 등록해 보세요!`;
 
         for (const officer of officers) {
           // Send log and push
-          await this.sendExternalIfConfigured(officer.user, message);
+          await this.sendExternalIfConfigured(
+            officer.user,
+            message,
+            pushTitle,
+            pushBody,
+            group.id,
+            undefined,
+            'REMINDER',
+          );
           await this.createInAppNotification({
             userId: officer.userId,
             type: NotificationType.REMINDER,
@@ -300,7 +379,9 @@ export class NotificationsService {
       const isTodayOneDayBefore = localDayStart(now).getTime() === localDayStart(checkDate).getTime();
 
       if (isTodayOneDayBefore) {
-        const message = `[회비 납부 안내] 「${group.name}」 모임의 회비 마감일(매월 ${group.dueDay}일) 하루 전입니다. 계좌번호: ${group.bankName || ''} ${group.bankAccountNumber || ''}로 납부를 부탁드립니다.`;
+        const pushTitle = `[${group.name}] 이번 달 회비 납부 안내 💰`;
+        const pushBody = `내일은 매월 ${group.dueDay}일 회비 마감일입니다. 계좌번호: ${group.bankName || ''} ${group.bankAccountNumber || ''}`;
+        const message = `[${group.name}] 회비 납부 안내: 회비 마감일(매월 ${group.dueDay}일) 하루 전입니다. 계좌번호: ${group.bankName || ''} ${group.bankAccountNumber || ''}로 납부를 부탁드립니다.`;
 
         for (const member of group.members) {
           // Check if exempt
@@ -319,19 +400,28 @@ export class NotificationsService {
             },
           });
 
-          if (!payment) {
-            await this.sendExternalIfConfigured(member.user, message);
-            await this.createInAppNotification({
-              userId: member.userId,
-              type: NotificationType.REMINDER,
-              message,
-              groupId: group.id,
-            });
-          }
+          if (payment) continue;
+
+          await this.sendExternalIfConfigured(
+            member.user,
+            message,
+            pushTitle,
+            pushBody,
+            group.id,
+            undefined,
+            'FEE_DUE',
+          );
+          await this.createInAppNotification({
+            userId: member.userId,
+            type: NotificationType.REMINDER,
+            message,
+            groupId: group.id,
+          });
         }
       }
     }
   }
+
 
   async listForUser(userId: string) {
     const logs = await this.prisma.notificationLog.findMany({
@@ -403,6 +493,8 @@ export class NotificationsService {
     type: EventNotifyType,
     message: string,
     groupId?: string,
+    customTitle?: string,
+    customBody?: string,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
@@ -416,7 +508,15 @@ export class NotificationsService {
       targetGroupId = ev?.groupId;
     }
 
-    await this.sendExternalIfConfigured(user, message);
+    await this.sendExternalIfConfigured(
+      user,
+      message,
+      customTitle,
+      customBody,
+      targetGroupId,
+      eventId,
+      type,
+    );
     await this.createInAppNotification({
       userId,
       type: type as NotificationType,
@@ -454,32 +554,54 @@ export class NotificationsService {
   private async sendExternalIfConfigured(
     user: { id: string; displayName: string; kakaoChannelUserKey: string | null; fcmToken?: string | null; kakaoNotifyEnabled?: boolean; pushNotifyEnabled?: boolean },
     message: string,
+    customTitle?: string,
+    customBody?: string,
+    groupId?: string,
+    eventId?: string,
+    type?: string,
   ) {
+    const pushTitle = customTitle || 'Clover 알림';
+    const pushBody = customBody || message;
+
     // 1. FCM Web Push Notification
     let fcmSuccess = false;
     if (user.pushNotifyEnabled !== false && user.fcmToken) {
       if (this.fcmInitialized) {
         try {
+          const notificationTag = `clover-${groupId || 'grp'}-${eventId || 'ev'}-${type || 'general'}`;
           await getMessaging().send({
             token: user.fcmToken,
             notification: {
-              title: 'Clover 알림',
-              body: message,
+              title: pushTitle,
+              body: pushBody,
+            },
+            data: {
+              title: pushTitle,
+              body: pushBody,
+              groupId: groupId || '',
+              eventId: eventId || '',
+              tag: notificationTag,
+              url: eventId ? `/events/${eventId}` : groupId ? `/groups/${groupId}` : '/',
             },
             webpush: {
+              headers: {
+                Urgency: 'high',
+              },
               notification: {
+                tag: notificationTag,
+                renotify: false, // Prevents duplicate renotification vibration/banner
                 icon: '/icons/icon-192x192.png',
                 badge: '/icons/badge.png',
               },
             },
           });
-          this.logger.log(`FCM 알림 발송 성공 (${user.displayName})`);
+          this.logger.log(`FCM 알림 발송 성공 (${user.displayName}, tag=${notificationTag}): ${pushTitle} - ${pushBody}`);
           fcmSuccess = true;
         } catch (err) {
           this.logger.warn(`FCM 알림 발송 실패 (${user.displayName}): ${err}`);
         }
       } else {
-        this.logger.log(`[Mock FCM 알림] ${user.displayName} ← ${message}`);
+        this.logger.log(`[Mock FCM 알림] ${user.displayName} ← ${pushTitle} | ${pushBody}`);
         fcmSuccess = true;
       }
     }
@@ -499,7 +621,7 @@ export class NotificationsService {
     const channelToken = this.config.get<string>('KAKAO_CHANNEL_ACCESS_TOKEN');
 
     if (!channelToken) {
-      this.logger.log(`[Mock 카카오 알림] ${user.displayName} ← ${message}`);
+      this.logger.log(`[Mock 카카오 알림] ${user.displayName} ← ${pushTitle} | ${pushBody}`);
       return;
     }
 
@@ -512,6 +634,8 @@ export class NotificationsService {
           : 'https://kapi.kakao.com/v1/api/talk/friends/message/default/send';
 
         const linkUrl = this.getFrontendLink();
+        const fullKakaoText = `${pushTitle}\n\n${pushBody}\n\n지금 바로 클로버에서 확인해보세요!`;
+
         const params = new URLSearchParams();
         if (!isSelf) {
           params.append('receiver_uuids', JSON.stringify([user.kakaoChannelUserKey]));
@@ -520,7 +644,7 @@ export class NotificationsService {
           'template_object',
           JSON.stringify({
             object_type: 'text',
-            text: message,
+            text: fullKakaoText,
             link: {
               web_url: linkUrl,
               mobile_web_url: linkUrl,
@@ -547,7 +671,7 @@ export class NotificationsService {
         );
       }
     } else {
-      this.logger.log(`[Mock 알림] ${user.displayName} ← ${message}`);
+      this.logger.log(`[Mock 알림] ${user.displayName} ← ${pushTitle} | ${pushBody}`);
     }
   }
 

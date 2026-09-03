@@ -103,7 +103,7 @@ export class EventsService {
       },
     });
 
-    await this.notifications.notifyGroupMembers(event.id, 'CREATED');
+    await this.notifications.notifyGroupMembers(event.id, 'CREATED', userId);
 
     // Handle recurring events
     if (dto.repeatType && dto.repeatType !== 'none' && dto.repeatCount && dto.repeatCount > 1) {
@@ -154,7 +154,7 @@ export class EventsService {
       },
     });
 
-    await this.notifications.notifyGroupMembers(event.id, 'CHANGED');
+    await this.notifications.notifyGroupMembers(event.id, 'CHANGED', userId);
     return updated;
   }
 
@@ -169,7 +169,7 @@ export class EventsService {
       },
     });
 
-    await this.notifications.notifyEventCancelled(event.id, reason);
+    await this.notifications.notifyEventCancelled(event.id, reason, userId);
     return cancelled;
   }
 
