@@ -25,6 +25,12 @@ export class EventsController {
     return this.eventsService.searchPlaces(query);
   }
 
+  @Get('events/places/reverse')
+  @UseGuards(JwtAuthGuard)
+  reverseGeocode(@Query('lat') lat: string, @Query('lng') lng: string) {
+    return this.eventsService.reverseGeocode(parseFloat(lat), parseFloat(lng));
+  }
+
   @Get('groups/:groupId/events/latest')
   @UseGuards(JwtAuthGuard)
   getLatestTemplate(

@@ -260,7 +260,17 @@ export const api = {
       category?: string;
       phone?: string;
       url?: string;
+      lat?: number;
+      lng?: number;
     }>>(`/events/places/search?query=${encodeURIComponent(query)}`),
+  reverseGeocode: (lat: number, lng: number) =>
+    request<{
+      address: string;
+      buildingName?: string;
+      sido?: string;
+      sigungu?: string;
+      eupmyeondong?: string;
+    } | null>(`/events/places/reverse?lat=${lat}&lng=${lng}`),
   updateProfile: (data: {
     displayName?: string;
     profileImageUrl?: string | null;

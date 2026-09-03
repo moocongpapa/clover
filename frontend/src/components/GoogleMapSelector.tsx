@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { api } from '../api';
 
 declare global {
   interface Window {
@@ -232,22 +233,17 @@ export default function GoogleMapSelector({
         subdomains: 'abcd',
       }).addTo(map);
 
-      // Handle map click to place custom pin and reverse geocode
+      // Handle map click to place custom pin and reverse geocode with Kakao
       map.on('click', async (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ko`,
-            { headers: { 'User-Agent': 'Clover-App/1.0' } }
-          );
-          const data = await res.json();
-          let addr = data?.display_name || '';
-          if (addr.startsWith('대한민국, ')) addr = addr.replace('대한민국, ', '');
-          if (addr.includes(', 대한민국')) addr = addr.replace(', 대한민국', '');
+          const geo = await api.reverseGeocode(lat, lng);
+          const addr = geo?.address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          const placeName = geo?.buildingName || '지도에서 선택한 위치';
 
           const clickedPlace = {
-            place_name: data?.name || '지도에서 선택한 위치',
-            address_name: addr || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+            place_name: placeName,
+            address_name: addr,
             lat,
             lng,
           };
@@ -447,38 +443,29 @@ export default function GoogleMapSelector({
         localMatches.sort((a, b) => (a.distance ?? 9999) - (b.distance ?? 9999));
       }
 
-      // 2. Fetch live OpenStreetMap Nominatim Geocoding
-      let osmMatches: any[] = [];
+      // 2. Fetch live Kakao Local Places
+      let kakaoMatches: any[] = [];
       try {
-        const osmRes = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            query
-          )}&countrycodes=kr&accept-language=ko&limit=8`,
-          { headers: { 'User-Agent': 'Clover-App/1.0' } }
-        );
-        const osmData = await osmRes.json();
-        if (Array.isArray(osmData)) {
-          osmMatches = osmData.map((item: any) => {
-            let addr = item.display_name || '';
-            if (addr.startsWith('대한민국, ')) addr = addr.replace('대한민국, ', '');
-            if (addr.includes(', 대한민국')) addr = addr.replace(', 대한민국', '');
-            const lat = parseFloat(item.lat);
-            const lng = parseFloat(item.lon);
-            const dist = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, lat, lng) : undefined;
+        const places = await api.searchPlaces(query);
+        if (Array.isArray(places)) {
+          kakaoMatches = places.map((item) => {
+            const dist = (userLocation && item.lat && item.lng)
+              ? calculateDistanceKm(userLocation.lat, userLocation.lng, item.lat, item.lng)
+              : undefined;
             return {
-              place_name: item.name || query,
-              address_name: addr,
-              lat,
-              lng,
+              place_name: item.placeName,
+              address_name: item.address,
+              lat: item.lat,
+              lng: item.lng,
               distance: dist,
             };
           });
         }
       } catch (err) {
-        console.warn('OSM Geocoding fallback active', err);
+        console.warn('Kakao places search fallback active', err);
       }
 
-      // Combine & Deduplicate Results
+      // Combine & Deduplicate Results (Kakao matches first)
       const combined: Array<{
         place_name: string;
         address_name: string;
@@ -486,11 +473,11 @@ export default function GoogleMapSelector({
         lng?: number;
         distance?: number;
         isCustom?: boolean;
-      }> = [...localMatches];
+      }> = [...kakaoMatches];
 
-      osmMatches.forEach((osm) => {
-        if (!combined.some((c) => c.place_name === osm.place_name || c.address_name === osm.address_name)) {
-          combined.push(osm);
+      localMatches.forEach((loc) => {
+        if (!combined.some((c) => c.place_name === loc.place_name || c.address_name === loc.address_name)) {
+          combined.push(loc);
         }
       });
 

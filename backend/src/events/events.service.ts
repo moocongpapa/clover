@@ -746,6 +746,8 @@ export class EventsService {
             category: doc.category_name,
             phone: doc.phone,
             url: doc.place_url,
+            lat: doc.y ? parseFloat(doc.y) : undefined,
+            lng: doc.x ? parseFloat(doc.x) : undefined,
           }));
         }
       }
@@ -753,5 +755,36 @@ export class EventsService {
       console.warn('Kakao local search failed:', err);
     }
     return [];
+  }
+
+  async reverseGeocode(lat: number, lng: number) {
+    if (isNaN(lat) || isNaN(lng)) return null;
+    const kakaoKey = process.env.KAKAO_REST_API_KEY || '48b4025d5f4f3087b3435862d6d67491';
+    try {
+      const res = await fetch(
+        `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
+        {
+          headers: { Authorization: `KakaoAK ${kakaoKey}` },
+        },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const doc = data?.documents?.[0];
+        if (doc) {
+          const road = doc.road_address;
+          const jibun = doc.address;
+          return {
+            address: road?.address_name || jibun?.address_name || '',
+            buildingName: road?.building_name || '',
+            sido: jibun?.region_1depth_name || road?.region_1depth_name || '',
+            sigungu: jibun?.region_2depth_name || road?.region_2depth_name || '',
+            eupmyeondong: jibun?.region_3depth_name || road?.region_3depth_name || '',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Kakao reverse geocode failed:', err);
+    }
+    return null;
   }
 }
