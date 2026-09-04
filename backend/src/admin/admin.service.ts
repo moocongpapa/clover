@@ -16,7 +16,28 @@ import {
   UpdateSystemAnnouncementDto,
   SetAppSettingDto,
   BroadcastPushDto,
+  CreateRoleDto,
+  UpdateRoleDto,
+  ReorderRolesDto,
 } from './admin.dto';
+
+export interface RoleItem {
+  id: string;
+  key: string;
+  label: string;
+  isStaff: boolean;
+  isDefault: boolean;
+  canDelete: boolean;
+  sortOrder: number;
+}
+
+export const DEFAULT_ROLES: RoleItem[] = [
+  { id: 'role_pres', key: 'PRESIDENT', label: '회장', isStaff: true, isDefault: true, canDelete: false, sortOrder: 0 },
+  { id: 'role_vp', key: 'VICE_PRESIDENT', label: '부회장', isStaff: true, isDefault: true, canDelete: false, sortOrder: 1 },
+  { id: 'role_sec', key: 'SECRETARY', label: '총무', isStaff: true, isDefault: true, canDelete: false, sortOrder: 2 },
+  { id: 'role_off', key: 'OFFICER', label: '스태프', isStaff: true, isDefault: true, canDelete: false, sortOrder: 3 },
+  { id: 'role_member', key: 'MEMBER', label: '일반 회원', isStaff: false, isDefault: true, canDelete: false, sortOrder: 4 },
+];
 
 const DEFAULT_CATEGORIES = [
   { value: '풋살/축구', emoji: '⚽', sortOrder: 0 },
@@ -589,5 +610,107 @@ export class AdminService implements OnModuleInit {
     });
 
     return { ok: true, sentCount: users.length };
+  }
+
+  // ═══════════════════════════════════════════
+  // 9. Role / Position Management
+  // ═══════════════════════════════════════════
+  async getRoles(): Promise<RoleItem[]> {
+    const setting = await this.prisma.appSetting.findUnique({
+      where: { key: 'group_roles' },
+    });
+    if (!setting) {
+      await this.prisma.appSetting.create({
+        data: {
+          key: 'group_roles',
+          value: JSON.stringify(DEFAULT_ROLES),
+        },
+      });
+      return DEFAULT_ROLES;
+    }
+    try {
+      const parsed = JSON.parse(setting.value);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      }
+    } catch {}
+    return DEFAULT_ROLES;
+  }
+
+  async createRole(dto: CreateRoleDto) {
+    const roles = await this.getRoles();
+    const rawKey = dto.key?.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '') || `ROLE_${Date.now()}`;
+    if (roles.some((r) => r.key === rawKey)) {
+      throw new BadRequestException('이미 존재하는 직책 코드(KEY)입니다.');
+    }
+    const maxSort = roles.reduce((max, r) => Math.max(max, r.sortOrder ?? 0), 0);
+    const newRole: RoleItem = {
+      id: `role_${Date.now()}`,
+      key: rawKey,
+      label: dto.label.trim(),
+      isStaff: dto.isStaff ?? true,
+      isDefault: false,
+      canDelete: true,
+      sortOrder: maxSort + 1,
+    };
+    roles.push(newRole);
+    await this.prisma.appSetting.upsert({
+      where: { key: 'group_roles' },
+      update: { value: JSON.stringify(roles) },
+      create: { key: 'group_roles', value: JSON.stringify(roles) },
+    });
+    return newRole;
+  }
+
+  async updateRole(key: string, dto: UpdateRoleDto) {
+    const roles = await this.getRoles();
+    const roleIndex = roles.findIndex((r) => r.key === key);
+    if (roleIndex === -1) {
+      throw new NotFoundException('해당 직책을 찾을 수 없습니다.');
+    }
+    const target = roles[roleIndex];
+    if (dto.label !== undefined) target.label = dto.label.trim();
+    if (dto.isStaff !== undefined && target.key !== 'PRESIDENT') target.isStaff = dto.isStaff;
+    if (dto.sortOrder !== undefined) target.sortOrder = dto.sortOrder;
+
+    await this.prisma.appSetting.upsert({
+      where: { key: 'group_roles' },
+      update: { value: JSON.stringify(roles) },
+      create: { key: 'group_roles', value: JSON.stringify(roles) },
+    });
+    return target;
+  }
+
+  async deleteRole(key: string) {
+    const roles = await this.getRoles();
+    const target = roles.find((r) => r.key === key);
+    if (!target) {
+      throw new NotFoundException('해당 직책을 찾을 수 없습니다.');
+    }
+    if (target.isDefault || !target.canDelete) {
+      throw new BadRequestException('기본 시스템 직책(회장, 부회장, 총무, 스태프, 회원)은 삭제할 수 없습니다. 이름(명칭) 수정만 가능합니다.');
+    }
+    const filtered = roles.filter((r) => r.key !== key);
+    await this.prisma.appSetting.upsert({
+      where: { key: 'group_roles' },
+      update: { value: JSON.stringify(filtered) },
+      create: { key: 'group_roles', value: JSON.stringify(filtered) },
+    });
+    return { ok: true };
+  }
+
+  async reorderRoles(keys: string[]) {
+    const roles = await this.getRoles();
+    const updated = roles.map((r) => {
+      const idx = keys.indexOf(r.key);
+      return { ...r, sortOrder: idx !== -1 ? idx : r.sortOrder };
+    }).sort((a, b) => a.sortOrder - b.sortOrder);
+
+    await this.prisma.appSetting.upsert({
+      where: { key: 'group_roles' },
+      update: { value: JSON.stringify(updated) },
+      create: { key: 'group_roles', value: JSON.stringify(updated) },
+    });
+    return updated;
   }
 }

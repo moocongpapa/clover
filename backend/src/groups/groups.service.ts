@@ -1064,4 +1064,25 @@ export class GroupsService {
 
     return { success: true };
   }
+
+  async getRoles() {
+    const setting = await this.prisma.appSetting.findUnique({
+      where: { key: 'group_roles' },
+    });
+    if (setting) {
+      try {
+        const parsed = JSON.parse(setting.value);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        }
+      } catch {}
+    }
+    return [
+      { id: 'role_pres', key: 'PRESIDENT', label: '회장', isStaff: true, isDefault: true, canDelete: false, sortOrder: 0 },
+      { id: 'role_vp', key: 'VICE_PRESIDENT', label: '부회장', isStaff: true, isDefault: true, canDelete: false, sortOrder: 1 },
+      { id: 'role_sec', key: 'SECRETARY', label: '총무', isStaff: true, isDefault: true, canDelete: false, sortOrder: 2 },
+      { id: 'role_off', key: 'OFFICER', label: '스태프', isStaff: true, isDefault: true, canDelete: false, sortOrder: 3 },
+      { id: 'role_member', key: 'MEMBER', label: '일반 회원', isStaff: false, isDefault: true, canDelete: false, sortOrder: 4 },
+    ];
+  }
 }

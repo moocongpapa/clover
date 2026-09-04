@@ -130,3 +130,36 @@ export class BroadcastPushDto {
   @IsNotEmpty()
   message: string;
 }
+
+export class CreateRoleDto {
+  @IsOptional()
+  @IsString()
+  key?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  label: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isStaff?: boolean;
+}
+
+export class UpdateRoleDto {
+  @IsOptional()
+  @IsString()
+  label?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isStaff?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  sortOrder?: number;
+}
+
+export class ReorderRolesDto {
+  @IsNotEmpty()
+  keys: string[];
+}

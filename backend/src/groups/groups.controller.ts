@@ -53,6 +53,11 @@ export class GroupsController {
     return this.groupsService.getMyDuesSummary(user.id);
   }
 
+  @Get('roles')
+  getRoles() {
+    return this.groupsService.getRoles();
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateGroupDto) {

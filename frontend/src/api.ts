@@ -578,6 +578,7 @@ export const api = {
   getActiveCategories: () => request<CategoryItem[]>('/public/categories'),
   getActiveSystemAnnouncements: () => request<SystemAnnouncementItem[]>('/public/system-announcements'),
   getPublicSettings: () => request<Record<string, string>>('/public/settings'),
+  getGroupRoles: () => request<RoleItem[]>('/groups/roles'),
 
   // ── Admin Endpoints ──
   admin: {
@@ -636,6 +637,28 @@ export const api = {
         body: JSON.stringify({ categoryIds }),
       }),
 
+    // Roles
+    getRoles: () => request<RoleItem[]>('/admin/roles'),
+    createRole: (data: { key?: string; label: string; isStaff?: boolean }) =>
+      request<RoleItem>('/admin/roles', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateRole: (key: string, data: { label?: string; isStaff?: boolean; sortOrder?: number }) =>
+      request<RoleItem>(`/admin/roles/${key}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deleteRole: (key: string) =>
+      request<{ ok: boolean }>(`/admin/roles/${key}`, {
+        method: 'DELETE',
+      }),
+    reorderRoles: (keys: string[]) =>
+      request<RoleItem[]>('/admin/roles/reorder', {
+        method: 'POST',
+        body: JSON.stringify({ keys }),
+      }),
+
     // Feedback
     getFeedbacks: (params?: { status?: string; page?: number; limit?: number }) => {
       const q = new URLSearchParams();
@@ -690,6 +713,16 @@ export interface CategoryItem {
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface RoleItem {
+  id: string;
+  key: string;
+  label: string;
+  isStaff: boolean;
+  isDefault: boolean;
+  canDelete: boolean;
+  sortOrder: number;
 }
 
 export interface SystemAnnouncementItem {
@@ -1156,8 +1189,8 @@ export const ROLE_LABELS: Record<string, string> = {
   PRESIDENT: '회장',
   VICE_PRESIDENT: '부회장',
   SECRETARY: '총무',
-  OFFICER: '일반',
-  MEMBER: '회원',
+  OFFICER: '스태프',
+  MEMBER: '일반 회원',
 };
 
 export function getGenderEmoji(gender?: string | null): string {
@@ -1256,7 +1289,7 @@ export const ASSIGNABLE_ROLES = [
   { value: 'MEMBER', label: '일반 회원' },
   { value: 'VICE_PRESIDENT', label: '부회장' },
   { value: 'SECRETARY', label: '총무' },
-  { value: 'OFFICER', label: '일반' },
+  { value: 'OFFICER', label: '스태프' },
 ] as const;
 
 export const CATEGORY_OPTIONS = [

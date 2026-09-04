@@ -22,6 +22,9 @@ import {
   UpdateSystemAnnouncementDto,
   SetAppSettingDto,
   BroadcastPushDto,
+  CreateRoleDto,
+  UpdateRoleDto,
+  ReorderRolesDto,
 } from './admin.dto';
 
 @Controller('admin')
@@ -163,6 +166,32 @@ export class AdminController {
     return this.adminService.setSetting(dto);
   }
 
+  // ── Role Management ──
+  @Get('roles')
+  getRoles() {
+    return this.adminService.getRoles();
+  }
+
+  @Post('roles')
+  createRole(@Body() dto: CreateRoleDto) {
+    return this.adminService.createRole(dto);
+  }
+
+  @Patch('roles/:key')
+  updateRole(@Param('key') key: string, @Body() dto: UpdateRoleDto) {
+    return this.adminService.updateRole(key, dto);
+  }
+
+  @Delete('roles/:key')
+  deleteRole(@Param('key') key: string) {
+    return this.adminService.deleteRole(key);
+  }
+
+  @Post('roles/reorder')
+  reorderRoles(@Body() dto: ReorderRolesDto) {
+    return this.adminService.reorderRoles(dto.keys);
+  }
+
   // ── Broadcast Notification ──
   @Post('broadcast')
   broadcastNotification(@Body() dto: BroadcastPushDto) {
@@ -190,5 +219,10 @@ export class PublicAdminDataController {
   @Get('settings')
   getPublicSettings() {
     return this.adminService.getSettings();
+  }
+
+  @Get('roles')
+  getRoles() {
+    return this.adminService.getRoles();
   }
 }

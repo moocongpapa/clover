@@ -5,6 +5,7 @@ import './AdminLayout.css';
 const NAV_ITEMS = [
   { path: '/admin', label: '대시보드', icon: '📊', end: true },
   { path: '/admin/categories', label: '카테고리 관리', icon: '📁' },
+  { path: '/admin/roles', label: '직책/운영진 관리', icon: '🎖️' },
   { path: '/admin/users', label: '사용자 관리', icon: '👥' },
   { path: '/admin/groups', label: '모임 관리', icon: '🏠' },
   { path: '/admin/feedback', label: '피드백 관리', icon: '📩' },

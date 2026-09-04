@@ -17,6 +17,7 @@ import {
   type Event,
   type VoteChoice,
   type Announcement,
+  type RoleItem,
 } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
@@ -49,6 +50,7 @@ export default function GroupDetail() {
   const [accountCopied, setAccountCopied] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState('');
+  const [customRoles, setCustomRoles] = useState<RoleItem[]>([]);
 
   // Announcements States
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -213,6 +215,8 @@ export default function GroupDetail() {
       });
       setAttendanceStats(map);
     }).catch(() => {});
+
+    api.getGroupRoles().then(setCustomRoles).catch(() => {});
   };
 
   useEffect(load, [id]);
@@ -293,7 +297,19 @@ export default function GroupDetail() {
 
   const membership = group.myMembership;
   const isApproved = membership?.status === 'APPROVED';
-  const isOfficer = membership?.role ? isStaffRole(membership.role) : false;
+
+  const getRoleLabel = (roleKey: string) => {
+    return customRoles.find((r) => r.key === roleKey)?.label || ROLE_LABELS[roleKey] || roleKey;
+  };
+
+  const isStaffMember = (roleKey?: string | null) => {
+    if (!roleKey) return false;
+    const custom = customRoles.find((r) => r.key === roleKey);
+    if (custom) return custom.isStaff;
+    return isStaffRole(roleKey);
+  };
+
+  const isOfficer = membership?.role ? isStaffMember(membership.role) : false;
   const isPresident = membership?.role === 'PRESIDENT';
 
   const handleJoin = async () => {
@@ -521,7 +537,8 @@ export default function GroupDetail() {
   const renderUserDisplayWithBadge = (userObj: any) => {
     if (!userObj) return null;
     const member = group?.members?.find((m: any) => m.user.id === userObj.id);
-    const roleLabel = member ? ROLE_LABELS[member.role] : (userObj.role ? ROLE_LABELS[userObj.role] : '회원');
+    const roleKey = member ? member.role : userObj.role;
+    const roleLabel = roleKey ? getRoleLabel(roleKey) : '회원';
     const formattedName = formatUserDisplayName(userObj);
 
     return (
@@ -560,7 +577,7 @@ export default function GroupDetail() {
   const getMemberHeaderInfo = (userObj: any) => {
     if (!group || !group.members) return formatUserDisplayName(userObj);
     const member = group.members.find((m: any) => m.user.id === userObj.id);
-    const roleLabel = member ? ROLE_LABELS[member.role] : '회원';
+    const roleLabel = member ? getRoleLabel(member.role) : '회원';
     return `${formatUserDisplayName(userObj)}/${roleLabel}`;
   };
 
@@ -593,6 +610,8 @@ export default function GroupDetail() {
     if (role === 'VICE_PRESIDENT') return '🥈 ';
     if (role === 'SECRETARY') return '📋 ';
     if (role === 'OFFICER') return '⭐ ';
+    const found = customRoles.find((r) => r.key === role);
+    if (found?.isStaff) return '⭐ ';
     return '';
   };
 
@@ -618,8 +637,10 @@ export default function GroupDetail() {
   };
 
   const sortedMembers = [...group.members].sort((a: any, b: any) => {
-    const orderA = ROLE_SORT_ORDER[a.role] ?? 99;
-    const orderB = ROLE_SORT_ORDER[b.role] ?? 99;
+    const customIndexA = customRoles.findIndex((r) => r.key === a.role);
+    const customIndexB = customRoles.findIndex((r) => r.key === b.role);
+    const orderA = customIndexA !== -1 ? customIndexA : (ROLE_SORT_ORDER[a.role] ?? 99);
+    const orderB = customIndexB !== -1 ? customIndexB : (ROLE_SORT_ORDER[b.role] ?? 99);
     if (orderA !== orderB) return orderA - orderB;
     return a.user.displayName.localeCompare(b.user.displayName, 'ko');
   });
@@ -1765,14 +1786,10 @@ export default function GroupDetail() {
               {/* 3. Members List */}
               {(() => {
                 const officerCount = sortedMembers.filter(
-                  (m: any) =>
-                    m.role === 'PRESIDENT' ||
-                    m.role === 'VICE_PRESIDENT' ||
-                    m.role === 'SECRETARY' ||
-                    m.role === 'OFFICER'
+                  (m: any) => isStaffMember(m.role)
                 ).length;
 
-                const regularMemberCount = sortedMembers.filter((m: any) => m.role === 'MEMBER').length;
+                const regularMemberCount = sortedMembers.filter((m: any) => !isStaffMember(m.role)).length;
 
                 const injuredCount = sortedMembers.filter(
                   (m: any) =>
@@ -1783,11 +1800,7 @@ export default function GroupDetail() {
                 ).length;
 
                 const filteredMembers = sortedMembers.filter((m: any) => {
-                  const isStaff =
-                    m.role === 'PRESIDENT' ||
-                    m.role === 'VICE_PRESIDENT' ||
-                    m.role === 'SECRETARY' ||
-                    m.role === 'OFFICER';
+                  const isStaff = isStaffMember(m.role);
                   const isInjured =
                     m.userStatus === 'INJURED' ||
                     m.userStatus === 'INACTIVE_INJURED' ||
@@ -1795,7 +1808,7 @@ export default function GroupDetail() {
                     m.userStatus === 'UNAVAILABLE';
 
                   if (memberFilter === 'officer') return isStaff;
-                  if (memberFilter === 'member') return m.role === 'MEMBER';
+                  if (memberFilter === 'member') return !isStaff && m.role === 'MEMBER';
                   if (memberFilter === 'injured') return isInjured;
                   return true;
                 });
@@ -1847,7 +1860,7 @@ export default function GroupDetail() {
                       <ul className="member-list">
                         {filteredMembers.map((m: any) => {
                           const isPresidentRole = m.role === 'PRESIDENT';
-                          const isStaff = m.role === 'VICE_PRESIDENT' || m.role === 'SECRETARY' || m.role === 'OFFICER';
+                          const isStaff = isStaffMember(m.role) && !isPresidentRole;
                           const badgeClass = isPresidentRole
                             ? 'member-item-card__badge--president'
                             : isStaff
@@ -1869,7 +1882,7 @@ export default function GroupDetail() {
                                 {formatMemberNameWithEmoji(m.user)}
                               </span>
                               <span className={`member-item-card__badge ${badgeClass}`}>
-                                {ROLE_LABELS[m.role]}
+                                {getRoleLabel(m.role)}
                               </span>
                               {attendanceStats[m.userId] && (
                                 <span style={{
@@ -1956,7 +1969,10 @@ export default function GroupDetail() {
                               onChange={(e) => handleSetRole(m.user.id, e.target.value)}
                               aria-label={`${m.user.displayName} 역할 변경`}
                             >
-                              {ASSIGNABLE_ROLES.map((r) => (
+                              {(customRoles.length > 0
+                                ? customRoles.filter((r) => r.key !== 'PRESIDENT').map((r) => ({ value: r.key, label: r.label }))
+                                : ASSIGNABLE_ROLES
+                              ).map((r) => (
                                 <option key={r.value} value={r.value}>
                                   {r.label}
                                 </option>
@@ -2359,7 +2375,7 @@ export default function GroupDetail() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
                             <span style={{ fontWeight: 600 }}>{h.user?.displayName || '알 수 없음'}</span>
                             <span style={{ color: 'var(--ink-muted)', fontSize: '12px' }}>
-                              ({h.role === 'PRESIDENT' ? '회장' : h.role === 'VICE_PRESIDENT' ? '부회장' : h.role === 'SECRETARY' ? '총무' : '운영진'})
+                              ({getRoleLabel(h.role)})
                             </span>
                           </div>
                         </div>

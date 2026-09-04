@@ -30,6 +30,7 @@ import AdminRoute from './components/AdminRoute';
 import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCategories from './pages/admin/AdminCategories';
+import AdminRoles from './pages/admin/AdminRoles';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminGroups from './pages/admin/AdminGroups';
 import AdminFeedback from './pages/admin/AdminFeedback';
@@ -223,6 +224,7 @@ export default function App() {
           >
             <Route index element={<AdminDashboard />} />
             <Route path="categories" element={<AdminCategories />} />
+            <Route path="roles" element={<AdminRoles />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="groups" element={<AdminGroups />} />
             <Route path="feedback" element={<AdminFeedback />} />
