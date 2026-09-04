@@ -772,6 +772,7 @@ export interface Group {
   dueDay?: number | null;
   officerFeeExempt?: boolean | null;
   arenas?: any[] | null;
+  members?: any[] | null;
 }
 
 export interface MyGroup extends Group {

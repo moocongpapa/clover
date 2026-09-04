@@ -1,67 +1,45 @@
 import { useCallback, useEffect, useState, useRef, type MouseEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { api, startKakaoLogin, CATEGORY_OPTIONS, type Group } from '../api';
+import { Link } from 'react-router-dom';
+import { api, CATEGORY_OPTIONS, type Group } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
+import GroupPreviewModal from '../components/GroupPreviewModal';
 import './Groups.css';
 
 import { getGroupCoordinates, getDistanceKm } from '../utils/geo';
 
 function GroupCard({
   group,
-  onUpdated,
   userCoords,
+  onOpenPreview,
 }: {
   group: Group;
-  onUpdated: () => void;
   userCoords: { lat: number; lng: number } | null;
+  onOpenPreview: (group: Group, distanceStr: string) => void;
 }) {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(''), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
   const status = group.myMembership?.status;
   const isPresident = group.myMembership?.role === 'PRESIDENT';
+  const isApproved = status === 'APPROVED';
 
-  const handleJoin = async (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      await api.joinGroup(group.id);
-      onUpdated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '가입 신청 실패');
-    } finally {
-      setBusy(false);
-    }
-  };
+  const locationText =
+    group.activityRegion ||
+    group.activityDistrict ||
+    group.activitySigungu ||
+    group.activitySido ||
+    '지역 미정';
 
-  const handleCancel = async (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setBusy(true);
-    setError('');
-    try {
-      await api.cancelJoinGroup(group.id);
-      onUpdated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '취소 실패');
-    } finally {
-      setBusy(false);
+  const distanceStr = (() => {
+    if (!userCoords) return '';
+    const groupCoords = getGroupCoordinates(group);
+    const d = getDistanceKm(userCoords.lat, userCoords.lng, groupCoords.lat, groupCoords.lng);
+    return d < 1 ? `${Math.round(d * 1000)}m` : `${d.toFixed(1)}km`;
+  })();
+
+  const handleCardClick = (e: MouseEvent) => {
+    if (!isApproved) {
+      e.preventDefault();
+      onOpenPreview(group, distanceStr);
     }
   };
 
@@ -74,7 +52,7 @@ function GroupCard({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            startKakaoLogin();
+            onOpenPreview(group, distanceStr);
           }}
         >
           가입
@@ -82,7 +60,7 @@ function GroupCard({
       );
     }
 
-    if (status === 'APPROVED') {
+    if (isApproved) {
       return (
         <span className="group-card__badge group-card__badge--joined">
           {isPresident ? '회장' : '가입됨'}
@@ -95,10 +73,13 @@ function GroupCard({
         <button
           type="button"
           className="btn-sm btn-ghost group-card__action"
-          disabled={busy}
-          onClick={handleCancel}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onOpenPreview(group, distanceStr);
+          }}
         >
-          {busy ? '…' : '신청취소'}
+          대기중
         </button>
       );
     }
@@ -107,26 +88,24 @@ function GroupCard({
       <button
         type="button"
         className="btn-sm btn-primary group-card__action"
-        disabled={busy}
-        onClick={handleJoin}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onOpenPreview(group, distanceStr);
+        }}
       >
-        {busy ? '…' : '가입신청'}
+        가입신청
       </button>
     );
   };
 
-  const locationText = group.activityDistrict || group.activitySigungu || group.activitySido || '지역 미정';
-
-  const distanceStr = (() => {
-    if (!userCoords) return '';
-    const groupCoords = getGroupCoordinates(group);
-    const d = getDistanceKm(userCoords.lat, userCoords.lng, groupCoords.lat, groupCoords.lng);
-    return d < 1 ? `${Math.round(d * 1000)}m` : `${d.toFixed(1)}km`;
-  })();
-
   return (
     <article className="group-card-item">
-      <Link to={`/groups/${group.id}`} className="group-card-link">
+      <Link
+        to={`/groups/${group.id}`}
+        className="group-card-link"
+        onClick={handleCardClick}
+      >
         {/* Left: Square Thumbnail (당근 스타일 96x96) */}
         <div className="group-card-thumb">
           <GroupAvatar
@@ -141,7 +120,9 @@ function GroupCard({
         {/* Right: Info */}
         <div className="group-card-content">
           <div className="group-card-top-row">
-            <span className="group-card-category-badge">{group.category}</span>
+            <span className="group-card-category-badge">
+              {group.customSportName || group.category}
+            </span>
             <div className="group-card-action-wrap">{renderAction()}</div>
           </div>
 
@@ -160,7 +141,6 @@ function GroupCard({
           </div>
         </div>
       </Link>
-      {error && <p className="group-card-error-text">{error}</p>}
     </article>
   );
 }
@@ -208,6 +188,32 @@ export default function Groups() {
       setUserCoords({ lat: 37.49808, lng: 127.02797 });
     }
   }, []);
+
+  const [selectedPreviewGroup, setSelectedPreviewGroup] = useState<{
+    group: Group;
+    distanceStr?: string;
+  } | null>(null);
+
+  const handleOpenPreview = (group: Group, distanceStr: string) => {
+    setSelectedPreviewGroup({ group, distanceStr });
+  };
+
+  const handlePreviewUpdated = () => {
+    load();
+    setSelectedPreviewGroup((prev) => {
+      if (!prev) return null;
+      const isPending = prev.group.myMembership?.status === 'PENDING';
+      return {
+        ...prev,
+        group: {
+          ...prev.group,
+          myMembership: isPending
+            ? null
+            : { status: 'PENDING', role: 'MEMBER' },
+        },
+      };
+    });
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -326,7 +332,12 @@ export default function Groups() {
       ) : (
         <div className="groups-list-container">
           {filteredAndSortedGroups.slice(0, visibleCount).map((g) => (
-            <GroupCard key={g.id} group={g} onUpdated={load} userCoords={userCoords} />
+            <GroupCard
+              key={g.id}
+              group={g}
+              userCoords={userCoords}
+              onOpenPreview={handleOpenPreview}
+            />
           ))}
           {visibleCount < filteredAndSortedGroups.length && (
             <div ref={sentinelRef} className="scroll-sentinel" style={{ height: '20px' }} />
@@ -345,6 +356,15 @@ export default function Groups() {
           +
         </Link>
       </div>
+
+      {/* Group Summary Preview & Join Request Modal */}
+      <GroupPreviewModal
+        group={selectedPreviewGroup?.group || null}
+        isOpen={!!selectedPreviewGroup}
+        onClose={() => setSelectedPreviewGroup(null)}
+        onUpdated={handlePreviewUpdated}
+        distanceStr={selectedPreviewGroup?.distanceStr}
+      />
     </div>
   );
 }

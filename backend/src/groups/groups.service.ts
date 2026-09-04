@@ -41,6 +41,14 @@ export class GroupsService {
         ...(category ? { category } : {}),
       },
       include: {
+        arenas: true,
+        members: {
+          where: { role: MemberRole.PRESIDENT, status: MemberStatus.APPROVED },
+          take: 1,
+          include: {
+            user: { select: { displayName: true, profileImageUrl: true } },
+          },
+        },
         _count: { select: { members: { where: { status: MemberStatus.APPROVED } } } },
       },
       orderBy: { createdAt: 'desc' },
