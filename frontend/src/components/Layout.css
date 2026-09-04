@@ -244,9 +244,31 @@
 }
 
 .btn-header-cta {
-  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
   padding: 0 16px;
-  font-size: 15px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--brand-primary, #10b981);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.btn-header-cta:hover {
+  background: var(--brand-primary-hover, #059669);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.btn-header-cta:active {
+  transform: scale(0.98);
 }
 
 /* ── Main content ── */
