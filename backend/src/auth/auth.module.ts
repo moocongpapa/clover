@@ -18,10 +18,11 @@ import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
             '⚠️  JWT_SECRET 환경변수가 설정되지 않았거나 기본값입니다. 강력한 랜덤 시크릿을 설정하세요.',
           );
         }
+        const expiresIn = config.get<string>('JWT_EXPIRES_IN') || '3650d';
         return {
           secret,
           signOptions: {
-            expiresIn: 60 * 60 * 24 * 7,
+            expiresIn: expiresIn as any,
           },
         };
       },

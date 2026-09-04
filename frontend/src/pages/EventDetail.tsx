@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import GroupAvatar from '../components/GroupAvatar';
 import {
   api,
@@ -16,11 +16,13 @@ import {
   type VoteResults,
 } from '../api';
 import { useAuth } from '../context/AuthContext';
+import EventShareModal from '../components/EventShareModal';
 import './GroupDetail.css';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [group, setGroup] = useState<any>(null);
@@ -33,6 +35,18 @@ export default function EventDetailPage() {
   const [locationCopied, setLocationCopied] = useState(false);
   const [teamsCopied, setTeamsCopied] = useState(false);
   const [nudging, setNudging] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('share') === 'true') {
+      setShowShareModal(true);
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        next.delete('share');
+        return next;
+      }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (error) {
@@ -332,6 +346,18 @@ export default function EventDetailPage() {
               <div className="event-detail-header__actions">
                 {event.status === 'ACTIVE' && (
                   <>
+                    <button
+                      type="button"
+                      className="icon-action-btn icon-action-btn--share"
+                      onClick={() => setShowShareModal(true)}
+                      title="카카오톡으로 일정 및 투표 공유"
+                      aria-label="카카오톡 공유"
+                      style={{ background: '#fee500', borderColor: '#e6cf00', color: '#191919' }}
+                    >
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
+                      </svg>
+                    </button>
                     <Link
                       to={`/events/${event.id}/edit`}
                       className="icon-action-btn icon-action-btn--edit"
@@ -490,7 +516,7 @@ export default function EventDetailPage() {
               <span className="event-detail-creator__label">등록자:</span>
               <div className="event-detail-creator__user">
                 {event.createdBy.profileImageUrl ? (
-                  <img
+                  <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     src={event.createdBy.profileImageUrl}
                     alt=""
                     className="event-detail-creator__avatar"
@@ -555,7 +581,7 @@ export default function EventDetailPage() {
                         {voters.map((v) => (
                           <Link to={`/profile/${v.user.id}`} key={v.user.id} className="vote-voter-chip">
                             {v.user.profileImageUrl ? (
-                              <img src={v.user.profileImageUrl} alt="" className="vote-voter-chip__avatar" />
+                              <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={v.user.profileImageUrl} alt="" className="vote-voter-chip__avatar" />
                             ) : (
                               <span className="vote-voter-chip__avatar-fallback">{v.user.displayName[0]}</span>
                             )}
@@ -578,29 +604,55 @@ export default function EventDetailPage() {
             <h3 style={{ margin: 0 }}>미투표</h3>
             <span className="vote-section__total">{votes.nonVoters.length}명</span>
           </div>
-          {teams.canManage && votes.nonVoters.length > 0 && !locked && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
-              onClick={handleNudgeUnvoted}
-              disabled={nudging}
+              onClick={() => setShowShareModal(true)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '5px',
                 padding: '6px 12px',
                 fontSize: '12px',
                 fontWeight: '700',
-                background: 'rgba(239, 68, 68, 0.1)',
-                color: '#ef4444',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
+                background: '#fee500',
+                color: '#191919',
+                border: '1px solid #e6cf00',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
               }}
+              title="카카오톡으로 일정 및 참석 투표 공유"
             >
-              {nudging ? '알림 발송 중…' : '📢 미투표 회원 독려 알림'}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
+              </svg>
+              <span>카톡 투표 공유</span>
             </button>
-          )}
+            {teams.canManage && votes.nonVoters.length > 0 && !locked && (
+              <button
+                type="button"
+                onClick={handleNudgeUnvoted}
+                disabled={nudging}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {nudging ? '알림 발송 중…' : '📢 미투표 독려'}
+              </button>
+            )}
+          </div>
         </div>
 
         {votes.nonVoters.length === 0 ? (
@@ -610,7 +662,7 @@ export default function EventDetailPage() {
             {votes.nonVoters.map((user) => (
               <Link to={`/profile/${user.id}`} key={user.id} className="vote-voter-chip vote-voter-chip--nonvoter">
                 {user.profileImageUrl ? (
-                  <img src={user.profileImageUrl} alt="" className="vote-voter-chip__avatar" />
+                  <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={user.profileImageUrl} alt="" className="vote-voter-chip__avatar" />
                 ) : (
                   <span className="vote-voter-chip__avatar-fallback">{user.displayName[0]}</span>
                 )}
@@ -822,7 +874,7 @@ export default function EventDetailPage() {
                 {/* Left side: Avatar only */}
                 <div style={{ flexShrink: 0 }}>
                   {comment.user.profileImageUrl ? (
-                    <img src={comment.user.profileImageUrl} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                    <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={comment.user.profileImageUrl} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                   ) : (
                     <span style={{ display: 'grid', placeItems: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: '12px', fontWeight: 700 }}>
                       {comment.user.displayName[0]}
@@ -898,6 +950,24 @@ export default function EventDetailPage() {
       </section>
 
       {error && <p className="form-error">{error}</p>}
+
+      {/* Event Share Modal */}
+      <EventShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        event={event ? {
+          id: event.id,
+          title: event.title,
+          date: event.date,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          location: event.location,
+          description: event.description,
+          groupName: group?.name || event.group?.name,
+          groupProfileImageUrl: group?.profileImageUrl || event.group?.profileImageUrl,
+          voteCounts: votes?.counts,
+        } : null}
+      />
     </div>
   );
 }

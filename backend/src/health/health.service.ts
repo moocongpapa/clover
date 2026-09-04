@@ -2,12 +2,26 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import axios from 'axios';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async checkDatabase(): Promise<boolean> {
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      return true;
+    } catch (error) {
+      this.logger.error('Database health check failed:', error);
+      return false;
+    }
+  }
 
   /**
    * Render Free Tier Sleep Prevention:

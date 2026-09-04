@@ -53,6 +53,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .finally(() => setLoading(false));
+
+    const handleUnauthorized = () => {
+      setUser(null);
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'token' && !e.newValue) {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('clover-auth-unauthorized', handleUnauthorized);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('clover-auth-unauthorized', handleUnauthorized);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const syncFcmToken = async () => {

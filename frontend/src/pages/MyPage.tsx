@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api, safeImageUrl, formatPhoneNumber, type Announcement } from '../api';
+import { api, safeImageUrl, formatPhoneNumber, getCloverEmoji, getCloverTierLabel, type Announcement } from '../api';
 import GroupAvatar from '../components/GroupAvatar';
 import './MyPage.css';
 
@@ -168,6 +168,16 @@ export default function MyPage() {
             <span className="my-kakao-badge">💬 카카오 연동</span>
           </div>
           <div className="my-profile-meta-block">
+            {/* Clover Score Badge */}
+            <div className="my-profile-clover-row">
+              <span className="my-profile-clover-badge">
+                <span className="my-profile-clover-emoji">{getCloverEmoji(user.cloverScore)}</span>
+                <span className="my-profile-clover-score">{(user.cloverScore ?? 0).toFixed(1)}</span>
+                <span className="my-profile-clover-max">/ 4.0</span>
+                <span className="my-profile-clover-tier">({getCloverTierLabel(user.cloverScore)})</span>
+              </span>
+            </div>
+
             {formattedPhone && (
               <div className="my-profile-meta-item">
                 <span className="my-profile-meta-phone">{formattedPhone}</span>
@@ -186,8 +196,8 @@ export default function MyPage() {
           </div>
         </div>
 
-        <Link to="/profile/edit" className="btn-edit-profile-chip">
-          ✏️ 정보 수정
+        <Link to="/profile/edit" className="btn-edit-profile-icon" title="내 정보 수정" aria-label="내 정보 수정">
+          ✏️
         </Link>
       </div>
 

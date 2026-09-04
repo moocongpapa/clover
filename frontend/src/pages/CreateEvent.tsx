@@ -211,7 +211,7 @@ export default function CreateEvent() {
         reminderOffsets: selectedOffsets.join(','),
         ...(repeatType !== 'none' && { repeatType, repeatCount }),
       });
-      navigate(`/events/${event.id}`);
+      navigate(`/events/${event.id}?share=true`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '등록 실패');
     } finally {

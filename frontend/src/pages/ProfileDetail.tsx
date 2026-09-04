@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api, formatPhoneNumber, safeImageUrl, type User } from '../api';
+import { api, formatPhoneNumber, safeImageUrl, getCloverEmoji, getCloverTierLabel, type User } from '../api';
 import './ProfileDetail.css';
 
 export default function ProfileDetail() {
@@ -126,6 +126,14 @@ export default function ProfileDetail() {
         </div>
 
         <div className="profile-info-section">
+          <div className="info-row">
+            <span className="info-label">🍀 클로버 지수</span>
+            <span className="info-value" style={{ fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>{getCloverEmoji(profile.cloverScore)}</span>
+              <span>{(profile.cloverScore ?? 0).toFixed(1)}점</span>
+              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>({getCloverTierLabel(profile.cloverScore)})</span>
+            </span>
+          </div>
           <div className="info-row">
             <span className="info-label">성별</span>
             <span className="info-value">{formatGender(profile.gender)}</span>

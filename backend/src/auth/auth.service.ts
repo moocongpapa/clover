@@ -12,6 +12,7 @@ import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { DevLoginDto, UpdateProfileDto, CreateProfileCardDto, UpdateProfileCardDto } from './dto/auth.dto';
 import { Gender } from '@prisma/client';
+import { calculateUserCloverScore } from '../common/utils/clover.utils';
 
 const USER_PROFILE_SELECT = {
   id: true,
@@ -26,6 +27,7 @@ const USER_PROFILE_SELECT = {
   bio: true,
   kakaoNotifyEnabled: true,
   pushNotifyEnabled: true,
+  cloverScore: true,
   createdAt: true,
   role: true,
 } as const;
@@ -67,7 +69,11 @@ export class AuthService {
     const restApiKey = this.config.get<string>('KAKAO_REST_API_KEY');
     const redirectUri = customRedirectUri || this.config.get<string>('KAKAO_REDIRECT_URI') || 'https://clover-gilt.vercel.app/login';
 
-    if (!restApiKey || code.startsWith('mock_kakao_code')) {
+    const isDevLoginEnabled = this.config.get<string>('DEV_LOGIN_ENABLED') === 'true';
+    if (code.startsWith('mock_kakao_code') || (!restApiKey && isDevLoginEnabled)) {
+      if (!isDevLoginEnabled) {
+        throw new UnauthorizedException('개발 로그인이 비활성화되어 있습니다.');
+      }
       const parts = code.split(':');
       const nickname = parts[1] ? decodeURIComponent(parts[1]).trim() : '카카오 사용자';
       const kakaoId = `kakao-${nickname.toLowerCase().replace(/\s+/g, '-')}`;
@@ -90,7 +96,7 @@ export class AuthService {
           kakaoId: String(kakaoUser.id),
           displayName: kakaoUser.properties.nickname,
           profileImageUrl: kakaoUser.properties.profile_image,
-          role: nickname === '김완석' ? 'ADMIN' : 'MEMBER',
+          role: 'MEMBER',
         },
       });
 
@@ -201,7 +207,7 @@ export class AuthService {
         ...(birthYear ? { birthYear } : {}),
         ...(birthDate ? { birthDate } : {}),
         ...(phoneNumber ? { phoneNumber } : {}),
-        role: nickname === '김완석' ? 'ADMIN' : 'MEMBER',
+        role: 'MEMBER',
       },
       create: {
         kakaoId: String(kakaoUser.id),
@@ -211,7 +217,7 @@ export class AuthService {
         birthYear,
         birthDate,
         phoneNumber,
-        role: nickname === '김완석' ? 'ADMIN' : 'MEMBER',
+        role: 'MEMBER',
       },
     });
 
@@ -230,7 +236,7 @@ export class AuthService {
       update: {
         displayName: dto.displayName,
         profileImageUrl: dto.profileImageUrl ?? null,
-        role: dto.displayName === '김완석' ? 'ADMIN' : 'MEMBER',
+        role: 'MEMBER',
         gender: Gender.MALE,
         birthYear: 1990,
         birthDate: new Date(1990, 0, 1),
@@ -240,7 +246,7 @@ export class AuthService {
         kakaoId,
         displayName: dto.displayName,
         profileImageUrl: dto.profileImageUrl ?? null,
-        role: dto.displayName === '김완석' ? 'ADMIN' : 'MEMBER',
+        role: 'MEMBER',
         gender: Gender.MALE,
         birthYear: 1990,
         birthDate: new Date(1990, 0, 1),
@@ -276,6 +282,16 @@ export class AuthService {
       });
     }
     
+    // Dynamically calculate clover score
+    const currentScore = await calculateUserCloverScore(this.prisma, userId);
+    if (user.cloverScore !== currentScore) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { cloverScore: currentScore },
+      }).catch(() => {});
+      return { ...user, cloverScore: currentScore };
+    }
+
     return user;
   }
 
@@ -287,6 +303,17 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('존재하지 않는 회원입니다.');
     }
+
+    // Dynamically calculate clover score
+    const currentScore = await calculateUserCloverScore(this.prisma, userId);
+    if (user.cloverScore !== currentScore) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { cloverScore: currentScore },
+      }).catch(() => {});
+      return { ...user, cloverScore: currentScore };
+    }
+
     return user;
   }
 
@@ -454,6 +481,7 @@ export class AuthService {
     bio?: string | null;
     kakaoNotifyEnabled: boolean;
     pushNotifyEnabled: boolean;
+    cloverScore?: number;
   }) {
     const accessToken = this.jwtService.sign({ sub: user.id });
     return {
@@ -470,6 +498,7 @@ export class AuthService {
         bio: user.bio ?? null,
         kakaoNotifyEnabled: user.kakaoNotifyEnabled,
         pushNotifyEnabled: user.pushNotifyEnabled,
+        cloverScore: (user as any).cloverScore ?? 0.0,
       },
     };
   }

@@ -120,9 +120,14 @@ function GroupCard({
         {/* Right: Info */}
         <div className="group-card-content">
           <div className="group-card-top-row">
-            <span className="group-card-category-badge">
-              {group.customSportName || group.category}
-            </span>
+            <div className="group-card-tags">
+              <span className="group-card-category-badge">
+                {group.customSportName || group.category}
+              </span>
+              <span className="group-card-members-badge">
+                👥 {group._count?.members ?? 0}명
+              </span>
+            </div>
             <div className="group-card-action-wrap">{renderAction()}</div>
           </div>
 

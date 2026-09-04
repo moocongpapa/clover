@@ -289,7 +289,7 @@ export default function Chat() {
                 >
                   {!isSelf && (
                     msg.user.profileImageUrl ? (
-                      <img
+                      <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         src={msg.user.profileImageUrl}
                         alt=""
                         className="chat-bubble-avatar"
@@ -310,7 +310,7 @@ export default function Chat() {
                       <div className="chat-text-box">
                         {msg.imageUrl && (
                           <div className="chat-media-preview">
-                            <img
+                            <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                               src={msg.imageUrl}
                               alt="Uploaded media"
                               className="chat-bubble-media"

@@ -20,8 +20,8 @@ export default function CreateAnnouncement() {
     setLoading(true);
     setError('');
     try {
-      await api.createAnnouncement({ title: title.trim(), content: content.trim() });
-      navigate('/announcements');
+      const res = await api.createAnnouncement({ title: title.trim(), content: content.trim() });
+      navigate(`/announcements?shareId=${res.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '공지사항 등록 실패');
     } finally {

@@ -17,6 +17,7 @@ import HomeEventCard, { HomeVoteProgressBar } from '../components/EventCard';
 import GroupAvatar from '../components/GroupAvatar';
 import LoadingIndicator from '../components/LoadingIndicator';
 import GroupPreviewModal from '../components/GroupPreviewModal';
+import EventShareModal from '../components/EventShareModal';
 import './Home.css';
 
 function formatEventDate(
@@ -704,6 +705,7 @@ function HomeDashboard() {
   const [groups, setGroups] = useState<any[]>([]);
   const [duesSummary, setDuesSummary] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [networkError, setNetworkError] = useState(false);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [showGroupSelectModal, setShowGroupSelectModal] = useState(false);
 
@@ -726,6 +728,7 @@ function HomeDashboard() {
 
   const load = () => {
     setLoading(true);
+    setNetworkError(false);
     Promise.all([
       api.getCalendar(),
       api.myGroups(),
@@ -736,6 +739,7 @@ function HomeDashboard() {
         setGroups(myGroups);
         if (myDues) setDuesSummary(myDues);
       })
+      .catch(() => setNetworkError(true))
       .finally(() => setLoading(false));
   };
 
@@ -743,6 +747,7 @@ function HomeDashboard() {
 
   const upcoming = events.filter(isUpcoming);
   const [heroVoting, setHeroVoting] = useState(false);
+  const [showHeroShare, setShowHeroShare] = useState(false);
 
   const handleHeroVote = async (eventId: string, choice: VoteChoice, currentVote?: VoteChoice | null) => {
     setHeroVoting(true);
@@ -804,6 +809,39 @@ function HomeDashboard() {
   }, [unpaidDuesCount]);
   return (
     <div className="home-dashboard">
+      {networkError && (
+        <div style={{
+          margin: '0 0 12px',
+          padding: '12px 16px',
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}>
+          <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: 600 }}>
+            ⚠️ 네트워크 연결에 문제가 발생했습니다
+          </span>
+          <button
+            onClick={() => { setNetworkError(false); load(); }}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              background: '#dc2626',
+              color: '#fff',
+              border: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
       {/* 🌟 Next Upcoming Event D-Day Highlight Widget with Integrated Direct Voting */}
       {nextUrgentEvent && (
         <div
@@ -860,12 +898,40 @@ function HomeDashboard() {
                 {nextUrgentEvent.myVote ? `${VOTE_LABELS[nextUrgentEvent.myVote]} 완료` : '투표 필요'}
               </span>
             </div>
-            <Link
-              to={`/groups/${nextUrgentEvent.group.id}`}
-              style={{ fontSize: '13px', fontWeight: 700, color: '#a7f3d0', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
-            >
-              {nextUrgentEvent.group.name || '모임'} 〉
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link
+                to={`/groups/${nextUrgentEvent.group.id}`}
+                style={{ fontSize: '13px', fontWeight: 700, color: '#a7f3d0', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
+              >
+                {nextUrgentEvent.group.name || '모임'} 〉
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowHeroShare(true);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  background: '#fee500',
+                  border: '1px solid #e6cf00',
+                  color: '#191919',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+                title="카카오톡으로 일정 및 투표 공유"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Event Title */}
@@ -1096,6 +1162,24 @@ function HomeDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Hero Event Share Modal */}
+      {nextUrgentEvent && (
+        <EventShareModal
+          isOpen={showHeroShare}
+          onClose={() => setShowHeroShare(false)}
+          event={{
+            id: nextUrgentEvent.id,
+            title: nextUrgentEvent.title,
+            date: nextUrgentEvent.date,
+            startTime: nextUrgentEvent.startTime,
+            endTime: nextUrgentEvent.endTime,
+            location: nextUrgentEvent.location,
+            groupName: nextUrgentEvent.group.name,
+            groupProfileImageUrl: nextUrgentEvent.group.profileImageUrl,
+          }}
+        />
       )}
     </div>
   );

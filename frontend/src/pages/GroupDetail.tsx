@@ -9,6 +9,7 @@ import {
   ASSIGNABLE_ROLES,
   formatMemberDisplayName,
   formatUserDisplayName,
+  getCloverEmoji,
   formatPhoneNumber,
   isStaffRole,
   normalizeCategory,
@@ -22,6 +23,9 @@ import {
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
 import ReportModal from '../components/ReportModal';
+import EventShareModal from '../components/EventShareModal';
+import AnnouncementShareModal from '../components/AnnouncementShareModal';
+import type { ShareEventData, ShareAnnouncementData } from '../utils/kakaoShare';
 import './GroupDetail.css';
 
 declare global {
@@ -46,6 +50,8 @@ export default function GroupDetail() {
   const [message, setMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [shareEventTarget, setShareEventTarget] = useState<ShareEventData | null>(null);
+  const [shareAnnouncementTarget, setShareAnnouncementTarget] = useState<ShareAnnouncementData | null>(null);
   const [shareToast, setShareToast] = useState<string | null>(null);
   const [accountCopied, setAccountCopied] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
@@ -564,7 +570,7 @@ export default function GroupDetail() {
         return (
           <span className="user-display-badge-container">
             <span className="user-display-name-text">
-              👨 {year} {name}
+              🍀 {year} {name}
             </span>
             <span className="user-role-pill-badge">{role}</span>
           </span>
@@ -642,6 +648,14 @@ export default function GroupDetail() {
     const orderA = customIndexA !== -1 ? customIndexA : (ROLE_SORT_ORDER[a.role] ?? 99);
     const orderB = customIndexB !== -1 ? customIndexB : (ROLE_SORT_ORDER[b.role] ?? 99);
     if (orderA !== orderB) return orderA - orderB;
+
+    // For general members (order >= 4 / MEMBER), sort by cloverScore descending (higher score first)
+    const scoreA = Number(a.user?.cloverScore ?? 0);
+    const scoreB = Number(b.user?.cloverScore ?? 0);
+    if (scoreA !== scoreB) {
+      return scoreB - scoreA;
+    }
+
     return a.user.displayName.localeCompare(b.user.displayName, 'ko');
   });
 
@@ -680,7 +694,7 @@ export default function GroupDetail() {
           ? `[공지] ${announcementTitle}`
           : announcementTitle;
 
-      await api.createAnnouncement({
+      const created = await api.createAnnouncement({
         title: finalTitle,
         content: announcementContent,
         groupId: id,
@@ -690,6 +704,19 @@ export default function GroupDetail() {
       setWritingAnnouncement(false);
       const ann = await api.listAnnouncements(id);
       setAnnouncements(ann);
+
+      // Offer immediate Kakao share modal
+      setShareAnnouncementTarget({
+        id: created.id,
+        title: created.title,
+        content: created.content,
+        isPinned: created.isPinned,
+        authorName: formatUserDisplayName(created.author || user),
+        groupId: group?.id,
+        groupName: group?.name,
+        groupProfileImageUrl: group?.profileImageUrl,
+        createdAt: created.createdAt,
+      });
     } catch (err) {
       alert(err instanceof Error ? err.message : '게시글 등록 실패');
     }
@@ -923,8 +950,8 @@ export default function GroupDetail() {
                 {(() => {
                   const president = group.members.find((m: any) => m.role === 'PRESIDENT');
                   if (president) {
-                    const birthText = president.user.birthYear ? String(president.user.birthYear % 100).padStart(2, '0') : '';
-                    return `리더 ${birthText ? birthText + '/' : ''}${president.user.displayName}/회장`;
+                    const birthText = president.user.birthYear ? `${String(president.user.birthYear % 100).padStart(2, '0')}년생` : '';
+                    return `👑 ${president.user.displayName}${birthText ? ` (${birthText})` : ''}`;
                   }
                   return '리더 없음';
                 })()}
@@ -1305,7 +1332,7 @@ export default function GroupDetail() {
                         {/* Post Header */}
                         <div className="feed-card-header">
                           {item.author.profileImageUrl ? (
-                            <img src={item.author.profileImageUrl} alt="" className="feed-card-avatar" />
+                            <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={item.author.profileImageUrl} alt="" className="feed-card-avatar" />
                           ) : (
                             <div className="feed-card-avatar-fallback">{item.author.displayName[0]}</div>
                           )}
@@ -1421,10 +1448,48 @@ export default function GroupDetail() {
                         </div>
 
                         {/* Post Footer info */}
-                        <div className="feed-card-footer">
+                        <div className="feed-card-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span className="feed-footer-stat">
                             댓글 {getAnnouncementComments(item.id).length}
                           </span>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShareAnnouncementTarget({
+                                id: item.id,
+                                title: item.title,
+                                content: item.content,
+                                isPinned: item.raw?.isPinned,
+                                authorName: formatUserDisplayName(item.author),
+                                groupId: group?.id,
+                                groupName: group?.name,
+                                groupProfileImageUrl: group?.profileImageUrl,
+                                createdAt: item.createdAt,
+                              });
+                            }}
+                            style={{
+                              background: '#fee500',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '4px 9px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              color: '#191919',
+                              cursor: 'pointer',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                            }}
+                            title="카카오톡으로 공유하기"
+                            aria-label="카카오톡으로 공유하기"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#000000">
+                              <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
+                            </svg>
+                            <span>카톡 공유</span>
+                          </button>
                         </div>
 
 
@@ -1550,7 +1615,7 @@ export default function GroupDetail() {
                           </span>
                         </Link>
                         {ev.status === 'ACTIVE' && (
-                          <div className="quick-vote-row" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--grey-100)' }}>
+                          <div className="quick-vote-row" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--grey-100)', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--ink-tertiary)' }}>원터치 투표:</span>
                             <button
                               type="button"
@@ -1575,6 +1640,45 @@ export default function GroupDetail() {
                               title="원터치 불참 투표"
                             >
                               🚫 불참
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShareEventTarget({
+                                  id: ev.id,
+                                  title: ev.title,
+                                  date: ev.date,
+                                  startTime: ev.startTime,
+                                  endTime: ev.endTime,
+                                  location: ev.location,
+                                  description: ev.description,
+                                  groupName: group.name,
+                                  groupProfileImageUrl: group.profileImageUrl,
+                                });
+                              }}
+                              style={{
+                                marginLeft: 'auto',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '4px 9px',
+                                borderRadius: '20px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                background: '#fee500',
+                                color: '#191919',
+                                border: '1px solid #e6cf00',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                              title="카카오톡으로 일정 및 참석 투표 공유"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
+                              </svg>
+                              <span>카톡 공유</span>
                             </button>
                           </div>
                         )}
@@ -1629,13 +1733,13 @@ export default function GroupDetail() {
                           </div>
                         ) : (
                           <div style={{ width: '100%', height: '100%' }}>
-                            <img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                         )}
 
                         <div style={{ position: 'absolute', bottom: '0', left: '0', right: '0', padding: '6px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
                           {m.uploadedBy?.profileImageUrl ? (
-                            <img src={m.uploadedBy.profileImageUrl} alt="" style={{ width: '14px', height: '14px', borderRadius: '50%' }} />
+                            <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={m.uploadedBy.profileImageUrl} alt="" style={{ width: '14px', height: '14px', borderRadius: '50%' }} />
                           ) : (
                             <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#fff', color: '#333', display: 'grid', placeItems: 'center', fontSize: '8px', fontWeight: 700 }}>
                               {m.uploadedBy?.displayName?.[0] || 'U'}
@@ -1659,7 +1763,6 @@ export default function GroupDetail() {
                 const myMembershipRecord = group.members.find((m: any) => m.userId === user?.id);
                 const rawStatus = myMembershipRecord?.userStatus || 'ACTIVE';
                 const isInactive = rawStatus.startsWith('INACTIVE_') || rawStatus === 'INJURED' || rawStatus === 'UNAVAILABLE';
-                const currentMainStatus = isInactive ? 'INACTIVE' : 'ACTIVE';
 
                 let currentReason = 'INJURED';
                 if (rawStatus === 'INJURED' || rawStatus === 'INACTIVE_INJURED') currentReason = 'INJURED';
@@ -1668,52 +1771,53 @@ export default function GroupDetail() {
                 else if (rawStatus === 'INACTIVE_WORK') currentReason = 'WORK';
                 else if (rawStatus === 'INACTIVE_OTHER' || rawStatus === 'UNAVAILABLE') currentReason = 'OTHER';
 
-                const handleSelectMainStatus = async (mainType: 'ACTIVE' | 'INACTIVE') => {
-                  if (mainType === 'ACTIVE') {
-                    await handleUpdateMyStatus('ACTIVE');
-                  } else {
-                    await handleUpdateMyStatus(`INACTIVE_${currentReason}`);
-                  }
-                };
-
-                const handleSelectReason = async (reasonKey: string) => {
+                const handleSetInactive = async (reasonKey: string) => {
                   await handleUpdateMyStatus(`INACTIVE_${reasonKey}`);
                 };
 
+                const handleResetToActive = async () => {
+                  await handleUpdateMyStatus('ACTIVE');
+                };
+
                 return (
-                  <section className="compact-activity-status-card">
+                  <section className={`compact-activity-status-card ${isInactive ? 'is-inactive-mode' : ''}`}>
                     <div className="compact-activity-status-header">
-                      <span className="compact-activity-status-label">내 활동 상태</span>
-                      <span className={`compact-activity-status-badge ${currentMainStatus === 'ACTIVE' ? 'is-active' : 'is-inactive'}`}>
-                        {currentMainStatus === 'ACTIVE'
-                          ? '🟢 정상 활동'
-                          : `🔴 ${INACTIVE_REASON_OPTIONS.find((o) => o.value === currentReason)?.label || '장기 불참'}`}
-                      </span>
-                    </div>
-                    <div className="compact-activity-controls-row">
-                      <div className="compact-segmented-toggle">
-                        <button
-                          type="button"
-                          className={`compact-toggle-btn ${currentMainStatus === 'ACTIVE' ? 'is-selected' : ''}`}
-                          onClick={() => handleSelectMainStatus('ACTIVE')}
-                        >
-                          <span>🟢 정상</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={`compact-toggle-btn ${currentMainStatus === 'INACTIVE' ? 'is-selected' : ''}`}
-                          onClick={() => handleSelectMainStatus('INACTIVE')}
-                        >
-                          <span>🔴 장기 불참</span>
-                        </button>
+                      <div className="compact-activity-status-title-group">
+                        <span className="compact-activity-status-label">내 활동 상태</span>
+                        <span className={`compact-activity-status-badge ${!isInactive ? 'is-active' : 'is-inactive'}`}>
+                          {!isInactive ? '🟢 정상 활동 중' : '🔴 장기 불참 중'}
+                        </span>
                       </div>
-                      {currentMainStatus === 'INACTIVE' && (
+                      {!isInactive ? (
+                        <button
+                          type="button"
+                          className="status-action-pill-btn"
+                          onClick={() => handleSetInactive(currentReason)}
+                          title="부상, 출장 등으로 장기 불참 시 등록하세요"
+                        >
+                          🔴 장기 불참 등록
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="status-action-pill-btn status-action-pill-btn--restore"
+                          onClick={handleResetToActive}
+                          title="다시 정상 활동으로 변경합니다"
+                        >
+                          🟢 정상 활동으로 복귀
+                        </button>
+                      )}
+                    </div>
+
+                    {isInactive && (
+                      <div className="compact-inactive-settings-row">
+                        <span className="compact-inactive-reason-label">불참 사유:</span>
                         <div className="compact-reason-wrapper">
                           <select
                             id="inactive-reason-select"
                             className="compact-reason-select"
                             value={currentReason}
-                            onChange={(e) => handleSelectReason(e.target.value)}
+                            onChange={(e) => handleSetInactive(e.target.value)}
                             aria-label="불참 사유 선택"
                           >
                             {INACTIVE_REASON_OPTIONS.map((opt) => (
@@ -1723,8 +1827,8 @@ export default function GroupDetail() {
                             ))}
                           </select>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </section>
                 );
               })()}
@@ -1744,7 +1848,7 @@ export default function GroupDetail() {
                       <li key={m.id} className="member-item-card">
                         <Link to={`/profile/${m.user.id}`} className="member-item-card__left">
                           {m.user.profileImageUrl ? (
-                            <img src={m.user.profileImageUrl} alt="" className="member-item-card__avatar" />
+                            <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={m.user.profileImageUrl} alt="" className="member-item-card__avatar" />
                           ) : (
                             <div className="member-item-card__avatar-fallback">{m.user.displayName[0]}</div>
                           )}
@@ -1847,7 +1951,7 @@ export default function GroupDetail() {
                           className={`member-filter-pill member-filter-pill--injured ${memberFilter === 'injured' ? 'is-active' : ''}`}
                           onClick={() => setMemberFilter('injured')}
                         >
-                          부상자 ({injuredCount})
+                          장기 불참 ({injuredCount})
                         </button>
                       </div>
                     </div>
@@ -1866,12 +1970,17 @@ export default function GroupDetail() {
                             : isStaff
                               ? 'member-item-card__badge--officer'
                               : '';
+                          const isMemberInactive =
+                            m.userStatus === 'INJURED' ||
+                            m.userStatus === 'INACTIVE_INJURED' ||
+                            m.userStatus?.startsWith('INACTIVE_') ||
+                            m.userStatus === 'UNAVAILABLE';
 
                     return (
                       <li key={m.id} className="member-item-card">
                         <Link to={`/profile/${m.user.id}`} className="member-item-card__left">
                           {m.user.profileImageUrl ? (
-                            <img src={m.user.profileImageUrl} alt="" className="member-item-card__avatar" />
+                            <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={m.user.profileImageUrl} alt="" className="member-item-card__avatar" />
                           ) : (
                             <div className="member-item-card__avatar-fallback">{m.user.displayName[0]}</div>
                           )}
@@ -1883,6 +1992,21 @@ export default function GroupDetail() {
                               </span>
                               <span className={`member-item-card__badge ${badgeClass}`}>
                                 {getRoleLabel(m.role)}
+                              </span>
+                              <span style={{
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                borderRadius: '10px',
+                                marginLeft: '6px',
+                                fontWeight: 700,
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                color: '#059669',
+                                border: '1px solid rgba(16, 185, 129, 0.2)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                              }}>
+                                {getCloverEmoji(m.user.cloverScore)} {(m.user.cloverScore ?? 0).toFixed(1)}
                               </span>
                               {attendanceStats[m.userId] && (
                                 <span style={{
@@ -1901,14 +2025,14 @@ export default function GroupDetail() {
                               )}
                             </div>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
-                              {m.userStatus && (
-                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)' }}>
-                                  상태: {userStatusLabels[m.userStatus] || m.userStatus}
+                              {isMemberInactive && (
+                                <span className="member-item-card__inactive-badge">
+                                  {userStatusLabels[m.userStatus] || '🔴 장기 불참'}
                                 </span>
                               )}
                               {m.user.phoneNumber && (
                                 <span className="member-item-card__phone">
-                                  · {formatPhoneNumber(m.user.phoneNumber)}
+                                  {isMemberInactive ? '· ' : ''}{formatPhoneNumber(m.user.phoneNumber)}
                                 </span>
                               )}
                             </div>
@@ -2501,7 +2625,7 @@ export default function GroupDetail() {
           <div className="media-lightbox-header" onClick={(e) => e.stopPropagation()}>
             <div className="media-lightbox-uploader">
               {mediaFiles[selectedMediaIndex].uploadedBy?.profileImageUrl ? (
-                <img
+                <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   src={mediaFiles[selectedMediaIndex].uploadedBy.profileImageUrl}
                   alt=""
                   className="media-lightbox-uploader-avatar"
@@ -2553,7 +2677,7 @@ export default function GroupDetail() {
                 className="media-lightbox-media-elem"
               />
             ) : (
-              <img
+              <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 src={mediaFiles[selectedMediaIndex].url}
                 alt="확대 사진"
                 className="media-lightbox-media-elem"
@@ -2700,6 +2824,20 @@ export default function GroupDetail() {
           </div>
         </div>
       )}
+
+      {/* Event Share Modal */}
+      <EventShareModal
+        isOpen={Boolean(shareEventTarget)}
+        onClose={() => setShareEventTarget(null)}
+        event={shareEventTarget}
+      />
+
+      {/* Announcement Share Modal */}
+      <AnnouncementShareModal
+        isOpen={Boolean(shareAnnouncementTarget)}
+        onClose={() => setShareAnnouncementTarget(null)}
+        announcement={shareAnnouncementTarget}
+      />
     </div>
   );
 }

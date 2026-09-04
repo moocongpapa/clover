@@ -657,7 +657,7 @@ export class NotificationsService {
       return;
     }
 
-    const isSelf = user.displayName === '김완석';
+    const isSelf = !user.kakaoChannelUserKey;
 
     if (isSelf || user.kakaoChannelUserKey) {
       try {
@@ -714,18 +714,8 @@ export class NotificationsService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
 
-    let targetUser = user;
-    if (user.displayName !== '김완석') {
-      const kwsUser = await this.prisma.user.findFirst({
-        where: { displayName: '김완석' },
-      });
-      if (kwsUser) {
-        targetUser = kwsUser;
-      }
-    }
-
-    const message = `[FCM 테스트] 안녕하세요, ${targetUser.displayName}님! Clover 실시간 FCM 알림 테스트 메시지입니다.`;
-    await this.sendExternalIfConfigured(targetUser, message);
+    const message = `[FCM 테스트] 안녕하세요, ${user.displayName}님! Clover 실시간 FCM 알림 테스트 메시지입니다.`;
+    await this.sendExternalIfConfigured(user, message);
   }
 
   async sendTestKakao(userId?: string) {

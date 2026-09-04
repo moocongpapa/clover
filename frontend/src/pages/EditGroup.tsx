@@ -1,12 +1,10 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import RegionSelector, {
-  type RegionSelection,
-} from '../components/RegionSelector';
 import BankAccountFields, {
   readBankAccountFromForm,
 } from '../components/BankAccountFields';
-import GoogleMapSelector from '../components/GoogleMapSelector';
+import PlaceSearchModal, { type PlaceResult } from '../components/PlaceSearchModal';
+import { parseKoreanAddress } from '../utils/addressParser';
 import BackButton from '../components/BackButton';
 import { api, CATEGORY_OPTIONS, isStaffRole, normalizeCategory } from '../api';
 import './CreateGroup.css';
@@ -21,12 +19,12 @@ export default function EditGroup() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
+  const [showPlaceModal, setShowPlaceModal] = useState(false);
 
   // Form states
   const [category, setCategory] = useState('풋살/축구');
   const [customSportName, setCustomSportName] = useState('');
   const [selectedArenas, setSelectedArenas] = useState<{ placeName: string; address: string }[]>([]);
-  const [primaryArenaIndex, setPrimaryArenaIndex] = useState<number>(-1);
   const [maxMembers, setMaxMembers] = useState(50);
   const [monthlyFee, setMonthlyFee] = useState<number | undefined>(undefined);
   const [monthlyFeeInput, setMonthlyFeeInput] = useState<string>('');
@@ -47,7 +45,12 @@ export default function EditGroup() {
       .catch(() => {});
   }, []);
 
-  const [region, setRegion] = useState<RegionSelection>({
+  const [region, setRegion] = useState<{
+    activitySido: string;
+    activitySigungu: string;
+    activityDistrict?: string;
+    activityTown?: string;
+  }>({
     activitySido: '',
     activitySigungu: '',
     activityDistrict: '',
@@ -79,7 +82,6 @@ export default function EditGroup() {
           setCustomSportName(g.customSportName || '');
         }
         setSelectedArenas(g.arenas || []);
-        setPrimaryArenaIndex(g.arenas && g.arenas.length > 0 ? 0 : -1);
         setMaxMembers(g.maxMembers || 50);
         setMonthlyFee(g.monthlyFee || undefined);
         setMonthlyFeeInput(g.monthlyFee ? g.monthlyFee.toLocaleString() : '');
@@ -99,6 +101,35 @@ export default function EditGroup() {
       })
       .catch((e) => setError(e.message));
   }, [id]);
+
+  const handleSelectPlace = (placeText: string, raw?: PlaceResult) => {
+    const placeName = raw?.placeName || placeText.split('(')[0].trim();
+    const address = raw?.address || (placeText.includes('(') ? placeText.split('(')[1].replace(')', '').trim() : placeText);
+
+    // Set as primary arena
+    setSelectedArenas([{ placeName, address }]);
+
+    // Automatically parse address into Sido/Sigungu
+    const parsed = parseKoreanAddress(address);
+    if (parsed) {
+      setRegion({
+        activitySido: parsed.activitySido,
+        activitySigungu: parsed.activitySigungu,
+        activityDistrict: parsed.activityDistrict || '',
+        activityTown: parsed.activityTown || '',
+      });
+    }
+  };
+
+  const handleRemoveArena = () => {
+    setSelectedArenas([]);
+    setRegion({
+      activitySido: '',
+      activitySigungu: '',
+      activityDistrict: '',
+      activityTown: '',
+    });
+  };
 
   const handleImageChange = (file: File | null) => {
     if (imageFile && previewUrl?.startsWith('blob:')) {
@@ -142,9 +173,18 @@ export default function EditGroup() {
     if (!id || !group) return;
     const fd = new FormData(e.currentTarget);
 
-    if (!region.activitySido || !region.activitySigungu) {
-      setError('주요 활동 지역(시/도, 시/군/구)을 선택해 주세요.');
+    if (selectedArenas.length === 0 || !selectedArenas[0].address) {
+      setError('주요 활동 구장(장소)을 지도에서 선택해 주세요.');
       return;
+    }
+
+    if (!region.activitySido || !region.activitySigungu) {
+      // Fallback parse if needed
+      const parsed = parseKoreanAddress(selectedArenas[0].address);
+      if (!parsed || !parsed.activitySido) {
+        setError('선택한 구장의 주소에서 활동 지역을 확인할 수 없습니다. 다른 구장을 선택해 주세요.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -159,12 +199,8 @@ export default function EditGroup() {
         profileImageUrl = null;
       }
 
-      // Reorder arenas so the primary one is at index 0
-      let arenasPayload = [...selectedArenas];
-      if (primaryArenaIndex >= 0 && primaryArenaIndex < arenasPayload.length) {
-        const [primary] = arenasPayload.splice(primaryArenaIndex, 1);
-        arenasPayload.unshift(primary);
-      }
+      const activeSido = region.activitySido || parseKoreanAddress(selectedArenas[0].address)?.activitySido || '';
+      const activeSigungu = region.activitySigungu || parseKoreanAddress(selectedArenas[0].address)?.activitySigungu || '';
 
       await api.updateGroup(id, {
         name: fd.get('name') as string,
@@ -176,9 +212,9 @@ export default function EditGroup() {
         monthlyFee: monthlyFee !== undefined ? monthlyFee : null,
         dueDay: dueDay || null,
         officerFeeExempt,
-        arenas: arenasPayload,
-        activitySido: region.activitySido || '',
-        activitySigungu: region.activitySigungu || '',
+        arenas: selectedArenas,
+        activitySido: activeSido,
+        activitySigungu: activeSigungu,
         activityDistrict: region.activityDistrict || undefined,
         activityTown: region.activityTown || undefined,
         ...readBankAccountFromForm(fd),
@@ -288,28 +324,133 @@ export default function EditGroup() {
           </div>
         </div>
 
-        {/* 1. Google map search arenas */}
+        {/* 주요 활동 구장 & 자동 활동 지역 설정 */}
         <div className="form-group">
-          <GoogleMapSelector
-            selectedArenas={selectedArenas}
-            onChange={setSelectedArenas}
-            primaryIndex={primaryArenaIndex}
-            onPrimaryChange={setPrimaryArenaIndex}
-            onAddressSelect={(parsed) => {
-              setRegion({
-                activitySido: parsed.activitySido,
-                activitySigungu: parsed.activitySigungu,
-                activityDistrict: parsed.activityDistrict,
-                activityTown: parsed.activityTown
-              });
-            }}
-          />
-        </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <label style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--ink-dark)' }}>
+              주요 활동 구장 (장소) <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowPlaceModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                color: 'var(--accent, #10b981)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: '8px',
+                padding: '4px 10px',
+                fontSize: '12.5px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+            >
+              🔍 지도 / 장소 검색
+            </button>
+          </div>
 
-        {/* Region selector is always displayed so user can customize it */}
-        <div className="form-group">
-          <label>주요 활동 지역 *</label>
-          <RegionSelector value={region} onChange={setRegion} />
+          {selectedArenas.length > 0 ? (
+            <div
+              style={{
+                background: '#f0fdf4',
+                border: '1.5px solid var(--accent, #10b981)',
+                borderRadius: '14px',
+                padding: '14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--ink-dark)' }}>
+                    📍 {selectedArenas[0].placeName}
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--accent, #10b981)',
+                        background: '#dcfce7',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        marginLeft: '8px',
+                        fontWeight: '800',
+                      }}
+                    >
+                      ★ 주요 활동 구장
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: 'var(--ink-muted)', marginTop: '3px' }}>
+                    {selectedArenas[0].address}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPlaceModal(true)}
+                    style={{
+                      border: '1px solid var(--border)',
+                      background: '#ffffff',
+                      color: 'var(--ink-dark)',
+                      fontWeight: '700',
+                      fontSize: '12px',
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    변경
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveArena}
+                    style={{
+                      border: 'none',
+                      background: '#fee2e2',
+                      color: '#ef4444',
+                      fontWeight: '700',
+                      fontSize: '12px',
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => setShowPlaceModal(true)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '24px 16px',
+                background: 'var(--grey-50, #f8fafc)',
+                border: '1.5px dashed var(--border)',
+                borderRadius: '14px',
+                cursor: 'pointer',
+                textAlign: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
+            >
+              <span style={{ fontSize: '24px' }}>🗺️</span>
+              <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--ink-dark)' }}>
+                주요 활동 구장을 지도에서 검색해 주세요
+              </span>
+              <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
+                모임이 주로 활동하는 구장을 등록합니다
+              </span>
+            </div>
+          )}
         </div>
 
         {/* 2. Sport category selectors */}
@@ -552,6 +693,14 @@ export default function EditGroup() {
           </Link>
         </div>
       </form>
+
+      <PlaceSearchModal
+        isOpen={showPlaceModal}
+        onClose={() => setShowPlaceModal(false)}
+        onSelectPlace={handleSelectPlace}
+        title="주요 활동 구장 설정"
+        initialKeyword={selectedArenas[0]?.placeName || ''}
+      />
     </div>
   );
 }

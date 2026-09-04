@@ -28,6 +28,7 @@ export interface User {
   role?: string;
   kakaoNotifyEnabled?: boolean;
   pushNotifyEnabled?: boolean;
+  cloverScore?: number | null;
 }
 
 export function isProfileComplete(user?: User | null): boolean {
@@ -163,11 +164,25 @@ async function request<T>(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  // Use AbortSignal.timeout(15000) if no external signal provided
+  const signal = options.signal || (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(15000) : undefined);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers, signal });
+  } catch (err: any) {
+    if (err?.name === 'TimeoutError') {
+      throw new Error('서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+    }
+    throw err;
+  }
 
   if (!res.ok) {
     if (res.status === 401) {
       clearToken();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('clover-auth-unauthorized'));
+      }
     }
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? `요청 실패 (${res.status})`);
@@ -184,7 +199,9 @@ export async function startKakaoLogin() {
       return;
     }
   } catch {}
-  const restApiKey = '48b4025d5f4f3087b3435862d6d67491';
+  const restApiKey =
+    import.meta.env.VITE_KAKAO_REST_API_KEY ||
+    '48b4025d5f4f3087b3435862d6d67491';
   const redirectUri = `${window.location.origin}/login`;
   window.location.href = `https://kauth.kakao.com/oauth/authorize?client_id=${restApiKey}&redirect_uri=${encodeURIComponent(
     redirectUri,
@@ -379,23 +396,14 @@ export const api = {
     return res.json() as Promise<{ url: string; filename: string; fileType: 'IMAGE' | 'VIDEO' }>;
   },
   uploadMultipleGalleryFiles: async (files: File[]) => {
-    const token = getToken();
-    const form = new FormData();
+    // Process files sequentially or in parallel batches via uploadGalleryFile
+    // which handles Firebase Storage -> Base64 compression -> Multipart upload
+    const results: Array<{ url: string; filename: string; fileType: 'IMAGE' | 'VIDEO' }> = [];
     for (const file of files) {
-      form.append('files', file);
+      const res = await api.uploadGalleryFile(file);
+      results.push(res);
     }
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/uploads/gallery/multiple`, {
-      method: 'POST',
-      headers,
-      body: form,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message ?? `업로드 실패 (${res.status})`);
-    }
-    return res.json() as Promise<Array<{ url: string; filename: string; fileType: 'IMAGE' | 'VIDEO' }>>;
+    return results;
   },
   joinGroup: (id: string) =>
     request('/groups/' + id + '/join', { method: 'POST' }),
@@ -1193,6 +1201,24 @@ export const ROLE_LABELS: Record<string, string> = {
   MEMBER: '일반 회원',
 };
 
+export function getCloverEmoji(score?: number | null): string {
+  const s = score ?? 0;
+  if (s >= 4.0) return '🍀'; // 네잎클로버 (최고 등급)
+  if (s >= 3.0) return '☘️'; // 세잎클로버 (우수)
+  if (s >= 2.0) return '🌿'; // 두잎 / 허브 (보통)
+  if (s >= 1.0) return '🌱'; // 새싹 (시작 단계)
+  return '🌰'; // 씨앗 / 발아 전 (0.0 ~ 0.9)
+}
+
+export function getCloverTierLabel(score?: number | null): string {
+  const s = score ?? 0;
+  if (s >= 4.0) return '네잎클로버';
+  if (s >= 3.0) return '세잎클로버';
+  if (s >= 2.0) return '두잎클로버';
+  if (s >= 1.0) return '새싹클로버';
+  return '씨앗';
+}
+
 export function getGenderEmoji(gender?: string | null): string {
   if (gender === 'MALE') return '👨';
   if (gender === 'FEMALE') return '👩';
@@ -1216,13 +1242,15 @@ export function formatUserDisplayName(u?: {
   birthYear?: number | null;
   birthDate?: string | null;
   nickname?: string | null;
+  cloverScore?: number | null;
 } | null): string {
   if (!u) return '익명';
   const name = u.displayName || u.nickname || '익명';
-  const genderEmoji = getGenderEmoji(u.gender);
+  // Use clover emoji tier instead of gender emoji
+  const cloverEmoji = getCloverEmoji(u.cloverScore);
   const birthStr = getShortBirthYear(u.birthYear, u.birthDate);
 
-  const parts = [genderEmoji, birthStr, name].filter(Boolean);
+  const parts = [cloverEmoji, birthStr, name].filter(Boolean);
   return parts.join(' ');
 }
 
@@ -1232,6 +1260,7 @@ export function formatMemberDisplayName(user: {
   birthYear?: number | null;
   birthDate?: string | null;
   isEarlyYear?: boolean | null;
+  cloverScore?: number | null;
 }) {
   return formatUserDisplayName(user);
 }

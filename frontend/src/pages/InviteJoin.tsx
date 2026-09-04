@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import BackButton from '../components/BackButton';
-import { api } from '../api';
+import { api, formatUserDisplayName } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
 import './InviteJoin.css';
@@ -96,10 +96,7 @@ export default function InviteJoin() {
 
   const formatLeaderName = () => {
     if (!group?.presidentUser) return '리더 없음';
-    const u = group.presidentUser;
-    const birthYearText = u.birthYear ? `${String(u.birthYear % 100).padStart(2, '0')}` : '';
-    const genderEmoji = u.gender === 'MALE' ? '🙋‍♂️' : u.gender === 'FEMALE' ? '🙋‍♀️' : '👤';
-    return `${genderEmoji} ${birthYearText ? birthYearText + ' ' : ''}${u.displayName}`;
+    return formatUserDisplayName(group.presidentUser);
   };
 
   return (

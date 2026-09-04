@@ -11,6 +11,7 @@ import {
   type VoteChoice,
 } from '../api';
 import GroupAvatar from './GroupAvatar';
+import EventShareModal from './EventShareModal';
 
 export function formatEventDateTime(
   date: string,
@@ -105,6 +106,7 @@ export default function EventCard({
   const [voting, setVoting] = useState(false);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<VoteChoice | null>(event.myVote);
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     setSelected(event.myVote);
@@ -157,9 +159,35 @@ export default function EventCard({
         >
           {event.group.name} 〉
         </Link>
-        <div className="home-event-card__stamp-badge">
+        <div className="home-event-card__stamp-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {stampValue && <span className="home-event-card__stamp">{stampValue}</span>}
           {badge}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowShare(true);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '26px',
+              height: '26px',
+              borderRadius: '8px',
+              background: '#fee500',
+              border: '1px solid #e6cf00',
+              color: '#191919',
+              cursor: 'pointer',
+              padding: 0,
+            }}
+            title="카카오톡으로 일정 및 투표 공유"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -218,6 +246,22 @@ export default function EventCard({
       ) : (
         event.status !== 'CANCELLED' && <HomeVoteCounts event={event} />
       )}
+
+      <EventShareModal
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        event={{
+          id: event.id,
+          title: event.title,
+          date: event.date,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          location: event.location,
+          groupName: event.group?.name,
+          groupProfileImageUrl: event.group?.profileImageUrl,
+          voteCounts: event.voteCounts,
+        }}
+      />
     </article>
   );
 }

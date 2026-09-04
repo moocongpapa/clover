@@ -141,4 +141,5 @@ export const USER_MEMBER_SELECT = {
   birthYear: true,
   isEarlyYear: true,
   phoneNumber: true,
+  cloverScore: true,
 } as const;

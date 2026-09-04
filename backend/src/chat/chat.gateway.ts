@@ -14,7 +14,27 @@ import { ChatService } from './chat.service';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      try {
+        const allowedOrigins = (process.env.FRONTEND_URL || 'https://clover-gilt.vercel.app,http://localhost:5174').split(',').map((o) => o.trim());
+        const hostname = new URL(origin).hostname;
+        const isAllowed =
+          allowedOrigins.includes(origin) ||
+          (hostname.endsWith('.vercel.app') && hostname.includes('clover')) ||
+          hostname === 'localhost' ||
+          /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(
+            origin,
+          );
+        callback(null, isAllowed);
+      } catch {
+        callback(null, false);
+      }
+    },
+    credentials: true,
   },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -63,11 +83,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('joinRoom')
-  handleJoinRoom(
+  async handleJoinRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { groupId: string },
   ) {
     if (!data?.groupId) return;
+    const user = client.data.user;
+    if (!user) return;
+
+    const membership = await this.prisma.groupMember.findFirst({
+      where: {
+        groupId: data.groupId,
+        userId: user.id,
+        status: 'APPROVED',
+      },
+    });
+
+    if (!membership) return;
     client.join(data.groupId);
   }
 

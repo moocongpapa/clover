@@ -3,12 +3,24 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import express from 'express';
 import helmet from 'helmet';
+import compression from 'compression';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
+
+  // Increase payload limit for base64 image and media uploads (default is 100kb)
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  app.set('trust proxy', 1);
+  app.enableShutdownHooks();
+  app.use(compression());
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Security headers
   app.use(
@@ -37,7 +49,7 @@ async function bootstrap() {
         const hostname = new URL(origin).hostname;
         const isAllowed =
           allowedOrigins.includes(origin) ||
-          hostname.endsWith('.vercel.app') ||
+          (hostname.endsWith('.vercel.app') && hostname.includes('clover')) ||
           hostname === 'localhost' ||
           /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(
             origin,

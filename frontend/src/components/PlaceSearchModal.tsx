@@ -19,6 +19,7 @@ interface PlaceSearchModalProps {
   onClose: () => void;
   onSelectPlace: (placeText: string, raw?: PlaceResult) => void;
   initialKeyword?: string;
+  title?: string;
 }
 
 const QUICK_SEARCH_CHIPS = ['풋살장', '축구장', '체육관', '배드민턴', '테니스장', '볼링장', '공원', '카페'];
@@ -28,6 +29,7 @@ export default function PlaceSearchModal({
   onClose,
   onSelectPlace,
   initialKeyword = '',
+  title = '모임 장소 설정',
 }: PlaceSearchModalProps) {
   const [tab, setTab] = useState<'search' | 'map'>('search');
   const [keyword, setKeyword] = useState(initialKeyword);
@@ -297,7 +299,7 @@ export default function PlaceSearchModal({
             <span style={{ fontSize: '20px' }}>📍</span>
             <div>
               <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: 'var(--ink-dark)' }}>
-                모임 장소 설정
+                {title}
               </h3>
               <span style={{ fontSize: '11px', color: 'var(--accent, #10b981)', fontWeight: '700' }}>
                 🇰🇷 100% 한글 지도 & 카카오 로컬 연동

@@ -201,10 +201,12 @@ function NotificationRow({ item, onDelete }: NotificationRowProps) {
 export default function Notifications() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'events' | 'joins'>('all');
 
   const load = () => {
     setLoading(true);
+    setError(false);
     api
       .getNotifications()
       .then((res) => {
@@ -213,7 +215,10 @@ export default function Notifications() {
         );
         setNotifications(sorted);
       })
-      .catch((err) => console.error(err))
+      .catch((err) => {
+        console.error(err);
+        setError(true);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -342,7 +347,30 @@ export default function Notifications() {
       </div>
 
       {/* Content List */}
-      {loading ? (
+      {error ? (
+        <div className="notifications-empty" style={{ padding: '40px 16px', textAlign: 'center' }}>
+          <span className="notifications-empty-icon" style={{ fontSize: '36px' }}>⚠️</span>
+          <p className="notifications-empty-title" style={{ marginTop: '8px' }}>소식을 불러오지 못했습니다</p>
+          <p className="notifications-empty-desc">네트워크 연결을 확인한 후 다시 시도해 주세요.</p>
+          <button
+            type="button"
+            onClick={load}
+            style={{
+              marginTop: '16px',
+              padding: '8px 20px',
+              borderRadius: '10px',
+              background: 'var(--accent, #10b981)',
+              color: '#fff',
+              border: 'none',
+              fontWeight: 700,
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : loading ? (
         <div className="notifications-list">
           {[1, 2, 3].map((i) => (
             <div key={i} className="notification-skeleton">

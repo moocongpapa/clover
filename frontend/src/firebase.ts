@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken } from 'firebase/messaging';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getAnalytics, logEvent, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey:
@@ -25,6 +26,30 @@ const isFirebaseConfigured = Boolean(
 export const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
 export const messaging = isFirebaseConfigured && typeof window !== 'undefined' ? getMessaging(app!) : null;
 export const storage = isFirebaseConfigured && app ? getStorage(app) : null;
+
+// Initialize Analytics asynchronously in browser environment
+let analyticsInstance: ReturnType<typeof getAnalytics> | null = null;
+if (isFirebaseConfigured && app && typeof window !== 'undefined') {
+  isAnalyticsSupported().then((supported) => {
+    if (supported) {
+      try {
+        analyticsInstance = getAnalytics(app);
+      } catch {
+        // Analytics already initialized or restricted
+      }
+    }
+  }).catch(() => null);
+}
+
+export function logAnalyticsEvent(eventName: string, params?: Record<string, any>) {
+  if (analyticsInstance) {
+    try {
+      logEvent(analyticsInstance, eventName, params);
+    } catch {
+      // Ignore analytics failures
+    }
+  }
+}
 
 /**
  * Upload an image file permanently to Firebase Cloud Storage.

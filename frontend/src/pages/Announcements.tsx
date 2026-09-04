@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api, formatUserDisplayName, type Announcement } from '../api';
 import { useAuth } from '../context/AuthContext';
 import GroupAvatar from '../components/GroupAvatar';
+import AnnouncementShareModal from '../components/AnnouncementShareModal';
+import { type ShareAnnouncementData } from '../utils/kakaoShare';
 import './Announcements.css';
 
 export default function Announcements() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [shareTarget, setShareTarget] = useState<ShareAnnouncementData | null>(null);
 
   // Edit State
   const [editingItem, setEditingItem] = useState<Announcement | null>(null);
@@ -20,7 +24,28 @@ export default function Announcements() {
   const loadAnnouncements = () => {
     setLoading(true);
     api.listAnnouncements()
-      .then(setAnnouncements)
+      .then((list) => {
+        setAnnouncements(list);
+        const shareId = searchParams.get('shareId');
+        if (shareId) {
+          const target = list.find((a) => a.id === shareId);
+          if (target) {
+            setShareTarget({
+              id: target.id,
+              title: target.title,
+              content: target.content,
+              isPinned: target.isPinned,
+              authorName: formatUserDisplayName(target.author),
+              groupId: target.groupId,
+              groupName: target.group?.name,
+              groupProfileImageUrl: target.group?.profileImageUrl,
+              createdAt: target.createdAt,
+            });
+          }
+          searchParams.delete('shareId');
+          setSearchParams(searchParams, { replace: true });
+        }
+      })
       .finally(() => setLoading(false));
   };
 
@@ -125,6 +150,46 @@ export default function Announcements() {
                     <h3 className="announcement-title">{item.title}</h3>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Kakao Share Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShareTarget({
+                          id: item.id,
+                          title: item.title,
+                          content: item.content,
+                          isPinned: item.isPinned,
+                          authorName: formatUserDisplayName(item.author),
+                          groupId: item.groupId,
+                          groupName: item.group?.name,
+                          groupProfileImageUrl: item.group?.profileImageUrl,
+                          createdAt: item.createdAt,
+                        });
+                      }}
+                      style={{
+                        background: '#fee500',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: '#191919',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                      }}
+                      title="카카오톡 공유"
+                      aria-label="카카오톡 공유"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#000000">
+                        <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
+                      </svg>
+                      <span>공유</span>
+                    </button>
+
                     {canManage && (
                       <div className="announcement-card__actions" style={{ display: 'flex', gap: '4px' }}>
                         <button
@@ -291,6 +356,13 @@ export default function Announcements() {
           </div>
         </div>
       )}
+
+      {/* Announcement Share Modal */}
+      <AnnouncementShareModal
+        isOpen={Boolean(shareTarget)}
+        onClose={() => setShareTarget(null)}
+        announcement={shareTarget}
+      />
     </div>
   );
 }
