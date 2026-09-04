@@ -67,13 +67,21 @@ function isSameDay(a: Date, b: Date): boolean {
 export default function Calendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('clover_calendar_view_mode') as ViewMode | null;
+    return saved === 'list' || saved === 'month' ? saved : 'month';
+  });
   const [listTab, setListTab] = useState<ListTab>('upcoming');
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => new Date());
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('clover_calendar_view_mode', mode);
+  };
 
   const loadEvents = useCallback(() => {
     api
@@ -181,7 +189,7 @@ export default function Calendar() {
           <button
             type="button"
             className={`home-view-toggle-item ${viewMode === 'list' ? 'is-active' : ''}`}
-            onClick={() => setViewMode('list')}
+            onClick={() => handleViewModeChange('list')}
             title="리스트 보기"
           >
             📋 리스트
@@ -189,7 +197,7 @@ export default function Calendar() {
           <button
             type="button"
             className={`home-view-toggle-item ${viewMode === 'month' ? 'is-active' : ''}`}
-            onClick={() => setViewMode('month')}
+            onClick={() => handleViewModeChange('month')}
             title="캘린더 보기"
           >
             📅 캘린더
