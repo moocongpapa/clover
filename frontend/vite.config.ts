@@ -12,8 +12,8 @@ export default defineConfig({
         enabled: true
       },
       manifest: {
-        name: 'Clover 모임 일정 관리',
-        short_name: 'Clover',
+        name: '클로버 Clover 모임 일정 관리',
+        short_name: '클로버 Clover',
         description: '모임 일정은 모이고, 참석 여부는 자동으로 알려주는 Clover',
         theme_color: '#3b82f6',
         icons: [
