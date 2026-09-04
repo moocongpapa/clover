@@ -1246,11 +1246,9 @@ export function formatUserDisplayName(u?: {
 } | null): string {
   if (!u) return '익명';
   const name = u.displayName || u.nickname || '익명';
-  // Use clover emoji tier instead of gender emoji
-  const cloverEmoji = getCloverEmoji(u.cloverScore);
   const birthStr = getShortBirthYear(u.birthYear, u.birthDate);
 
-  const parts = [cloverEmoji, birthStr, name].filter(Boolean);
+  const parts = [birthStr, name].filter(Boolean);
   return parts.join(' ');
 }
 

@@ -9,7 +9,6 @@ import {
   ASSIGNABLE_ROLES,
   formatMemberDisplayName,
   formatUserDisplayName,
-  getCloverEmoji,
   formatPhoneNumber,
   isStaffRole,
   normalizeCategory,
@@ -1992,21 +1991,6 @@ export default function GroupDetail() {
                               </span>
                               <span className={`member-item-card__badge ${badgeClass}`}>
                                 {getRoleLabel(m.role)}
-                              </span>
-                              <span style={{
-                                fontSize: '11px',
-                                padding: '2px 8px',
-                                borderRadius: '10px',
-                                marginLeft: '6px',
-                                fontWeight: 700,
-                                background: 'rgba(16, 185, 129, 0.1)',
-                                color: '#059669',
-                                border: '1px solid rgba(16, 185, 129, 0.2)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                              }}>
-                                {getCloverEmoji(m.user.cloverScore)} {(m.user.cloverScore ?? 0).toFixed(1)}
                               </span>
                               {attendanceStats[m.userId] && (
                                 <span style={{
