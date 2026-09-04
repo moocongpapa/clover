@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestFcmToken } from '../firebase';
 import { api } from '../api';
@@ -7,6 +7,7 @@ import './Settings.css';
 
 export default function Settings() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, updateUser, logout } = useAuth();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -29,7 +30,9 @@ export default function Settings() {
 
   // Modal states
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(
+    Boolean((location.state as any)?.openFeedback)
+  );
   const [showLogoutModal, setShowLogoutModal] = useState<boolean>(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState<boolean>(false);
   const [showLicenseModal, setShowLicenseModal] = useState<boolean>(false);

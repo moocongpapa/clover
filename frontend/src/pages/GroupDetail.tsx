@@ -401,6 +401,23 @@ export default function GroupDetail() {
     }
   };
 
+  const handleLeaveGroup = async () => {
+    if (isPresident) {
+      alert('회장은 모임을 탈퇴할 수 없습니다. 회장직을 다른 회원에게 양도한 후 탈퇴해 주세요.');
+      return;
+    }
+    if (!confirm(`정말로 "${group.name}" 모임을 탈퇴하시겠습니까?`)) {
+      return;
+    }
+    try {
+      await api.leaveGroup(group.id);
+      alert('모임에서 탈퇴했습니다.');
+      navigate('/my-groups');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '모임 탈퇴 실패');
+    }
+  };
+
   const handleKakaoShare = async () => {
     if (!group) return;
     const inviteUrl = `${window.location.origin}/invite/${group.inviteCode}`;
@@ -2492,9 +2509,9 @@ export default function GroupDetail() {
                   </div>
                 )}
 
-                {/* Dissolve Group Action (President only, bottom right) */}
-                {isPresident && (
-                  <div className="group-dissolve-footer-row">
+                {/* Group Leave or Dissolve Actions */}
+                <div className="group-dissolve-footer-row" style={{ display: 'flex', justifyContent: 'center', marginTop: '24px', paddingBottom: '20px' }}>
+                  {isPresident ? (
                     <button
                       type="button"
                       className="btn-dissolve-group"
@@ -2502,8 +2519,24 @@ export default function GroupDetail() {
                     >
                       💥 모임 해체하기
                     </button>
-                  </div>
-                )}
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleLeaveGroup}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--ink-muted, #94a3b8)',
+                        fontSize: '13px',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        padding: '8px 16px'
+                      }}
+                    >
+                      모임 탈퇴하기
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}

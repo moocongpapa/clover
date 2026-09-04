@@ -794,8 +794,21 @@ function HomeDashboard() {
     return duesSummary.filter(d => !d.isPaid && !d.isExempt).length;
   }, [duesSummary]);
 
+  const unvotedEvents = useMemo(() => {
+    return upcoming.filter(e => !e.myVote);
+  }, [upcoming]);
+
   const actionItems = useMemo(() => {
     const items = [];
+    if (unvotedEvents.length > 0 && !nextUrgentEvent?.myVote) {
+      items.push({
+        title: '참석 투표 필요',
+        desc: `${unvotedEvents.length}개의 다가오는 일정 투표가 아직 진행되지 않았어요.`,
+        iconClass: 'home-action-card__icon--vote',
+        emoji: '🗳️',
+        link: `/events/${unvotedEvents[0].id}`,
+      });
+    }
     if (unpaidDuesCount > 0) {
       items.push({
         title: '이번 달 회비 미납',
@@ -806,7 +819,7 @@ function HomeDashboard() {
       });
     }
     return items;
-  }, [unpaidDuesCount]);
+  }, [unpaidDuesCount, unvotedEvents, nextUrgentEvent]);
   return (
     <div className="home-dashboard">
       {networkError && (

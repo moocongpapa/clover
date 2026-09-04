@@ -141,6 +141,15 @@ export default function Layout() {
             </span>
             <span className="tab-bar__label">내 모임</span>
           </NavLink>
+          <NavLink to="/groups" className={tabClass} aria-label="모임 찾기" title="모임 찾기">
+            <span className="tab-bar__icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
+            <span className="tab-bar__label">모임 찾기</span>
+          </NavLink>
           <NavLink to="/calendar" className={tabClass} aria-label="일정" title="일정">
             <span className="tab-bar__icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
