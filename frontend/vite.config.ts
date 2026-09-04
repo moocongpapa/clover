@@ -15,17 +15,22 @@ export default defineConfig({
         name: '클로버 Clover 모임 일정 관리',
         short_name: '클로버 Clover',
         description: '모임 일정은 모이고, 참석 여부는 자동으로 알려주는 Clover',
+        lang: 'ko-KR',
+        display: 'standalone',
+        background_color: '#ffffff',
         theme_color: '#3b82f6',
         icons: [
           {
             src: '/icons/icon-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: '/icons/icon-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       }
