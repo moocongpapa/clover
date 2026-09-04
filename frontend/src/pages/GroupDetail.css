@@ -3335,3 +3335,313 @@
 .payment-quick-btn:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Group Invite & Kakao Share Modal (Bottom Sheet on Mobile)
+   ═══════════════════════════════════════════════════════════════ */
+.invite-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: inviteBackdropFadeIn 0.2s ease-out;
+}
+
+@media (min-width: 600px) {
+  .invite-modal-backdrop {
+    align-items: center;
+    padding: 20px;
+  }
+}
+
+.invite-modal-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface, #ffffff);
+  border-radius: 26px 26px 0 0;
+  padding: 18px 20px 32px;
+  box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.2);
+  animation: inviteCardSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  border-top: 1px solid var(--border-soft, #e2e8f0);
+}
+
+@media (min-width: 600px) {
+  .invite-modal-card {
+    border-radius: 24px;
+    padding: 24px;
+    border: 1px solid var(--border, #e2e8f0);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+  }
+}
+
+.invite-modal-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border, #cbd5e1);
+  border-radius: 999px;
+  margin: 0 auto 14px;
+}
+
+@media (min-width: 600px) {
+  .invite-modal-handle {
+    display: none;
+  }
+}
+
+.invite-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.invite-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-dark, #191f28);
+  margin: 0;
+}
+
+.invite-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--grey-100, #f1f5f9);
+  color: var(--ink-muted, #64748b);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.invite-modal-close:hover {
+  background: var(--grey-200, #e2e8f0);
+  color: var(--ink-dark, #191f28);
+}
+
+.invite-modal-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--grey-50, #f8fafc);
+  border: 1px solid var(--border-soft, #e2e8f0);
+  border-radius: 16px;
+  margin-bottom: 18px;
+}
+
+.invite-modal-preview-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.invite-modal-group-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-dark, #191f28);
+  margin: 0 0 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-modal-group-desc {
+  font-size: 12px;
+  color: var(--ink-muted, #64748b);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.invite-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.invite-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  border: none;
+  text-align: left;
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.invite-action-btn:active {
+  transform: scale(0.98);
+}
+
+/* Kakao Action Button */
+.invite-action-btn--kakao {
+  background: #fee500;
+  color: #191919;
+  box-shadow: 0 3px 12px rgba(254, 229, 0, 0.35);
+}
+
+.invite-action-btn--kakao:hover {
+  background: #fdd800;
+}
+
+.invite-action-btn__icon--kakao {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #191919;
+}
+
+/* Link Copy Action Button */
+.invite-action-btn--link {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  color: var(--ink-dark, #191f28);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.invite-action-btn--link:hover {
+  border-color: var(--accent, #10b981);
+  background: var(--accent-soft, #f0fdf4);
+}
+
+.invite-action-btn__icon--link {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--grey-100, #f1f5f9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.invite-action-btn__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.invite-action-btn__title {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.invite-action-btn__desc {
+  display: block;
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.invite-action-btn__arrow {
+  font-size: 18px;
+  font-weight: 700;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+/* Direct URL Input Row */
+.invite-modal-url-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--grey-50, #f8fafc);
+  border: 1px solid var(--border-soft, #e2e8f0);
+  border-radius: 12px;
+  padding: 6px 6px 6px 12px;
+}
+
+.invite-modal-url-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 12.5px;
+  color: var(--ink-muted, #64748b);
+  outline: none;
+  font-family: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-modal-url-copy-btn {
+  padding: 6px 14px;
+  background: var(--accent, #10b981);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.invite-modal-url-copy-btn:hover {
+  filter: brightness(1.05);
+}
+
+.invite-modal-url-copy-btn:active {
+  transform: scale(0.95);
+}
+
+.invite-share-toast {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  color: #047857;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  animation: inviteToastFadeIn 0.2s ease-out;
+}
+
+@keyframes inviteBackdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes inviteCardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes inviteToastFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

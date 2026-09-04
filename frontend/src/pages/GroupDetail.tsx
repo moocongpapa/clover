@@ -44,6 +44,8 @@ export default function GroupDetail() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
   const [accountCopied, setAccountCopied] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState('');
@@ -378,12 +380,94 @@ export default function GroupDetail() {
     }
   };
 
+  const handleKakaoShare = async () => {
+    if (!group) return;
+    const inviteUrl = `${window.location.origin}/invite/${group.inviteCode}`;
+    const shareTitle = `🍀 [Clover] "${group.name}" 모임 초대장`;
+    const shareText = `"${group.name}" 모임에서 함께해요!\n초대 링크를 누르면 별도 승인 없이 바로 가입하실 수 있습니다.`;
+    const fullMessage = `${shareTitle}\n\n${shareText}\n\n👉 모임 바로 참여하기:\n${inviteUrl}`;
+
+    // 1. If Kakao JS SDK is available and initialized, use Kakao.Share.sendDefault
+    const kakao = (window as any).Kakao;
+    if (kakao) {
+      if (!kakao.isInitialized?.()) {
+        const jsKey = (import.meta as any).env?.VITE_KAKAO_JAVASCRIPT_KEY;
+        if (jsKey) {
+          try {
+            kakao.init(jsKey);
+          } catch (e) {
+            console.warn('Kakao init error:', e);
+          }
+        }
+      }
+
+      if (kakao.isInitialized?.()) {
+        try {
+          kakao.Share.sendDefault({
+            objectType: 'feed',
+            content: {
+              title: `🍀 [Clover] ${group.name}`,
+              description: group.description || `${group.name} 모임에 초대합니다! 링크를 누르면 바로 가입됩니다.`,
+              imageUrl: group.profileImageUrl || `${window.location.origin}/favicon.png`,
+              link: {
+                mobileWebUrl: inviteUrl,
+                webUrl: inviteUrl,
+              },
+            },
+            buttons: [
+              {
+                title: '모임 바로 가입하기',
+                link: {
+                  mobileWebUrl: inviteUrl,
+                  webUrl: inviteUrl,
+                },
+              },
+            ],
+          });
+          setShareToast('카카오톡 공유창이 열렸습니다!');
+          setTimeout(() => setShareToast(null), 3000);
+          return;
+        } catch (e) {
+          console.warn('Kakao.Share.sendDefault failed, falling back:', e);
+        }
+      }
+    }
+
+    // 2. Native Web Share API (mobile devices: opens KakaoTalk & chat room picker natively)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: fullMessage,
+          url: inviteUrl,
+        });
+        setShareToast('카카오톡 채팅방 또는 원하는 앱으로 공유되었습니다!');
+        setTimeout(() => setShareToast(null), 3000);
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
+
+    // 3. Fallback: Copy rich message with URL to clipboard and show guide
+    try {
+      await navigator.clipboard.writeText(fullMessage);
+      setShareToast('카톡 단톡방에 바로 붙여넣을 수 있도록 초대장 문구가 복사되었습니다!');
+      setTimeout(() => setShareToast(null), 4000);
+    } catch {
+      setError('초대장 복사에 실패했습니다.');
+    }
+  };
+
   const handleCopyInvite = async () => {
+    if (!group) return;
     const inviteUrl = `${window.location.origin}/invite/${group.inviteCode}`;
     try {
       await navigator.clipboard.writeText(inviteUrl);
       setCopied(true);
+      setShareToast('초대 링크가 복사되었습니다!');
       setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setShareToast(null), 3000);
     } catch {
       setError('링크 복사에 실패했습니다.');
     }
@@ -786,26 +870,28 @@ export default function GroupDetail() {
                 <button
                   type="button"
                   className="group-detail-invite-btn"
-                  onClick={handleCopyInvite}
-                  title="초대 링크 복사 (승인 없이 바로 입장)"
+                  onClick={() => {
+                    setShareToast(null);
+                    setShowInviteModal(true);
+                  }}
+                  title="모임 초대하기 (카카오톡 채팅방 공유 / 링크 복사)"
                   style={{
-                    background: copied ? '#10b981' : 'rgba(16, 185, 129, 0.12)',
-                    border: copied ? '1px solid #10b981' : '1px solid rgba(16, 185, 129, 0.25)',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    border: '1px solid rgba(16, 185, 129, 0.25)',
                     borderRadius: '999px',
                     padding: '6px 14px',
                     fontSize: '13px',
                     fontWeight: 700,
-                    color: copied ? '#ffffff' : '#059669',
+                    color: '#059669',
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
                     flexShrink: 0,
                     transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                    boxShadow: copied ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
                   }}
                 >
-                  {copied ? '✅ 복사됨!' : '✉️ 초대'}
+                  ✉️ 초대
                 </button>
               </div>
             </div>
@@ -2500,6 +2586,104 @@ export default function GroupDetail() {
         targetTitle={reportTarget.title}
         onSuccess={() => setMessage('신고가 성공적으로 접수되었습니다. 관리자가 검토 후 조치합니다.')}
       />
+
+      {/* Group Invite & Kakao Share Modal */}
+      {showInviteModal && group && (
+        <div
+          className="invite-modal-backdrop"
+          onClick={() => setShowInviteModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="invite-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="invite-modal-handle" />
+
+            <div className="invite-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px' }}>💌</span>
+                <h3 className="invite-modal-title">모임 초대하기</h3>
+              </div>
+              <button
+                type="button"
+                className="invite-modal-close"
+                onClick={() => setShowInviteModal(false)}
+                aria-label="닫기"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="invite-modal-preview">
+              <GroupAvatar src={group.profileImageUrl} name={group.name} size={48} radius={14} />
+              <div className="invite-modal-preview-text">
+                <h4 className="invite-modal-group-name">{group.name}</h4>
+                <p className="invite-modal-group-desc">
+                  초대받은 멤버는 가입 승인 절차 없이 바로 모임에 참여할 수 있어요.
+                </p>
+              </div>
+            </div>
+
+            <div className="invite-modal-actions">
+              <button
+                type="button"
+                className="invite-action-btn invite-action-btn--kakao"
+                onClick={handleKakaoShare}
+              >
+                <div className="invite-action-btn__icon invite-action-btn__icon--kakao">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
+                  </svg>
+                </div>
+                <div className="invite-action-btn__content">
+                  <span className="invite-action-btn__title">카카오톡으로 공유하기</span>
+                  <span className="invite-action-btn__desc">카톡 채팅방이나 친구에게 바로 초대장 전송</span>
+                </div>
+                <span className="invite-action-btn__arrow">›</span>
+              </button>
+
+              <button
+                type="button"
+                className="invite-action-btn invite-action-btn--link"
+                onClick={handleCopyInvite}
+              >
+                <div className="invite-action-btn__icon invite-action-btn--link">
+                  🔗
+                </div>
+                <div className="invite-action-btn__content">
+                  <span className="invite-action-btn__title">
+                    {copied ? '✅ 초대 링크가 복사되었습니다!' : '초대 링크 복사하기'}
+                  </span>
+                  <span className="invite-action-btn__desc">URL 링크를 클립보드에 복사</span>
+                </div>
+                <span className="invite-action-btn__arrow">›</span>
+              </button>
+            </div>
+
+            <div className="invite-modal-url-box">
+              <input
+                type="text"
+                readOnly
+                value={`${window.location.origin}/invite/${group.inviteCode}`}
+                className="invite-modal-url-input"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <button
+                type="button"
+                className="invite-modal-url-copy-btn"
+                onClick={handleCopyInvite}
+              >
+                {copied ? '복사됨' : '복사'}
+              </button>
+            </div>
+
+            {shareToast && (
+              <div className="invite-share-toast">
+                {shareToast}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
