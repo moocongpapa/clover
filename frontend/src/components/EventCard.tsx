@@ -201,9 +201,10 @@ export default function EventCard({
         />
         <div className="home-event-card__content-right">
           <Link
-            to={`/groups/${event.group.id}`}
+            to={`/events/${event.id}`}
             className="home-event-card__text-link"
             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+            aria-label={`${event.title} 일정 상세 보기`}
           >
             <h3>
               {event.title}
