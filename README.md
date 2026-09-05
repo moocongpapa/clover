@@ -103,7 +103,7 @@ flowchart TD
 | :--- | :--- |
 | **Frontend** | React 19, TypeScript, Vite, Vanilla CSS (Design Tokens), Workbox (PWA) |
 | **Backend** | NestJS, Prisma ORM, RxJS, Server-Sent Events (SSE) |
-| **Database** | PostgreSQL (Supabase Cloud) / SQLite (로컬 개발 & E2E) |
+| **Database** | PostgreSQL (Supabase Cloud) / 별도 PostgreSQL E2E 데이터베이스 |
 | **스토리지** | Firebase Cloud Storage (Google Cloud CDN) |
 | **인증 (Auth)** | Kakao OAuth2 + JWT (Access Token) + Dev Login Mode |
 | **푸시 알림** | Firebase Cloud Messaging (FCM Web Push) + Kakao Messaging API |
@@ -143,6 +143,8 @@ flowchart TD
 
 ## 💻 로컬 개발 환경 실행 방법
 
+Node.js는 **20.19 이상 또는 22.12 이상**이 필요합니다 (Vite 8 요구사항).
+
 ### 1. 백엔드 실행 (포트 3000)
 ```bash
 cd backend
@@ -161,11 +163,17 @@ npm run dev
 
 ### 3. E2E 통합 테스트 (포트 격리: 5175 / 3001)
 ```bash
+# Docker PostgreSQL을 처음 사용하는 경우, 테스트 DB를 한 번 생성합니다.
+docker compose up -d postgres
+docker compose exec postgres createdb -U postgres clover_e2e
+
 cd e2e
 npm install
 npx playwright install chromium
-npm test
+E2E_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/clover_e2e?schema=public" npm test
 ```
+
+`E2E_DATABASE_URL`은 필수이며 이름에 `e2e` 또는 `test`가 포함된 별도 PostgreSQL 데이터베이스만 허용합니다. 테스트는 이 데이터베이스를 매 실행마다 초기화하므로 개발·운영 `DATABASE_URL`을 설정하면 안 됩니다.
 
 ---
 

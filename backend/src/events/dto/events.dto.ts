@@ -1,19 +1,29 @@
 import {
   IsDateString,
+  IsArray,
+  ArrayMaxSize,
+  ArrayUnique,
+  IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
   Max,
+  MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { VoteChoice } from '@prisma/client';
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export class CreateEventDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(150)
   title!: string;
 
   @IsDateString()
@@ -31,10 +41,12 @@ export class CreateEventDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(300)
   location!: string;
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(4_000)
   description!: string;
 
   @IsOptional()
@@ -42,7 +54,7 @@ export class CreateEventDto {
   reminderOffsets?: string; // 쉼표로 구분된 시간 오프셋 목록
 
   @IsOptional()
-  @IsString()
+  @IsIn(['none', 'weekly', 'biweekly'])
   repeatType?: 'none' | 'weekly' | 'biweekly';
 
   @IsOptional()
@@ -63,7 +75,14 @@ export class CreateEventDto {
   openTime?: string;
 }
 
-import { VoteChoice } from '@prisma/client';
+export class SplitTeamMemberDto {
+  @IsString()
+  @IsNotEmpty()
+  userId!: string;
+
+  @IsEnum(VoteChoice)
+  choice!: VoteChoice;
+}
 
 export class SplitTeamsDto {
   @IsInt()
@@ -72,12 +91,18 @@ export class SplitTeamsDto {
   teamCount!: number;
 
   @IsOptional()
-  members?: Array<{ userId: string; choice: VoteChoice }>;
+  @IsArray()
+  @ArrayMaxSize(1_000)
+  @ArrayUnique((member: SplitTeamMemberDto) => member.userId)
+  @ValidateNested({ each: true })
+  @Type(() => SplitTeamMemberDto)
+  members?: SplitTeamMemberDto[];
 }
 
 export class UpdateEventDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(150)
   title!: string;
 
   @IsDateString()
@@ -95,10 +120,12 @@ export class UpdateEventDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(300)
   location!: string;
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(4_000)
   description!: string;
 
   @IsOptional()
@@ -109,5 +136,6 @@ export class UpdateEventDto {
 export class CreateCommentDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(2_000)
   content!: string;
 }

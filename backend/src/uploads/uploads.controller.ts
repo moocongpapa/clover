@@ -10,10 +10,16 @@ import {
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { nanoid } from 'nanoid';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import {
+  assertValidUpload,
+  extensionForMime,
+  GALLERY_MIME_TYPES,
+  IMAGE_MIME_TYPES,
+} from './upload-validation';
 
 const UPLOAD_DIR_GROUPS = join(process.cwd(), 'uploads', 'groups');
 const UPLOAD_DIR_PROFILES = join(process.cwd(), 'uploads', 'profiles');
@@ -21,23 +27,6 @@ const UPLOAD_DIR_GALLERY = join(process.cwd(), 'uploads', 'gallery');
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const MAX_GALLERY_SIZE = 50 * 1024 * 1024;
-
-const ALLOWED_MIME = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-]);
-
-const ALLOWED_GALLERY_MIME = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'video/mp4',
-  'video/quicktime',
-  'video/webm',
-]);
 
 function ensureUploadDir(dir: string) {
   if (!existsSync(dir)) {
@@ -53,21 +42,12 @@ function imageUploadInterceptor(uploadDir: string) {
         cb(null, uploadDir);
       },
       filename: (_req, file, cb) => {
-        const ext =
-          extname(file.originalname).toLowerCase() ||
-          (file.mimetype === 'image/png'
-            ? '.png'
-            : file.mimetype === 'image/webp'
-              ? '.webp'
-              : file.mimetype === 'image/gif'
-                ? '.gif'
-                : '.jpg');
-        cb(null, `${nanoid(12)}${ext}`);
+        cb(null, `${nanoid(12)}${extensionForMime(file.mimetype)}`);
       },
     }),
     limits: { fileSize: MAX_SIZE },
     fileFilter: (_req, file, cb) => {
-      if (!ALLOWED_MIME.has(file.mimetype)) {
+      if (!IMAGE_MIME_TYPES.has(file.mimetype)) {
         cb(
           new BadRequestException(
             'JPEG, PNG, WebP, GIF 이미지만 업로드할 수 있습니다.',
@@ -89,13 +69,12 @@ function galleryUploadInterceptor(uploadDir: string) {
         cb(null, uploadDir);
       },
       filename: (_req, file, cb) => {
-        const ext = extname(file.originalname).toLowerCase();
-        cb(null, `${nanoid(12)}${ext}`);
+        cb(null, `${nanoid(12)}${extensionForMime(file.mimetype)}`);
       },
     }),
     limits: { fileSize: MAX_GALLERY_SIZE },
     fileFilter: (_req, file, cb) => {
-      if (!ALLOWED_GALLERY_MIME.has(file.mimetype)) {
+      if (!GALLERY_MIME_TYPES.has(file.mimetype)) {
         cb(
           new BadRequestException(
             '이미지(JPEG, PNG, WebP, GIF) 또는 동영상(MP4, MOV, WebM) 파일만 업로드할 수 있습니다.',
@@ -117,13 +96,12 @@ function galleryMultipleUploadInterceptor(uploadDir: string) {
         cb(null, uploadDir);
       },
       filename: (_req, file, cb) => {
-        const ext = extname(file.originalname).toLowerCase();
-        cb(null, `${nanoid(12)}${ext}`);
+        cb(null, `${nanoid(12)}${extensionForMime(file.mimetype)}`);
       },
     }),
     limits: { fileSize: MAX_GALLERY_SIZE },
     fileFilter: (_req, file, cb) => {
-      if (!ALLOWED_GALLERY_MIME.has(file.mimetype)) {
+      if (!GALLERY_MIME_TYPES.has(file.mimetype)) {
         cb(
           new BadRequestException(
             '이미지(JPEG, PNG, WebP, GIF) 또는 동영상(MP4, MOV, WebM) 파일만 업로드할 수 있습니다.',
@@ -144,7 +122,10 @@ function buildPublicUploadUrl(
 ) {
   const port = config.get<number>('PORT', 3000);
   const publicBase =
-    config.get<string>('API_PUBLIC_URL') ?? (process.env.NODE_ENV === 'production' || process.env.RENDER ? 'https://clover-backend-vm9k.onrender.com' : `http://localhost:${port}`);
+    config.get<string>('API_PUBLIC_URL') ??
+    (process.env.NODE_ENV === 'production' || process.env.RENDER
+      ? 'https://clover-backend-vm9k.onrender.com'
+      : `http://localhost:${port}`);
   return `${publicBase}/uploads/${folder}/${filename}`;
 }
 
@@ -159,6 +140,7 @@ export class UploadsController {
     if (!file) {
       throw new BadRequestException('이미지 파일을 선택해 주세요.');
     }
+    assertValidUpload(file);
 
     return {
       url: buildPublicUploadUrl(this.config, 'groups', file.filename),
@@ -173,6 +155,7 @@ export class UploadsController {
     if (!file) {
       throw new BadRequestException('이미지 파일을 선택해 주세요.');
     }
+    assertValidUpload(file);
 
     return {
       url: buildPublicUploadUrl(this.config, 'profiles', file.filename),
@@ -187,6 +170,7 @@ export class UploadsController {
     if (!file) {
       throw new BadRequestException('파일을 선택해 주세요.');
     }
+    assertValidUpload(file);
 
     const fileType = file.mimetype.startsWith('video/') ? 'VIDEO' : 'IMAGE';
 
@@ -204,6 +188,7 @@ export class UploadsController {
     if (!files || files.length === 0) {
       throw new BadRequestException('업로드할 파일을 선택해 주세요.');
     }
+    files.forEach(assertValidUpload);
 
     return files.map((file) => ({
       url: buildPublicUploadUrl(this.config, 'gallery', file.filename),

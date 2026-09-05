@@ -5,6 +5,7 @@ import {
   UseGuards,
   Query,
   Req,
+  BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -37,10 +38,17 @@ export class ChatController {
     });
 
     if (!member) {
-      throw new ForbiddenException('모임 회원만 채팅 기록을 조회할 수 있습니다.');
+      throw new ForbiddenException(
+        '모임 회원만 채팅 기록을 조회할 수 있습니다.',
+      );
     }
 
-    const limit = limitStr ? parseInt(limitStr, 10) : 50;
+    const limit = limitStr === undefined ? 50 : Number(limitStr);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new BadRequestException(
+        'limit은 1에서 100 사이의 정수여야 합니다.',
+      );
+    }
     return this.chatService.getMessages(groupId, limit);
   }
 }

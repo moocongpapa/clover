@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Headers,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -75,24 +87,22 @@ export class NotificationsController {
     @CurrentUser() user: AuthUser,
     @Body() body: { ids: string[] },
   ) {
-    return this.notificationsService.deleteSelectedForUser(user.id, body?.ids ?? []);
+    return this.notificationsService.deleteSelectedForUser(
+      user.id,
+      body?.ids ?? [],
+    );
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  deleteSingle(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-  ) {
+  deleteSingle(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.notificationsService.deleteSelectedForUser(user.id, [id]);
   }
 
   /** E2E/개발용: 하루 전 리마인더 크론 수동 실행 */
   @Post('dev/trigger-reminders')
-  async triggerReminders() {
-    if (this.config.get<string>('DEV_LOGIN_ENABLED') !== 'true') {
-      throw new ForbiddenException('개발 모드에서만 사용할 수 있습니다.');
-    }
+  async triggerReminders(@Headers('x-e2e-test-secret') secret?: string) {
+    this.assertDevEndpointAllowed(secret);
     await this.notificationsService.sendReminderNotifications(true);
     return { ok: true };
   }
@@ -100,10 +110,11 @@ export class NotificationsController {
   /** 개발용: 실시간 FCM 테스트 알림 전송 */
   @Post('dev/test-fcm')
   @UseGuards(JwtAuthGuard)
-  async testFcm(@CurrentUser() user: AuthUser) {
-    if (this.config.get<string>('DEV_LOGIN_ENABLED') !== 'true') {
-      throw new ForbiddenException('개발 모드에서만 사용할 수 있습니다.');
-    }
+  async testFcm(
+    @CurrentUser() user: AuthUser,
+    @Headers('x-e2e-test-secret') secret?: string,
+  ) {
+    this.assertDevEndpointAllowed(secret);
     await this.notificationsService.sendTestFcm(user.id);
     return { ok: true };
   }
@@ -111,11 +122,40 @@ export class NotificationsController {
   /** 개발용: 실시간 카카오톡 테스트 알림 전송 */
   @Post('dev/test-kakao')
   @UseGuards(JwtAuthGuard)
-  async testKakao(@CurrentUser() user: AuthUser) {
-    if (this.config.get<string>('DEV_LOGIN_ENABLED') !== 'true') {
-      throw new ForbiddenException('개발 모드에서만 사용할 수 있습니다.');
-    }
+  async testKakao(
+    @CurrentUser() user: AuthUser,
+    @Headers('x-e2e-test-secret') secret?: string,
+  ) {
+    this.assertDevEndpointAllowed(secret);
     const res = await this.notificationsService.sendTestKakao(user.id);
     return { ok: true, result: res };
+  }
+
+  private assertDevEndpointAllowed(providedSecret?: string) {
+    const environment = this.config.get<string>('NODE_ENV') ?? 'development';
+    const expectedSecret = this.config.get<string>('E2E_TEST_SECRET');
+    const isDevelopment =
+      environment === 'development' || environment === 'test';
+
+    if (
+      !isDevelopment ||
+      this.config.get<string>('DEV_LOGIN_ENABLED') !== 'true' ||
+      !expectedSecret ||
+      !providedSecret ||
+      !this.secretsMatch(expectedSecret, providedSecret)
+    ) {
+      throw new ForbiddenException(
+        '개발 전용 엔드포인트에 접근할 수 없습니다.',
+      );
+    }
+  }
+
+  private secretsMatch(expected: string, received: string) {
+    const expectedBuffer = Buffer.from(expected);
+    const receivedBuffer = Buffer.from(received);
+    return (
+      expectedBuffer.length === receivedBuffer.length &&
+      timingSafeEqual(expectedBuffer, receivedBuffer)
+    );
   }
 }

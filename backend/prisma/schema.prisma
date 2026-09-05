@@ -184,7 +184,7 @@ model EventTeamSplit {
   assignments EventTeamAssignment[]
 
   @@index([eventId])
-  @@index([eventId, round])
+  @@unique([eventId, round])
 }
 
 model EventTeamAssignment {

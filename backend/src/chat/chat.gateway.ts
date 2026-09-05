@@ -11,6 +11,8 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatService } from './chat.service';
+import { ConfigService } from '@nestjs/config';
+import { isAllowedOrigin } from '../common/utils/origin.utils';
 
 @WebSocketGateway({
   cors: {
@@ -20,15 +22,11 @@ import { ChatService } from './chat.service';
         return;
       }
       try {
-        const allowedOrigins = (process.env.FRONTEND_URL || 'https://clover-gilt.vercel.app,http://localhost:5174').split(',').map((o) => o.trim());
-        const hostname = new URL(origin).hostname;
-        const isAllowed =
-          allowedOrigins.includes(origin) ||
-          (hostname.endsWith('.vercel.app') && hostname.includes('clover')) ||
-          hostname === 'localhost' ||
-          /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(
-            origin,
-          );
+        const isAllowed = isAllowedOrigin(
+          origin,
+          process.env.FRONTEND_URL,
+          process.env.NODE_ENV,
+        );
         callback(null, isAllowed);
       } catch {
         callback(null, false);
@@ -45,12 +43,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly chatService: ChatService,
+    private readonly config: ConfigService,
   ) {}
 
   async handleConnection(client: Socket) {
-    const authHeader = client.handshake.headers.authorization as string | undefined;
-    const queryToken = client.handshake.query.token as string | undefined;
-    let token = queryToken;
+    const authHeader = client.handshake.headers.authorization as
+      | string
+      | undefined;
+    const authToken = client.handshake.auth?.token;
+    let token = typeof authToken === 'string' ? authToken : undefined;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.slice(7);
@@ -67,7 +68,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         where: { id: payload.sub },
       });
 
-      if (!user) {
+      if (!user || user.isBlocked) {
         client.disconnect();
         return;
       }
@@ -115,11 +116,34 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { groupId: string; message?: string; imageUrl?: string; videoUrl?: string },
+    @MessageBody()
+    data: {
+      groupId: string;
+      message?: string;
+      imageUrl?: string;
+      videoUrl?: string;
+    },
   ) {
     const user = client.data.user;
     if (!user || !data?.groupId) return;
-    if (!data.message && !data.imageUrl && !data.videoUrl) return;
+
+    const message = typeof data.message === 'string' ? data.message.trim() : '';
+    if (message.length > 2_000) {
+      client.emit('chatError', {
+        message: '메시지는 2,000자 이하여야 합니다.',
+      });
+      return;
+    }
+
+    const imageUrl = this.isTrustedGalleryUrl(data.imageUrl);
+    const videoUrl = this.isTrustedGalleryUrl(data.videoUrl);
+    if ((data.imageUrl && !imageUrl) || (data.videoUrl && !videoUrl)) {
+      client.emit('chatError', {
+        message: '업로드된 미디어 파일만 전송할 수 있습니다.',
+      });
+      return;
+    }
+    if (!message && !imageUrl && !videoUrl) return;
 
     // Check if the user is a member of the group
     const membership = await this.prisma.groupMember.findFirst({
@@ -135,11 +159,34 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const savedMessage = await this.chatService.saveMessage(
       data.groupId,
       user.id,
-      data.message || '',
-      data.imageUrl,
-      data.videoUrl,
+      message,
+      imageUrl,
+      videoUrl,
     );
 
     this.server.to(data.groupId).emit('newMessage', savedMessage);
+  }
+
+  private isTrustedGalleryUrl(value?: string): string | undefined {
+    if (!value) return undefined;
+
+    try {
+      const port = this.config.get<number>('PORT', 3000);
+      const base =
+        this.config.get<string>('API_PUBLIC_URL') ??
+        (process.env.NODE_ENV === 'production' || process.env.RENDER
+          ? 'https://clover-backend-vm9k.onrender.com'
+          : `http://localhost:${port}`);
+      const url = new URL(value);
+      const publicUrl = new URL(base);
+      const allowedExtensions = /\.(jpe?g|png|webp|gif|mp4|mov|webm)$/i;
+      return url.origin === publicUrl.origin &&
+        url.pathname.startsWith('/uploads/gallery/') &&
+        allowedExtensions.test(url.pathname)
+        ? url.toString()
+        : undefined;
+    } catch {
+      return undefined;
+    }
   }
 }

@@ -109,7 +109,11 @@ export function parseKoreanAddress(address: string) {
 
   if (tokens.length > 1) {
     const second = tokens[1];
-    if (tokens.length > 2 && second.endsWith('시') && (tokens[2].endsWith('구') || tokens[2].endsWith('군'))) {
+    if (
+      tokens.length > 2 &&
+      second.endsWith('시') &&
+      (tokens[2].endsWith('구') || tokens[2].endsWith('군'))
+    ) {
       activitySigungu = `${second} ${tokens[2]}`;
       if (tokens.length > 3) activityDistrict = tokens[3];
       if (tokens.length > 4) activityTown = tokens[4];
@@ -140,6 +144,10 @@ export const USER_MEMBER_SELECT = {
   gender: true,
   birthYear: true,
   isEarlyYear: true,
-  phoneNumber: true,
   cloverScore: true,
+} as const;
+
+export const USER_MEMBER_WITH_CONTACT_SELECT = {
+  ...USER_MEMBER_SELECT,
+  phoneNumber: true,
 } as const;

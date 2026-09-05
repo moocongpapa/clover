@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -133,7 +134,11 @@ export class GroupsController {
     @CurrentUser() user: AuthUser,
     @Body() dto: LinkProfileCardDto,
   ) {
-    return this.groupsService.linkProfileCard(id, user.id, dto.profileCardId ?? null);
+    return this.groupsService.linkProfileCard(
+      id,
+      user.id,
+      dto.profileCardId ?? null,
+    );
   }
 
   @Patch(':id/members/:userId')
@@ -144,12 +149,7 @@ export class GroupsController {
     @CurrentUser() user: AuthUser,
     @Body() dto: UpdateMemberDto,
   ) {
-    return this.groupsService.updateMember(
-      groupId,
-      targetUserId,
-      user.id,
-      dto,
-    );
+    return this.groupsService.updateMember(groupId, targetUserId, user.id, dto);
   }
 
   @Get(':id/payments')
@@ -160,8 +160,7 @@ export class GroupsController {
     @Query('year') yearStr: string,
     @Query('month') monthStr: string,
   ) {
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10);
+    const { year, month } = parseDuesPeriod(yearStr, monthStr);
     return this.groupsService.getPayments(id, user.id, year, month);
   }
 
@@ -174,9 +173,14 @@ export class GroupsController {
     @Query('year') yearStr: string,
     @Query('month') monthStr: string,
   ) {
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10);
-    return this.groupsService.togglePayment(id, user.id, targetUserId, year, month);
+    const { year, month } = parseDuesPeriod(yearStr, monthStr);
+    return this.groupsService.togglePayment(
+      id,
+      user.id,
+      targetUserId,
+      year,
+      month,
+    );
   }
 
   @Post(':id/payments/remind')
@@ -187,8 +191,7 @@ export class GroupsController {
     @Query('year') yearStr: string,
     @Query('month') monthStr: string,
   ) {
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10);
+    const { year, month } = parseDuesPeriod(yearStr, monthStr);
     return this.groupsService.remindUnpaidMembers(id, user.id, year, month);
   }
 
@@ -204,10 +207,7 @@ export class GroupsController {
 
   @Get(':id/media')
   @UseGuards(JwtAuthGuard)
-  getGroupMedia(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  getGroupMedia(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.groupsService.getGroupMedia(id, user.id);
   }
 
@@ -246,4 +246,22 @@ export class GroupsController {
   ) {
     return this.groupsService.kickMember(id, targetUserId, user.id);
   }
+}
+
+function parseDuesPeriod(yearValue?: string, monthValue?: string) {
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  if (
+    !Number.isInteger(year) ||
+    year < 2000 ||
+    year > 2100 ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12
+  ) {
+    throw new BadRequestException(
+      'year와 month는 유효한 회비 기간이어야 합니다.',
+    );
+  }
+  return { year, month };
 }

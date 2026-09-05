@@ -1,12 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { api, API_BASE, formatUserDisplayName, type Announcement } from '../api';
-import { useAuth } from '../context/AuthContext';
-import GroupAvatar from '../components/GroupAvatar';
-import BackButton from '../components/BackButton';
-import './Chat.css';
+import { useState, useEffect, useRef } from "react";
+import { io, Socket } from "socket.io-client";
+import {
+  api,
+  API_BASE,
+  formatUserDisplayName,
+  type Announcement,
+} from "../api";
+import { useAuth } from "../context/AuthContext";
+import GroupAvatar from "../components/GroupAvatar";
+import BackButton from "../components/BackButton";
+import "./Chat.css";
 
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from "react-router-dom";
 
 interface MessagePayload {
   id: string;
@@ -25,12 +30,30 @@ interface MessagePayload {
   };
 }
 
+function safeMediaUrl(
+  value: string | null | undefined,
+  kind: "image" | "video",
+) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    const extensionPattern =
+      kind === "image" ? /\.(jpe?g|png|webp|gif)$/i : /\.(mp4|mov|webm)$/i;
+    return extensionPattern.test(url.pathname) ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Chat() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const queryGroupId = searchParams.get('groupId');
+  const queryGroupId = searchParams.get("groupId");
   const [groups, setGroups] = useState<any[]>([]);
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(queryGroupId);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(
+    queryGroupId,
+  );
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [showNoticePopup, setShowNoticePopup] = useState(false);
 
@@ -48,7 +71,8 @@ export default function Chat() {
       return;
     }
 
-    api.listAnnouncements(activeGroupId)
+    api
+      .listAnnouncements(activeGroupId)
       .then((res) => {
         if (res && res.length > 0) {
           setAnnouncement(res[0]); // Most recent announcement
@@ -62,7 +86,7 @@ export default function Chat() {
       });
   }, [activeGroupId]);
   const [messages, setMessages] = useState<MessagePayload[]>([]);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingChats, setLoadingChats] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -73,7 +97,8 @@ export default function Chat() {
 
   // 1. Load my groups
   useEffect(() => {
-    api.myGroups()
+    api
+      .myGroups()
       .then((res) => {
         setGroups(res);
       })
@@ -81,7 +106,7 @@ export default function Chat() {
       .finally(() => setLoadingRooms(false));
   }, []);
 
-  const activeGroup = groups.find(g => g.id === activeGroupId);
+  const activeGroup = groups.find((g) => g.id === activeGroupId);
 
   // 2. Load history & establish Socket connection when room changes
   useEffect(() => {
@@ -92,7 +117,8 @@ export default function Chat() {
 
     setLoadingChats(true);
     // Load existing messages via REST API
-    api.getChatHistory(activeGroupId, 100)
+    api
+      .getChatHistory(activeGroupId, 100)
       .then((res) => {
         setMessages(res); // old messages first
         scrollToBottom();
@@ -101,18 +127,18 @@ export default function Chat() {
       .finally(() => setLoadingChats(false));
 
     // Connect socket
-    const token = localStorage.getItem('token') || '';
+    const token = localStorage.getItem("token") || "";
     const socket = io(API_BASE, {
-      query: { token },
-      transports: ['websocket'],
+      auth: { token },
+      transports: ["websocket"],
     });
     socketRef.current = socket;
 
-    socket.on('connect', () => {
-      socket.emit('joinRoom', { groupId: activeGroupId });
+    socket.on("connect", () => {
+      socket.emit("joinRoom", { groupId: activeGroupId });
     });
 
-    socket.on('newMessage', (msg: MessagePayload) => {
+    socket.on("newMessage", (msg: MessagePayload) => {
       if (msg.groupId === activeGroupId) {
         setMessages((prev) => [...prev, msg]);
       }
@@ -120,7 +146,7 @@ export default function Chat() {
 
     return () => {
       if (socket) {
-        socket.emit('leaveRoom', { groupId: activeGroupId });
+        socket.emit("leaveRoom", { groupId: activeGroupId });
         socket.disconnect();
       }
       socketRef.current = null;
@@ -144,18 +170,18 @@ export default function Chat() {
     const text = inputText.trim();
     if (!text || !activeGroupId || !socketRef.current) return;
 
-    socketRef.current.emit('sendMessage', {
+    socketRef.current.emit("sendMessage", {
       groupId: activeGroupId,
       message: text,
     });
-    setInputText('');
+    setInputText("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.nativeEvent.isComposing) {
       return;
     }
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend(e);
     }
@@ -168,25 +194,25 @@ export default function Chat() {
     setUploading(true);
     try {
       const res = await api.uploadGalleryFile(file);
-      if (res.fileType === 'IMAGE') {
-        socketRef.current.emit('sendMessage', {
+      if (res.fileType === "IMAGE") {
+        socketRef.current.emit("sendMessage", {
           groupId: activeGroupId,
-          message: '',
+          message: "",
           imageUrl: res.url,
         });
-      } else if (res.fileType === 'VIDEO') {
-        socketRef.current.emit('sendMessage', {
+      } else if (res.fileType === "VIDEO") {
+        socketRef.current.emit("sendMessage", {
           groupId: activeGroupId,
-          message: '',
+          message: "",
           videoUrl: res.url,
         });
       }
     } catch (err) {
       console.error(err);
-      alert('파일 업로드에 실패했습니다.');
+      alert("파일 업로드에 실패했습니다.");
     } finally {
       setUploading(false);
-      e.target.value = '';
+      e.target.value = "";
     }
   };
 
@@ -198,8 +224,8 @@ export default function Chat() {
   const formatMessageTime = (isoString: string) => {
     const d = new Date(isoString);
     let hours = d.getHours();
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? '오후' : '오전';
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "오후" : "오전";
     hours = hours % 12;
     hours = hours ? hours : 12;
     return `${ampm} ${hours}:${minutes}`;
@@ -236,7 +262,7 @@ export default function Chat() {
                   <div className="chat-room-card__info">
                     <span className="chat-room-card__title">{group.name}</span>
                     <span className="chat-room-card__desc">
-                      {group.description || '대화를 시작해 보세요!'}
+                      {group.description || "대화를 시작해 보세요!"}
                     </span>
                   </div>
                   <span className="chat-room-card__arrow">▶</span>
@@ -260,74 +286,107 @@ export default function Chat() {
             )}
             <div className="chat-room-title-info">
               <span className="chat-room-name">{activeGroup?.name}</span>
-              <span className="chat-room-members">멤버 {activeGroup?.memberCount}명</span>
+              <span className="chat-room-members">
+                멤버 {activeGroup?.memberCount}명
+              </span>
             </div>
           </header>
 
           {announcement && (
-            <div 
+            <div
               className="chat-room-notice-banner"
               onClick={() => setShowNoticePopup(true)}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: "pointer" }}
             >
               <span className="chat-room-notice-badge">공지</span>
-              <span className="chat-room-notice-text">{announcement.title}</span>
+              <span className="chat-room-notice-text">
+                {announcement.title}
+              </span>
             </div>
           )}
 
           <div className="chat-messages-scroller" ref={scrollerRef}>
-            {loadingChats && <p className="chat-loading">채팅 내역을 불러오는 중…</p>}
+            {loadingChats && (
+              <p className="chat-loading">채팅 내역을 불러오는 중…</p>
+            )}
             {!loadingChats && messages.length === 0 && (
-              <p className="chat-empty">아직 메시지가 없습니다. 첫 대화를 나누어 보세요!</p>
+              <p className="chat-empty">
+                아직 메시지가 없습니다. 첫 대화를 나누어 보세요!
+              </p>
             )}
             {messages.map((msg) => {
               const isSelf = msg.userId === user?.id;
+              const imageUrl = safeMediaUrl(msg.imageUrl, "image");
+              const videoUrl = safeMediaUrl(msg.videoUrl, "video");
               return (
                 <div
                   key={msg.id}
-                  className={`chat-message-bubble${isSelf ? ' chat-message-bubble--self' : ''}`}
+                  className={`chat-message-bubble${isSelf ? " chat-message-bubble--self" : ""}`}
                 >
-                  {!isSelf && (
-                    msg.user.profileImageUrl ? (
-                      <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  {!isSelf &&
+                    (msg.user.profileImageUrl ? (
+                      <img
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
                         src={msg.user.profileImageUrl}
                         alt=""
                         className="chat-bubble-avatar"
-                        style={{ borderRadius: '8px' }}
+                        style={{ borderRadius: "8px" }}
                       />
                     ) : (
-                      <div className="chat-bubble-fallback" style={{ borderRadius: '8px' }}>
+                      <div
+                        className="chat-bubble-fallback"
+                        style={{ borderRadius: "8px" }}
+                      >
                         {msg.user.displayName[0]}
                       </div>
-                    )
-                  )}
+                    ))}
 
                   <div className="chat-message-content">
                     {!isSelf && (
-                      <span className="chat-sender-name">{formatUserDisplayName(msg.user)}</span>
+                      <span className="chat-sender-name">
+                        {formatUserDisplayName(msg.user)}
+                      </span>
                     )}
                     <div className="chat-text-wrapper">
                       <div className="chat-text-box">
-                        {msg.imageUrl && (
+                        {imageUrl && (
                           <div className="chat-media-preview">
-                            <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                              src={msg.imageUrl}
+                            <img
+                              loading="lazy"
+                              decoding="async"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display =
+                                  "none";
+                              }}
+                              src={imageUrl}
                               alt="Uploaded media"
                               className="chat-bubble-media"
-                              onClick={() => window.open(msg.imageUrl || '', '_blank')}
+                              onClick={() =>
+                                window.open(
+                                  imageUrl,
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                              }
                             />
                           </div>
                         )}
-                        {msg.videoUrl && (
+                        {videoUrl && (
                           <div className="chat-media-preview">
                             <video
-                              src={msg.videoUrl}
+                              src={videoUrl}
                               controls
                               className="chat-bubble-media"
                             />
                           </div>
                         )}
-                        {msg.message && <div className="chat-bubble-text">{msg.message}</div>}
+                        {msg.message && (
+                          <div className="chat-bubble-text">{msg.message}</div>
+                        )}
                       </div>
                       <span className="chat-message-time">
                         {formatMessageTime(msg.sentAt)}
@@ -345,10 +404,38 @@ export default function Chat() {
             </div>
           )}
 
-          <div className="chat-input-row-container" style={{ position: 'relative' }}>
+          <div
+            className="chat-input-row-container"
+            style={{ position: "relative" }}
+          >
             {showEmojiPicker && (
               <div className="chat-emoji-picker-container">
-                {['😊', '😂', '😍', '👍', '🙌', '👏', '🎉', '🔥', '👀', '🤔', '😢', '😮', '😡', '💖', '💔', '💩', '🌟', '💡', '💯', '📌', '🌈', '🎂', '😭', '🙏'].map((emoji) => (
+                {[
+                  "😊",
+                  "😂",
+                  "😍",
+                  "👍",
+                  "🙌",
+                  "👏",
+                  "🎉",
+                  "🔥",
+                  "👀",
+                  "🤔",
+                  "😢",
+                  "😮",
+                  "😡",
+                  "💖",
+                  "💔",
+                  "💩",
+                  "🌟",
+                  "💡",
+                  "💯",
+                  "📌",
+                  "🌈",
+                  "🎂",
+                  "😭",
+                  "🙏",
+                ].map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
@@ -363,14 +450,35 @@ export default function Chat() {
             <input
               type="file"
               ref={fileInputRef}
-              style={{ display: 'none' }}
+              style={{ display: "none" }}
               accept="image/*,video/*"
               onChange={handleFileUpload}
             />
             <div className="chat-input-left-tools">
-              <button type="button" className="chat-tool-icon-btn" title="추가" onClick={() => fileInputRef.current?.click()}>➕</button>
-              <button type="button" className="chat-tool-icon-btn" title="카메라" onClick={() => fileInputRef.current?.click()}>📷</button>
-              <button type="button" className="chat-tool-icon-btn" title="사진첩" onClick={() => fileInputRef.current?.click()}>🖼️</button>
+              <button
+                type="button"
+                className="chat-tool-icon-btn"
+                title="추가"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                ➕
+              </button>
+              <button
+                type="button"
+                className="chat-tool-icon-btn"
+                title="카메라"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                📷
+              </button>
+              <button
+                type="button"
+                className="chat-tool-icon-btn"
+                title="사진첩"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                🖼️
+              </button>
             </div>
             <form onSubmit={handleSend} className="chat-input-bar-inner">
               <textarea
@@ -390,7 +498,13 @@ export default function Chat() {
                 >
                   😊
                 </button>
-                <button type="button" className="chat-tool-icon-btn" title="음성">🎤</button>
+                <button
+                  type="button"
+                  className="chat-tool-icon-btn"
+                  title="음성"
+                >
+                  🎤
+                </button>
               </div>
               <button
                 type="submit"
@@ -403,30 +517,53 @@ export default function Chat() {
           </div>
 
           {showNoticePopup && announcement && (
-            <div className="notice-popup-overlay" onClick={() => setShowNoticePopup(false)}>
-              <div className="notice-popup-content-box" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="notice-popup-overlay"
+              onClick={() => setShowNoticePopup(false)}
+            >
+              <div
+                className="notice-popup-content-box"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <header className="notice-popup-header">
                   <h2 className="notice-popup-title">📢 공지사항</h2>
-                  <button className="notice-popup-close-x" onClick={() => setShowNoticePopup(false)}>✕</button>
+                  <button
+                    className="notice-popup-close-x"
+                    onClick={() => setShowNoticePopup(false)}
+                  >
+                    ✕
+                  </button>
                 </header>
                 <div className="notice-popup-meta">
-                  <span className="notice-popup-author">{announcement.author.displayName}</span>
+                  <span className="notice-popup-author">
+                    {announcement.author.displayName}
+                  </span>
                   <span className="notice-popup-date">
-                    {new Date(announcement.createdAt).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {new Date(announcement.createdAt).toLocaleDateString(
+                      "ko-KR",
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    )}
                   </span>
                 </div>
                 <div className="notice-popup-body">
-                  <h3 className="notice-popup-content-title">{announcement.title}</h3>
+                  <h3 className="notice-popup-content-title">
+                    {announcement.title}
+                  </h3>
                   <p className="notice-popup-text">{announcement.content}</p>
                 </div>
                 <footer className="notice-popup-footer">
-                  <button className="notice-popup-close-btn" onClick={() => setShowNoticePopup(false)}>닫기</button>
+                  <button
+                    className="notice-popup-close-btn"
+                    onClick={() => setShowNoticePopup(false)}
+                  >
+                    닫기
+                  </button>
                 </footer>
               </div>
             </div>

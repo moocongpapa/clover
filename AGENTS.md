@@ -20,7 +20,7 @@ Clover는 모임, 회원 정보, 일정 및 투표, 정산 이력을 관리하�
 
 - **프론트엔드**: React (TypeScript) + Vite, CSS3 (Vanilla CSS 테마 변수 활용)
 - **백엔드**: NestJS (TypeScript), Prisma ORM
-- **데이터베이스**: SQLite (`backend/dev.db` 및 E2E 테스트용 `backend/e2e.db`)
+- **데이터베이스**: PostgreSQL (개발/운영과 E2E 전용 데이터베이스를 분리)
 - **테스트 프레임워크**: Playwright (E2E 테스트)
 
 ---
@@ -72,11 +72,11 @@ Clover는 모임, 회원 정보, 일정 및 투표, 정산 이력을 관리하�
 | :--- | :--- | :--- |
 | **백엔드 (API)** | `3000` 포트 | `3001` 포트 |
 | **프론트엔드 (Vite)** | `5174` 포트 | `5175` 포트 |
-| **데이터베이스 파일** | `backend/dev.db` | `backend/e2e.db` |
+| **데이터베이스** | 개발용 PostgreSQL | 이름에 `e2e` 또는 `test`가 포함된 별도 PostgreSQL |
 
 ### 주의사항 및 문제 예방 (EPERM 방지)
-- **Prisma Generate 에러 방지**: 개발 서버와 E2E 테스트가 동시에 동일한 `node_modules/.prisma` 라이브러리를 잠금(Lock)하여 발생하는 `EPERM` 에러를 막기 위해, `playwright.config.ts`의 백엔드 실행 시 `prisma generate` 단계는 생략(`--skip-generate` 옵션 활용)하고 빌드된 Nest 서버만 빠르게 가동합니다.
-- **환경 변수 전달**: E2E 구동 시 Vite 서버에는 `VITE_API_URL=http://localhost:3001`을, NestJS 서버에는 `PORT=3001` 및 `DATABASE_URL=file:./e2e.db?connection_limit=1`을 할당해야 합니다.
+- **테스트 데이터 보호**: E2E는 `E2E_DATABASE_URL`을 필수로 요구하고, 이름에 `e2e` 또는 `test`가 포함된 DB만 초기화합니다. 개발·운영 `DATABASE_URL`은 E2E에 전달하지 않습니다.
+- **환경 변수 전달**: E2E 구동 시 Vite 서버에는 `VITE_API_URL=http://localhost:3001`을, NestJS 서버에는 `PORT=3001`, `NODE_ENV=test`, `DATABASE_URL=$E2E_DATABASE_URL`을 할당합니다.
 
 ---
 
