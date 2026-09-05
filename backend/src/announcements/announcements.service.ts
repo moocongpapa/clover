@@ -194,6 +194,7 @@ export class AnnouncementsService {
       data: {
         ...(dto.title !== undefined ? { title: dto.title } : {}),
         ...(dto.content !== undefined ? { content: dto.content } : {}),
+        ...(dto.isPinned !== undefined ? { isPinned: dto.isPinned } : {}),
       },
       include: {
         author: {

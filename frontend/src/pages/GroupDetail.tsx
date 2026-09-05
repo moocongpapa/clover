@@ -135,6 +135,7 @@ export default function GroupDetail() {
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [editPostTitle, setEditPostTitle] = useState('');
   const [editPostContent, setEditPostContent] = useState('');
+  const [editPostIsPinned, setEditPostIsPinned] = useState(false);
   const [savingPostEdit, setSavingPostEdit] = useState(false);
 
   const [announcementCommentsMap, setAnnouncementCommentsMap] = useState<
@@ -759,6 +760,7 @@ export default function GroupDetail() {
     setEditingAnnouncement(ann);
     setEditPostTitle(ann.title);
     setEditPostContent(ann.content);
+    setEditPostIsPinned(Boolean(ann.isPinned));
   };
 
   const handleSaveEditAnnouncement = async (e: React.FormEvent) => {
@@ -769,6 +771,7 @@ export default function GroupDetail() {
       await api.updateAnnouncement(editingAnnouncement.id, {
         title: editPostTitle.trim(),
         content: editPostContent.trim(),
+        isPinned: editPostIsPinned,
       });
       setEditingAnnouncement(null);
       const ann = await api.listAnnouncements(id);
@@ -789,17 +792,6 @@ export default function GroupDetail() {
       setAnnouncements(annList);
     } catch (err: any) {
       alert(err.message || '게시글 삭제 실패');
-    }
-  };
-
-  const handleTogglePin = async (id: string) => {
-    try {
-      const updated = await api.togglePinAnnouncement(id);
-      setAnnouncements((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, isPinned: updated.isPinned } : a))
-      );
-    } catch (err) {
-      console.error('Pin toggle failed', err);
     }
   };
 
@@ -1333,6 +1325,42 @@ export default function GroupDetail() {
                         />
                       </div>
 
+                      {/* Pin to top toggle option (officers only) */}
+                      {isOfficer && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '12px 14px',
+                            background: 'var(--grey-50, #f8fafc)',
+                            borderRadius: '12px',
+                            border: '1px solid var(--border-soft, #e2e8f0)',
+                            marginBottom: '16px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '18px' }}>📌</span>
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ink-dark)' }}>
+                                게시글 상단 고정
+                              </div>
+                              <div style={{ fontSize: '11.5px', color: 'var(--ink-muted)' }}>
+                                목록 맨 위에 항상 고정되어 노출됩니다
+                              </div>
+                            </div>
+                          </div>
+                          <label className="toggle-switch">
+                            <input
+                              type="checkbox"
+                              checked={editPostIsPinned}
+                              onChange={(e) => setEditPostIsPinned(e.target.checked)}
+                            />
+                            <span className="toggle-slider" />
+                          </label>
+                        </div>
+                      )}
+
                       <div className="post-write-modal-actions">
                         <button
                           type="button"
@@ -1341,6 +1369,7 @@ export default function GroupDetail() {
                             setEditingAnnouncement(null);
                             setEditPostTitle('');
                             setEditPostContent('');
+                            setEditPostIsPinned(false);
                           }}
                         >
                           취소
@@ -1423,17 +1452,6 @@ export default function GroupDetail() {
                             }
                             return (
                               <div className="feed-card-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
-                                {isOfficer && (
-                                  <button
-                                    type="button"
-                                    className="btn-sm btn-outline"
-                                    onClick={() => handleTogglePin(item.id)}
-                                    title={item.raw.isPinned ? '고정 해제' : '상단 고정'}
-                                    style={{ fontSize: '12px' }}
-                                  >
-                                    {item.raw.isPinned ? '📌 해제' : '📌 고정'}
-                                  </button>
-                                )}
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditAnnouncement(item.raw)}

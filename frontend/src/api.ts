@@ -252,7 +252,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  updateAnnouncement: (id: string, data: { title?: string; content?: string }) =>
+  updateAnnouncement: (id: string, data: { title?: string; content?: string; isPinned?: boolean }) =>
     request<Announcement>(`/announcements/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
