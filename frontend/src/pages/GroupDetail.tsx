@@ -1628,6 +1628,20 @@ export default function GroupDetail() {
                             {ev.status === 'CANCELLED' && (
                               <span className="status-cancelled" style={{ marginLeft: '6px' }}>취소됨</span>
                             )}
+                            {ev.publishAt && new Date(ev.publishAt).getTime() > Date.now() && (
+                              <span style={{
+                                marginLeft: '6px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                padding: '2px 7px',
+                                borderRadius: '6px',
+                                background: '#fef3c7',
+                                color: '#d97706',
+                                border: '1px solid #fde68a'
+                              }}>
+                                🔒 D-{ev.openDaysBefore || 3} 오픈 예정 ({ev.openTime || '12:00'})
+                              </span>
+                            )}
                             <span className="event-meta" style={{ display: 'block', marginTop: '4px', fontSize: '12.5px', color: 'var(--ink-muted)' }}>
                               📅 {formatEventDate(ev.date)}{' '}
                               {formatEventTimeRange(ev.startTime, ev.endTime)}{' '}

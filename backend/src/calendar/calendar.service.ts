@@ -18,8 +18,15 @@ export class CalendarService {
       return [];
     }
 
+    const now = new Date();
     const events = await this.prisma.event.findMany({
-      where: { groupId: { in: groupIds } },
+      where: {
+        groupId: { in: groupIds },
+        OR: [
+          { publishAt: null },
+          { publishAt: { lte: now } },
+        ],
+      },
       include: {
         group: {
           select: {

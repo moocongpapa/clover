@@ -50,6 +50,17 @@ export class CreateEventDto {
   @Min(2)
   @Max(8)
   repeatCount?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(14)
+  openDaysBefore?: number;
+
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_PATTERN, { message: '오픈 시간은 HH:MM 형식이어야 합니다.' })
+  openTime?: string;
 }
 
 import { VoteChoice } from '@prisma/client';

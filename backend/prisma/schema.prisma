@@ -151,6 +151,10 @@ model Event {
   cancelReason    String?
   createdById     String?
   reminderOffsets String            @default("24,1") // 이벤트 시작 몇 시간 전에 알림을 보낼지 쉼표로 구분
+  publishAt       DateTime?         // 일정 오픈 시점 (null이면 즉시 공개)
+  openDaysBefore  Int?              @default(3) // 며칠 전 오픈 설정 (기본 3일 전)
+  openTime        String?           @default("12:00") // 몇 시 오픈 설정 (기본 낮 12시)
+  isNotified      Boolean           @default(false) // 오픈 알림 발송 완료 여부
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   group           Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -164,6 +168,7 @@ model Event {
   @@index([date])
   @@index([createdById])
   @@index([status])
+  @@index([publishAt])
 }
 
 model EventTeamSplit {

@@ -250,14 +250,40 @@ export class NotificationsService {
   @Cron('*/5 * * * *') // Run every 5 minutes
   async sendReminderNotifications(forceAllOffsets = false) {
     const now = new Date();
+
+    // 1. Check and publish newly released scheduled events
+    try {
+      const scheduledEvents = await this.prisma.event.findMany({
+        where: {
+          status: 'ACTIVE',
+          isNotified: false,
+          publishAt: { lte: now },
+        },
+      });
+
+      for (const scheduled of scheduledEvents) {
+        await this.prisma.event.update({
+          where: { id: scheduled.id },
+          data: { isNotified: true },
+        });
+        await this.notifyGroupMembers(scheduled.id, 'CREATED');
+        this.logger.log(`Published scheduled event ${scheduled.id} (${scheduled.title})`);
+      }
+    } catch (err) {
+      this.logger.error(`Error publishing scheduled events: ${err}`);
+    }
     
-    // Find active events that are scheduled in the future (today or later)
+    // 2. Find active events that are scheduled in the future and already published
     const events = await this.prisma.event.findMany({
       where: {
         status: 'ACTIVE',
         date: {
           gte: localDayStart(now),
         },
+        OR: [
+          { publishAt: null },
+          { publishAt: { lte: now } },
+        ],
       },
       include: {
         group: {

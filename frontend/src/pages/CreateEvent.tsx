@@ -70,6 +70,8 @@ export default function CreateEvent() {
   const [description, setDescription] = useState('');
   const [repeatType, setRepeatType] = useState<'none' | 'weekly' | 'biweekly'>('none');
   const [repeatCount, setRepeatCount] = useState(4);
+  const [openDaysBefore, setOpenDaysBefore] = useState(3);
+  const [openTime, setOpenTime] = useState('12:00');
 
   // Reminder offsets checklist (defaults to 24 and 1)
   const [selectedOffsets, setSelectedOffsets] = useState<number[]>([24, 1]);
@@ -209,7 +211,12 @@ export default function CreateEvent() {
         location: eventLocation.trim() || '미정',
         description: description.trim() || '일정에 참석 여부를 투표해 주세요!',
         reminderOffsets: selectedOffsets.join(','),
-        ...(repeatType !== 'none' && { repeatType, repeatCount }),
+        ...(repeatType !== 'none' && {
+          repeatType,
+          repeatCount,
+          openDaysBefore,
+          openTime,
+        }),
       });
       navigate(`/events/${event.id}?share=true`);
     } catch (err) {
@@ -574,27 +581,112 @@ export default function CreateEvent() {
                     </div>
                   </div>
 
+                  {/* 오픈 시점 및 시간 설정 */}
                   <div style={{
-                    fontSize: '13px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    padding: '12px',
+                    background: 'var(--surface, #ffffff)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-soft, #e2e8f0)'
+                  }}>
+                    <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink-dark)' }}>
+                      ⏰ 다음 회차 일정 공개 시점
+                    </label>
+                    
+                    {/* D-며칠 전 선택 칩 */}
+                    <div>
+                      <span style={{ fontSize: '12px', color: 'var(--ink-muted)', display: 'block', marginBottom: '6px' }}>
+                        모임 며칠 전에 오픈할까요?
+                      </span>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {[
+                          { days: 1, label: '1일 전' },
+                          { days: 2, label: '2일 전' },
+                          { days: 3, label: '3일 전 (추천)' },
+                          { days: 5, label: '5일 전' },
+                          { days: 7, label: '7일 전' },
+                        ].map((item) => (
+                          <button
+                            key={item.days}
+                            type="button"
+                            className={`feed-filter-chip ${openDaysBefore === item.days ? 'is-active' : ''}`}
+                            onClick={() => setOpenDaysBefore(item.days)}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              background: openDaysBefore === item.days ? 'var(--accent)' : 'var(--surface)',
+                              color: openDaysBefore === item.days ? '#fff' : 'var(--ink-dark)',
+                              borderRadius: '8px',
+                              border: openDaysBefore === item.days ? '1px solid var(--accent)' : '1px solid var(--border-soft)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 오픈 시각 선택 */}
+                    <div>
+                      <span style={{ fontSize: '12px', color: 'var(--ink-muted)', display: 'block', marginBottom: '6px' }}>
+                        공개 시간
+                      </span>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <select
+                          value={openTime}
+                          onChange={(e) => setOpenTime(e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-soft)',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: 'var(--ink-dark)',
+                            background: 'var(--surface)',
+                          }}
+                        >
+                          <option value="09:00">오전 09:00 (출근길)</option>
+                          <option value="12:00">낮 12:00 (점심시간, 추천)</option>
+                          <option value="14:00">오후 02:00</option>
+                          <option value="18:00">오후 06:00 (퇴근시간)</option>
+                          <option value="20:00">저녁 08:00</option>
+                          <option value="21:00">밤 09:00</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    fontSize: '12.5px',
                     fontWeight: '600',
                     color: '#059669',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                    background: 'rgba(16, 185, 129, 0.08)',
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    lineHeight: '1.4'
+                    lineHeight: '1.45'
                   }}>
-                    ✨ <strong>등록 예정 날짜:</strong><br />
+                    ✨ <strong>일정 오픈 안내:</strong><br />
                     {(() => {
                       if (!date) return '상단에서 일시를 먼저 선택해주세요';
                       const baseDate = new Date(date + 'T00:00:00');
                       const intervalDays = repeatType === 'biweekly' ? 14 : 7;
+                      const days = ['일', '월', '화', '수', '목', '금', '토'];
                       const dates = Array.from({ length: repeatCount }, (_, i) => {
                         const d = new Date(baseDate.getTime() + intervalDays * i * 86400000);
-                        const days = ['일', '월', '화', '수', '목', '금', '토'];
                         return `${d.getMonth() + 1}/${d.getDate()}(${days[d.getDay()]})`;
                       });
-                      return `${dates.join(', ')} 총 ${repeatCount}개 일정이 한 번에 등록됩니다.`;
+                      return (
+                        <>
+                          • <strong>1회차 ({dates[0]}):</strong> 등록 즉시 공개 및 알림 발송<br />
+                          • <strong>2~{repeatCount}회차 ({dates.slice(1).join(', ')}):</strong> 각 일정 <strong>D-{openDaysBefore}일 {openTime}</strong>에 자동으로 오픈되고 투표 알림이 발송됩니다.
+                        </>
+                      );
                     })()}
                   </div>
                 </div>

@@ -913,6 +913,10 @@ export interface Event {
   createdBy: User;
   _count?: { votes: number };
   reminderOffsets?: string | null;
+  publishAt?: string | null;
+  openDaysBefore?: number | null;
+  openTime?: string | null;
+  isNotified?: boolean;
 }
 
 export interface EventDetail extends Event {
@@ -927,6 +931,10 @@ export interface CreateEventInput {
   location: string;
   description: string;
   reminderOffsets?: string;
+  repeatType?: 'none' | 'weekly' | 'biweekly';
+  repeatCount?: number;
+  openDaysBefore?: number;
+  openTime?: string;
 }
 
 export interface VoteResults {

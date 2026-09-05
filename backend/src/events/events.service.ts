@@ -27,10 +27,20 @@ export class EventsService {
   ) {}
 
   async listByGroup(groupId: string, userId: string) {
-    await this.groupsService.requireApprovedMember(groupId, userId);
+    const membership = await this.groupsService.requireApprovedMember(groupId, userId);
+    const userIsOfficer = isOfficer(membership.role);
+
+    const now = new Date();
+    const whereCondition: any = { groupId };
+    if (!userIsOfficer) {
+      whereCondition.OR = [
+        { publishAt: null },
+        { publishAt: { lte: now } },
+      ];
+    }
 
     const events = await this.prisma.event.findMany({
-      where: { groupId },
+      where: whereCondition,
       include: {
         createdBy: {
           select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
@@ -95,6 +105,10 @@ export class EventsService {
         description: dto.description,
         reminderOffsets: dto.reminderOffsets ?? '24,1',
         createdById: userId,
+        publishAt: null, // First event is published immediately
+        openDaysBefore: dto.openDaysBefore ?? 3,
+        openTime: dto.openTime ?? '12:00',
+        isNotified: true, // Notification sent immediately
       },
       include: {
         createdBy: {
@@ -109,9 +123,19 @@ export class EventsService {
     if (dto.repeatType && dto.repeatType !== 'none' && dto.repeatCount && dto.repeatCount > 1) {
       const intervalDays = dto.repeatType === 'biweekly' ? 14 : 7;
       const baseDate = parseEventDate(dto.date);
+      const openDays = dto.openDaysBefore !== undefined ? dto.openDaysBefore : 3;
+      const [openHour, openMinute] = (dto.openTime || '12:00').split(':').map(Number);
       
       for (let i = 1; i < dto.repeatCount; i++) {
         const nextDate = new Date(baseDate.getTime() + intervalDays * i * 24 * 60 * 60 * 1000);
+        
+        // Calculate publishAt: openDays before nextDate at openHour:openMinute
+        const publishAt = new Date(nextDate.getTime() - openDays * 24 * 60 * 60 * 1000);
+        publishAt.setHours(openHour, openMinute, 0, 0);
+
+        // If publishAt is already in the past (e.g. registered less than openDays before), publish immediately
+        const isPastPublish = publishAt.getTime() <= Date.now();
+
         await this.prisma.event.create({
           data: {
             groupId,
@@ -123,6 +147,10 @@ export class EventsService {
             description: dto.description,
             reminderOffsets: dto.reminderOffsets ?? '24,1',
             createdById: userId,
+            publishAt,
+            openDaysBefore: openDays,
+            openTime: dto.openTime || '12:00',
+            isNotified: isPastPublish,
           },
         });
       }
