@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { api, isProfileComplete } from '../api';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
@@ -7,6 +7,7 @@ import './Login.css';
 export default function Login() {
   const { user, loginWithToken } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [kakaoUrl, setKakaoUrl] = useState<string | null>(null);
   const [showKakaoModal, setShowKakaoModal] = useState(false);
@@ -16,12 +17,32 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const hasProcessedCodeRef = useRef(false);
 
+  // Save the target return URL if redirected from a protected route
+  useEffect(() => {
+    const fromState = (location.state as any)?.from;
+    const targetPath = fromState?.pathname
+      ? `${fromState.pathname}${fromState.search || ''}`
+      : null;
+    if (targetPath && targetPath !== '/login') {
+      sessionStorage.setItem('clover_redirect_after_login', targetPath);
+    }
+  }, [location]);
+
+  const getDestinationUrl = () => {
+    const saved = sessionStorage.getItem('clover_redirect_after_login');
+    if (saved && saved !== '/login') {
+      sessionStorage.removeItem('clover_redirect_after_login');
+      return saved;
+    }
+    return '/';
+  };
+
   useEffect(() => {
     if (user) {
       if (!isProfileComplete(user)) {
         navigate('/profile/edit?required=true', { replace: true });
       } else {
-        navigate('/', { replace: true });
+        navigate(getDestinationUrl(), { replace: true });
       }
     }
   }, [user, navigate]);
@@ -40,7 +61,7 @@ export default function Login() {
           if (!isProfileComplete(res.user)) {
             navigate('/profile/edit?required=true', { replace: true });
           } else {
-            navigate('/', { replace: true });
+            navigate(getDestinationUrl(), { replace: true });
           }
         })
         .catch((e) => setError(e.message))
@@ -76,7 +97,7 @@ export default function Login() {
       const res = await api.kakaoCallback(code);
       loginWithToken(res.accessToken, res.user);
       setShowKakaoModal(false);
-      navigate('/');
+      navigate(getDestinationUrl());
     } catch (err) {
       setError(err instanceof Error ? err.message : '카카오 로그인 실패');
     } finally {

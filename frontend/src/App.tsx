@@ -61,12 +61,14 @@ import SplashScreen from './components/SplashScreen';
 import { PwaProvider } from './context/PwaContext';
 import PwaInstallBanner from './components/PwaInstallBanner';
 import PwaInstallModal from './components/PwaInstallModal';
+import KakaoInAppBanner from './components/KakaoInAppBanner';
 
 export default function App() {
   return (
     <PwaProvider>
       <AuthProvider>
         <SplashScreen />
+        <KakaoInAppBanner />
         <PwaInstallBanner />
         <PwaInstallModal />
         <ErrorBoundary>

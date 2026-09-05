@@ -430,27 +430,7 @@ export default function GroupDetail() {
       const shareText = `"${group.name}" 모임에서 함께해요!\n초대 링크를 누르면 별도 승인 없이 바로 가입하실 수 있습니다.`;
       const fullMessage = `${shareTitle}\n\n${shareText}\n\n👉 모임 바로 참여하기:\n${inviteUrl}`;
 
-      // 1. Mobile devices: Prefer native Web Share API (opens KakaoTalk & native share sheet directly)
-      const isMobile =
-        typeof navigator !== 'undefined' &&
-        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
-
-      if (isMobile && typeof navigator !== 'undefined' && navigator.share) {
-        try {
-          await navigator.share({
-            title: shareTitle,
-            text: `${shareTitle}\n\n${shareText}`,
-            url: inviteUrl,
-          });
-          setShareToast('카카오톡 채팅방 또는 원하는 앱으로 공유되었습니다!');
-          setTimeout(() => setShareToast(null), 3000);
-          return;
-        } catch (err: any) {
-          if (err?.name === 'AbortError') return;
-        }
-      }
-
-      // 2. If Kakao JS SDK is available, use Kakao.Share.sendDefault
+      // 1. Kakao JavaScript SDK feed share (Direct KakaoTalk Feed Template)
       const kakao = (window as any).Kakao;
       const isSdkReady = initKakaoSdk();
       if (kakao && isSdkReady) {
@@ -481,6 +461,22 @@ export default function GroupDetail() {
           return;
         } catch (e) {
           console.warn('Kakao.Share.sendDefault failed, falling back:', e);
+        }
+      }
+
+      // 2. Mobile devices: Prefer native Web Share API (opens native share sheet)
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          await navigator.share({
+            title: shareTitle,
+            text: `${shareTitle}\n\n${shareText}`,
+            url: inviteUrl,
+          });
+          setShareToast('공유되었습니다!');
+          setTimeout(() => setShareToast(null), 3000);
+          return;
+        } catch (err: any) {
+          if (err?.name === 'AbortError') return;
         }
       }
 

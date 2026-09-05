@@ -101,27 +101,7 @@ export async function shareEventToKakao(
     // 클립보드 복사용 전체 텍스트
     const fullTextMessage = `${shareTitle}\n\n${shareDescription}\n\n🗳️ 참석 투표 바로가기:\n${eventUrl}`;
 
-    // 1. Mobile devices: Prefer native Web Share API (opens KakaoTalk & native share sheet directly)
-    const isMobile =
-      typeof navigator !== 'undefined' &&
-      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
-
-    if (isMobile && typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          text: `${shareTitle}\n\n${shareBodyWithoutUrl}`,
-          url: eventUrl,
-        });
-        onToast?.('카카오톡 채팅방 또는 원하는 앱으로 공유되었습니다!');
-        return true;
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return false;
-        console.warn('navigator.share failed, trying fallback:', err);
-      }
-    }
-
-    // 2. Kakao JavaScript SDK feed share (uses valid JS key)
+    // 1. Kakao JavaScript SDK feed share (Direct KakaoTalk Feed Template)
     const kakao = typeof window !== 'undefined' ? (window as any).Kakao : null;
     const isSdkReady = initKakaoSdk();
 
@@ -157,7 +137,7 @@ export async function shareEventToKakao(
       }
     }
 
-    // 3. Desktop or non-mobile navigator.share if available
+    // 2. Native Web Share API fallback (opens system share sheet)
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
@@ -169,7 +149,7 @@ export async function shareEventToKakao(
         return true;
       } catch (err: any) {
         if (err?.name === 'AbortError') return false;
-        console.warn('navigator.share failed:', err);
+        console.warn('navigator.share failed, trying fallback:', err);
       }
     }
 
@@ -230,27 +210,7 @@ export async function shareAnnouncementToKakao(
     const shareDescription = `${previewContent}${authorText}\n\n👉 링크를 눌러 전체 공지 내용을 확인하세요!`;
     const fullTextMessage = `${shareTitle}\n\n${cleanContent}${authorText}\n\n공지 바로가기:\n${targetUrl}`;
 
-    // 1. Mobile devices: Prefer native Web Share API (opens KakaoTalk & native share sheet directly)
-    const isMobile =
-      typeof navigator !== 'undefined' &&
-      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
-
-    if (isMobile && typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          text: `${shareTitle}\n\n${cleanContent}${authorText}`,
-          url: targetUrl,
-        });
-        onToast?.('카카오톡 채팅방 또는 원하는 앱으로 공유되었습니다!');
-        return true;
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return false;
-        console.warn('navigator.share failed, trying fallback:', err);
-      }
-    }
-
-    // 2. Kakao JavaScript SDK feed share (uses valid JS key)
+    // 1. Kakao JavaScript SDK feed share (uses valid JS key)
     const kakao = typeof window !== 'undefined' ? (window as any).Kakao : null;
     const isSdkReady = initKakaoSdk();
 
@@ -283,6 +243,22 @@ export async function shareAnnouncementToKakao(
         return true;
       } catch (e) {
         console.warn('Kakao.Share.sendDefault failed, falling back:', e);
+      }
+    }
+
+    // 2. Native Web Share API fallback (opens system share sheet)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: `${shareTitle}\n\n${cleanContent}${authorText}`,
+          url: targetUrl,
+        });
+        onToast?.('공유되었습니다!');
+        return true;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return false;
+        console.warn('navigator.share failed, trying fallback:', err);
       }
     }
 
