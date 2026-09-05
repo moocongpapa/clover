@@ -38,9 +38,21 @@ export default function GroupAvatar({
     );
   }
 
+  const fallbackStyle: React.CSSProperties = {
+    ...style,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'var(--grey-50, #f8fafc)',
+    border: '1px solid var(--border-soft, #e2e8f0)',
+    flexShrink: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+  };
+
   return (
-    <span className={`${classes} group-avatar--fallback`} aria-label={`${name} 기본 이미지`} style={style}>
-      <CloverLogo size={Math.round(size * 0.6)} />
+    <span className={`${classes} group-avatar--fallback`} aria-label={`${name} 기본 이미지`} style={fallbackStyle}>
+      <CloverLogo size={Math.round(size * 0.58)} />
     </span>
   );
 }

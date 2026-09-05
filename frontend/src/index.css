@@ -680,3 +680,30 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ═══════════════════════════════════════════
+   Group Avatar & Fallback Styling
+   ═══════════════════════════════════════════ */
+.group-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+  box-sizing: border-box;
+}
+
+.group-avatar--fallback {
+  background: var(--grey-50, #f8fafc);
+  border: 1px solid var(--border-soft, #e2e8f0);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.group-avatar--fallback svg {
+  display: block;
+  margin: auto;
+}
+

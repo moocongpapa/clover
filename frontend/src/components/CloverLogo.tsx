@@ -25,6 +25,7 @@ export default function CloverLogo({
       className={className}
       role="img"
       aria-label={title}
+      style={{ display: 'block' }}
     >
       <title>{title}</title>
       <path
