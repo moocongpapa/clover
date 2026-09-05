@@ -1377,7 +1377,33 @@ export default function GroupDetail() {
 
               {/* Feed Items List */}
               {filteredFeedItems.length === 0 ? (
-                <p className="feed-empty-text">작성된 글이 없습니다.</p>
+                <div className="feed-empty-state">
+                  <span className="feed-empty-icon">📝</span>
+                  <h4 className="feed-empty-title">
+                    {feedFilter === 'announcements'
+                      ? '등록된 공지사항이 없습니다'
+                      : '아직 등록된 게시글이 없습니다'}
+                  </h4>
+                  <p className="feed-empty-desc">
+                    {feedFilter === 'announcements'
+                      ? '중요한 모임 소식이나 공지를 전달해보세요.'
+                      : '모임 멤버들과 첫 이야기를 나눠보세요!'}
+                  </p>
+                  {isApproved && (
+                    <button
+                      type="button"
+                      className="feed-empty-write-btn"
+                      onClick={() => {
+                        setPostType(feedFilter === 'announcements' && isOfficer ? 'NOTICE' : 'GENERAL');
+                        setAnnouncementTitle('');
+                        setAnnouncementContent('');
+                        setWritingAnnouncement(true);
+                      }}
+                    >
+                      ✏️ {feedFilter === 'announcements' && isOfficer ? '공지 작성하기' : '첫 글 작성하기'}
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="feed-list">
                   {filteredFeedItems.map((item) => {
