@@ -56,6 +56,7 @@ export default function GroupDetail() {
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState('');
   const [customRoles, setCustomRoles] = useState<RoleItem[]>([]);
+  const [isSharingInvite, setIsSharingInvite] = useState(false);
 
   // Announcements States
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -419,8 +420,6 @@ export default function GroupDetail() {
       setError(e instanceof Error ? e.message : '모임 탈퇴 실패');
     }
   };
-
-  const [isSharingInvite, setIsSharingInvite] = useState(false);
 
   const handleKakaoShare = async () => {
     if (!group || isSharingInvite) return;
