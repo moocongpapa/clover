@@ -8,7 +8,15 @@
 }
 
 /* ── Unified Compact Top Navigation Bar ── */
-.detail-top-nav-bar,
+.detail-top-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  min-height: 32px;
+  width: 100%;
+}
+
 .group-detail-header-bar,
 .event-detail-group-nav {
   display: flex;
@@ -17,6 +25,50 @@
   margin-bottom: 8px;
   min-height: 32px;
   width: 100%;
+}
+
+/* Polished Top Report Button matching .unified-back-btn */
+.detail-top-report-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-soft, #e2e8f0);
+  border-radius: 9999px;
+  padding: 5px 12px;
+  height: 32px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-muted, #64748b);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all var(--dur-base, 0.15s) var(--ease, ease);
+  user-select: none;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.detail-top-report-btn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
+.detail-top-report-btn:active {
+  transform: scale(0.96);
+  background: #fee2e2;
+}
+
+.detail-top-report-btn .report-btn-icon {
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.detail-top-report-btn .report-btn-label {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .group-hero {

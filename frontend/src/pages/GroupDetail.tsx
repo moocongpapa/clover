@@ -871,10 +871,11 @@ export default function GroupDetail() {
   return (
     <div className="group-detail">
       {/* Top Navigation Bar */}
-      <div className="detail-top-nav-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="detail-top-nav-bar">
         <BackButton onClick={() => navigate('/')} label="홈" />
         <button
           type="button"
+          className="detail-top-report-btn"
           onClick={() => {
             setReportTarget({
               type: '모임',
@@ -883,20 +884,11 @@ export default function GroupDetail() {
             });
             setShowReportModal(true);
           }}
-          style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '12.5px',
-            color: 'var(--ink-muted, #64748b)',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}
-          title="부적절한 모임 신고"
+          title="모임 신고"
+          aria-label="모임 신고"
         >
-          🚨 <span style={{ textDecoration: 'underline' }}>신고</span>
+          <span className="report-btn-icon">🚨</span>
+          <span className="report-btn-label">신고</span>
         </button>
       </div>
 
