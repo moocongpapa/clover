@@ -4,8 +4,7 @@ import BackButton from '../components/BackButton';
 import {
   api,
   formatCategoryEmoji,
-  formatEventDate,
-  formatEventTimeRange,
+  formatEventSchedule,
   ASSIGNABLE_ROLES,
   formatMemberDisplayName,
   formatUserDisplayName,
@@ -1667,11 +1666,18 @@ export default function GroupDetail() {
                                 🔒 D-{ev.openDaysBefore || 3} 오픈 예정 ({ev.openTime || '12:00'})
                               </span>
                             )}
-                            <span className="event-meta" style={{ display: 'block', marginTop: '4px', fontSize: '12.5px', color: 'var(--ink-muted)' }}>
-                              📅 {formatEventDate(ev.date)}{' '}
-                              {formatEventTimeRange(ev.startTime, ev.endTime)}{' '}
-                              · 📍 {ev.location}
-                            </span>
+                            <div className="event-meta" style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '6px', fontSize: '12.5px', color: 'var(--ink-muted)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span>📅</span>
+                                <span>{formatEventSchedule(ev.date, ev.startTime, ev.endTime)}</span>
+                              </div>
+                              {ev.location && (
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                                  <span style={{ flexShrink: 0 }}>📍</span>
+                                  <span style={{ wordBreak: 'break-all', lineHeight: 1.35 }}>{ev.location}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <span className="vote-pill" style={{ flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '4px 8px', borderRadius: '6px', background: 'var(--blue-50)', color: 'var(--accent)' }}>
                             투표 {ev._count?.votes ?? 0}명
