@@ -24,7 +24,7 @@ import GroupAvatar from '../components/GroupAvatar';
 import ReportModal from '../components/ReportModal';
 import EventShareModal from '../components/EventShareModal';
 import AnnouncementShareModal from '../components/AnnouncementShareModal';
-import type { ShareEventData, ShareAnnouncementData } from '../utils/kakaoShare';
+import { initKakaoSdk, type ShareEventData, type ShareAnnouncementData } from '../utils/kakaoShare';
 import './GroupDetail.css';
 
 declare global {
@@ -445,47 +445,37 @@ export default function GroupDetail() {
       }
     }
 
-    // 2. If Kakao JS SDK is available and configured, use Kakao.Share.sendDefault
+    // 2. If Kakao JS SDK is available, use Kakao.Share.sendDefault
     const kakao = (window as any).Kakao;
-    const jsKey = (import.meta as any).env?.VITE_KAKAO_JAVASCRIPT_KEY;
-    if (kakao && jsKey) {
-      if (!kakao.isInitialized?.()) {
-        try {
-          kakao.init(jsKey);
-        } catch (e) {
-          console.warn('Kakao init error:', e);
-        }
-      }
-
-      if (kakao.isInitialized?.()) {
-        try {
-          kakao.Share.sendDefault({
-            objectType: 'feed',
-            content: {
-              title: `🍀 [Clover] ${group.name}`,
-              description: group.description || `${group.name} 모임에 초대합니다! 링크를 누르면 바로 가입됩니다.`,
-              imageUrl: group.profileImageUrl || `${window.location.origin}/favicon.png`,
+    const isSdkReady = initKakaoSdk();
+    if (kakao && isSdkReady) {
+      try {
+        kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: {
+            title: `🍀 [Clover] ${group.name}`,
+            description: group.description || `${group.name} 모임에 초대합니다! 링크를 누르면 바로 가입됩니다.`,
+            imageUrl: group.profileImageUrl || `${window.location.origin}/favicon.png`,
+            link: {
+              mobileWebUrl: inviteUrl,
+              webUrl: inviteUrl,
+            },
+          },
+          buttons: [
+            {
+              title: '모임 바로 가입하기',
               link: {
                 mobileWebUrl: inviteUrl,
                 webUrl: inviteUrl,
               },
             },
-            buttons: [
-              {
-                title: '모임 바로 가입하기',
-                link: {
-                  mobileWebUrl: inviteUrl,
-                  webUrl: inviteUrl,
-                },
-              },
-            ],
-          });
-          setShareToast('카카오톡 공유창이 열렸습니다!');
-          setTimeout(() => setShareToast(null), 3000);
-          return;
-        } catch (e) {
-          console.warn('Kakao.Share.sendDefault failed, falling back:', e);
-        }
+          ],
+        });
+        setShareToast('카카오톡 공유창이 열렸습니다!');
+        setTimeout(() => setShareToast(null), 3000);
+        return;
+      } catch (e) {
+        console.warn('Kakao.Share.sendDefault failed, falling back:', e);
       }
     }
 

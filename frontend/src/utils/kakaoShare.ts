@@ -2,6 +2,32 @@
  * 카카오톡 일정 및 투표 공유 유틸리티
  */
 
+export const DEFAULT_KAKAO_JS_KEY = '914ce4ceb9c709b5736c0a378980bb14';
+
+export function getKakaoJsKey(): string {
+  return (
+    (import.meta as any).env?.VITE_KAKAO_JAVASCRIPT_KEY || DEFAULT_KAKAO_JS_KEY
+  );
+}
+
+export function initKakaoSdk(): boolean {
+  if (typeof window === 'undefined') return false;
+  const kakao = (window as any).Kakao;
+  if (!kakao) return false;
+  if (kakao.isInitialized?.()) return true;
+
+  const jsKey = getKakaoJsKey();
+  if (!jsKey) return false;
+
+  try {
+    kakao.init(jsKey);
+    return kakao.isInitialized?.() ?? false;
+  } catch (e) {
+    console.warn('Kakao init error:', e);
+    return false;
+  }
+}
+
 export interface ShareEventData {
   id: string;
   title: string;
@@ -85,49 +111,39 @@ export async function shareEventToKakao(
     }
   }
 
-  // 2. Kakao JavaScript SDK feed share (only if a valid custom JS key is set)
+  // 2. Kakao JavaScript SDK feed share (uses valid JS key)
   const kakao = typeof window !== 'undefined' ? (window as any).Kakao : null;
-  const configuredJsKey = (import.meta as any).env?.VITE_KAKAO_JAVASCRIPT_KEY;
+  const isSdkReady = initKakaoSdk();
 
-  if (kakao && configuredJsKey) {
-    if (!kakao.isInitialized?.()) {
-      try {
-        kakao.init(configuredJsKey);
-      } catch (e) {
-        console.warn('Kakao init error:', e);
-      }
-    }
-
-    if (kakao.isInitialized?.()) {
-      try {
-        kakao.Share.sendDefault({
-          objectType: 'feed',
-          content: {
-            title: shareTitle,
-            description: `📅 일시: ${scheduleText}${locationText}${voteText}\n\n터치 한 번으로 참석 투표에 참여하세요!`,
-            imageUrl:
-              event.groupProfileImageUrl ||
-              `${origin}/apple-touch-icon.png`,
+  if (kakao && isSdkReady) {
+    try {
+      kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: shareTitle,
+          description: `📅 일시: ${scheduleText}${locationText}${voteText}\n\n터치 한 번으로 참석 투표에 참여하세요!`,
+          imageUrl:
+            event.groupProfileImageUrl ||
+            `${origin}/apple-touch-icon.png`,
+          link: {
+            mobileWebUrl: eventUrl,
+            webUrl: eventUrl,
+          },
+        },
+        buttons: [
+          {
+            title: '🗳️ 참석 투표하러 가기',
             link: {
               mobileWebUrl: eventUrl,
               webUrl: eventUrl,
             },
           },
-          buttons: [
-            {
-              title: '🗳️ 참석 투표하러 가기',
-              link: {
-                mobileWebUrl: eventUrl,
-                webUrl: eventUrl,
-              },
-            },
-          ],
-        });
-        onToast?.('카카오톡 공유창이 열렸습니다!');
-        return true;
-      } catch (e) {
-        console.warn('Kakao.Share.sendDefault failed, falling back:', e);
-      }
+        ],
+      });
+      onToast?.('카카오톡 공유창이 열렸습니다!');
+      return true;
+    } catch (e) {
+      console.warn('Kakao.Share.sendDefault failed, falling back:', e);
     }
   }
 
@@ -214,49 +230,39 @@ export async function shareAnnouncementToKakao(
     }
   }
 
-  // 2. Kakao JavaScript SDK feed share (only if valid custom JS key is set)
+  // 2. Kakao JavaScript SDK feed share (uses valid JS key)
   const kakao = typeof window !== 'undefined' ? (window as any).Kakao : null;
-  const configuredJsKey = (import.meta as any).env?.VITE_KAKAO_JAVASCRIPT_KEY;
+  const isSdkReady = initKakaoSdk();
 
-  if (kakao && configuredJsKey) {
-    if (!kakao.isInitialized?.()) {
-      try {
-        kakao.init(configuredJsKey);
-      } catch (e) {
-        console.warn('Kakao init error:', e);
-      }
-    }
-
-    if (kakao.isInitialized?.()) {
-      try {
-        kakao.Share.sendDefault({
-          objectType: 'feed',
-          content: {
-            title: shareTitle,
-            description: shareDescription,
-            imageUrl:
-              announcement.groupProfileImageUrl ||
-              `${origin}/apple-touch-icon.png`,
+  if (kakao && isSdkReady) {
+    try {
+      kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: shareTitle,
+          description: shareDescription,
+          imageUrl:
+            announcement.groupProfileImageUrl ||
+            `${origin}/apple-touch-icon.png`,
+          link: {
+            mobileWebUrl: targetUrl,
+            webUrl: targetUrl,
+          },
+        },
+        buttons: [
+          {
+            title: '📢 공지사항 보러가기',
             link: {
               mobileWebUrl: targetUrl,
               webUrl: targetUrl,
             },
           },
-          buttons: [
-            {
-              title: '📢 공지사항 보러가기',
-              link: {
-                mobileWebUrl: targetUrl,
-                webUrl: targetUrl,
-              },
-            },
-          ],
-        });
-        onToast?.('카카오톡 공유창이 열렸습니다!');
-        return true;
-      } catch (e) {
-        console.warn('Kakao.Share.sendDefault failed, falling back:', e);
-      }
+        ],
+      });
+      onToast?.('카카오톡 공유창이 열렸습니다!');
+      return true;
+    } catch (e) {
+      console.warn('Kakao.Share.sendDefault failed, falling back:', e);
     }
   }
 
