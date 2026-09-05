@@ -875,24 +875,8 @@ export default function GroupDetail() {
       {/* Top Navigation Bar */}
       <div className="detail-top-nav-bar">
         <BackButton onClick={() => navigate('/')} label="홈" />
-        <button
-          type="button"
-          className="detail-top-report-btn"
-          onClick={() => {
-            setReportTarget({
-              type: '모임',
-              id: group.id,
-              title: group.name,
-            });
-            setShowReportModal(true);
-          }}
-          title="모임 신고"
-          aria-label="모임 신고"
-        >
-          <span className="report-btn-icon">🚨</span>
-          <span className="report-btn-label">신고</span>
-        </button>
       </div>
+
 
       {/* Group Info Section */}
       <div className="group-hero-section">
@@ -2577,7 +2561,7 @@ export default function GroupDetail() {
                 )}
 
                 {/* Group Leave or Dissolve Actions */}
-                <div className="group-dissolve-footer-row" style={{ display: 'flex', justifyContent: 'center', marginTop: '24px', paddingBottom: '20px' }}>
+                <div className="group-dissolve-footer-row" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '24px', paddingBottom: '20px' }}>
                   {isPresident ? (
                     <button
                       type="button"
@@ -2603,6 +2587,33 @@ export default function GroupDetail() {
                       모임 탈퇴하기
                     </button>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReportTarget({
+                        type: '모임',
+                        id: group.id,
+                        title: group.name,
+                      });
+                      setShowReportModal(true);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--ink-muted, #94a3b8)',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      opacity: 0.8,
+                    }}
+                  >
+                    <span>🚨</span>
+                    <span>모임 신고하기</span>
+                  </button>
                 </div>
               </div>
             </div>
