@@ -1428,6 +1428,16 @@
   gap: 12px;
 }
 
+.home-event-card__detail-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.home-event-card__detail-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
 .home-event-card__avatar {
   flex-shrink: 0;
   width: 52px;

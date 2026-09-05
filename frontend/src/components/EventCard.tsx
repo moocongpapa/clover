@@ -191,7 +191,11 @@ export default function EventCard({
         </div>
       </div>
 
-      <div className="home-event-card__body-main">
+      <Link
+        to={`/events/${event.id}`}
+        className="home-event-card__body-main home-event-card__detail-link"
+        aria-label={`${event.title} 일정 상세 보기`}
+      >
         <GroupAvatar
           src={event.group.profileImageUrl}
           name={event.group.name}
@@ -200,34 +204,27 @@ export default function EventCard({
           radius={14}
         />
         <div className="home-event-card__content-right">
-          <Link
-            to={`/events/${event.id}`}
-            className="home-event-card__text-link"
-            style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-            aria-label={`${event.title} 일정 상세 보기`}
-          >
-            <h3>
-              {event.title}
-            </h3>
-            <div className="home-event-card__meta">
-              <div className="home-event-card__meta-date">
-                📅 {formatEventDateTime(event.date, event.startTime, event.endTime)}
-              </div>
-              {event.location && (
-                <div className="home-event-card__meta-location">
-                  📍 {event.location}
-                  {event.myTeam && (
-                    <span className="home-event-card__team">
-                      {' '}
-                      · {formatTeamLabel(event.myTeam)}
-                    </span>
-                  )}
-                </div>
-              )}
+          <h3>
+            {event.title}
+          </h3>
+          <div className="home-event-card__meta">
+            <div className="home-event-card__meta-date">
+              📅 {formatEventDateTime(event.date, event.startTime, event.endTime)}
             </div>
-          </Link>
+            {event.location && (
+              <div className="home-event-card__meta-location">
+                📍 {event.location}
+                {event.myTeam && (
+                  <span className="home-event-card__team">
+                    {' '}
+                    · {formatTeamLabel(event.myTeam)}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </Link>
 
       {votable && event.status !== 'CANCELLED' && !event.voteLocked ? (
         <>
