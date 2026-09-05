@@ -3,46 +3,17 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import {
   api,
   startKakaoLogin,
-  formatEventTimeRange,
   isProfileComplete,
   isStaffRole,
-  VOTE_CHOICES,
-  VOTE_LABELS,
   type CalendarEvent,
-  type VoteChoice,
   type Group,
 } from '../api';
 import { useAuth } from '../context/AuthContext';
-import HomeEventCard, { HomeVoteProgressBar } from '../components/EventCard';
+import HomeEventCard from '../components/EventCard';
 import GroupAvatar from '../components/GroupAvatar';
 import LoadingIndicator from '../components/LoadingIndicator';
 import GroupPreviewModal from '../components/GroupPreviewModal';
-import EventShareModal from '../components/EventShareModal';
 import './Home.css';
-
-function formatEventDate(
-  date: string,
-  startTime: string,
-  endTime?: string | null,
-) {
-  const d = new Date(date);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const eventDay = new Date(d);
-  eventDay.setHours(0, 0, 0, 0);
-
-  let label = d.toLocaleDateString('ko-KR', {
-    month: 'short',
-    day: 'numeric',
-    weekday: 'short',
-  });
-  if (eventDay.getTime() === today.getTime()) label = '오늘';
-  else if (eventDay.getTime() === tomorrow.getTime()) label = '내일';
-
-  return `${label} ${formatEventTimeRange(startTime, endTime)}`;
-}
 
 function isUpcoming(ev: CalendarEvent) {
   return !ev.isPast;
@@ -726,8 +697,8 @@ function HomeDashboard() {
     navigate('/groups/new');
   };
 
-  const load = () => {
-    setLoading(true);
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
     setNetworkError(false);
     Promise.all([
       api.getCalendar(),
@@ -740,67 +711,28 @@ function HomeDashboard() {
         if (myDues) setDuesSummary(myDues);
       })
       .catch(() => setNetworkError(true))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   };
 
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const upcoming = events.filter(isUpcoming);
-  const [heroVoting, setHeroVoting] = useState(false);
-  const [showHeroShare, setShowHeroShare] = useState(false);
-
-  const handleHeroVote = async (eventId: string, choice: VoteChoice, currentVote?: VoteChoice | null) => {
-    setHeroVoting(true);
-    try {
-      if (currentVote === choice) {
-        await api.cancelVote(eventId);
-      } else {
-        await api.castVote(eventId, choice);
-      }
-      await load();
-    } catch (err) {
-      console.error('Hero vote failed:', err);
-    } finally {
-      setHeroVoting(false);
-    }
-  };
-
-  // Next upcoming urgent event for the hero D-Day card (sorted by earliest date/time)
-  const nextUrgentEvent = upcoming.length > 0 ? upcoming[0] : null;
-
-  // Remaining upcoming events (excluding nextUrgentEvent which is in the Hero card)
-  const remainingUpcoming = useMemo(() => {
-    if (!nextUrgentEvent) return upcoming;
-    return upcoming.filter((e) => e.id !== nextUrgentEvent.id);
-  }, [upcoming, nextUrgentEvent]);
-
-  const getDDayInfo = (dateStr: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const cleanDateStr = (dateStr || '').split('T')[0];
-    const parts = cleanDateStr.split('-');
-    if (parts.length < 3) return { label: 'D-Day', isUrgent: false };
-    const target = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-    target.setHours(0, 0, 0, 0);
-    const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return { label: '🔥 오늘 D-Day', isUrgent: true };
-    if (diffDays === 1) return { label: '⚡ 내일 D-1', isUrgent: true };
-    if (diffDays === 2) return { label: '📅 D-2', isUrgent: false };
-    if (diffDays > 2) return { label: `📅 D-${diffDays}`, isUrgent: false };
-    return { label: '진행 중', isUrgent: true };
-  };
 
   const unpaidDuesCount = useMemo(() => {
-    return duesSummary.filter(d => !d.isPaid && !d.isExempt).length;
+    return duesSummary.filter((d) => !d.isPaid && !d.isExempt).length;
   }, [duesSummary]);
 
   const unvotedEvents = useMemo(() => {
-    return upcoming.filter(e => !e.myVote);
+    return upcoming.filter((e) => !e.myVote);
   }, [upcoming]);
 
   const actionItems = useMemo(() => {
     const items = [];
-    if (unvotedEvents.length > 0 && !nextUrgentEvent?.myVote) {
+    if (unvotedEvents.length > 0) {
       items.push({
         title: '참석 투표 필요',
         desc: `${unvotedEvents.length}개의 다가오는 일정 투표가 아직 진행되지 않았어요.`,
@@ -819,7 +751,7 @@ function HomeDashboard() {
       });
     }
     return items;
-  }, [unpaidDuesCount, unvotedEvents, nextUrgentEvent]);
+  }, [unpaidDuesCount, unvotedEvents]);
   return (
     <div className="home-dashboard">
       {networkError && (
@@ -855,195 +787,9 @@ function HomeDashboard() {
           </button>
         </div>
       )}
-      {/* 🌟 Next Upcoming Event D-Day Highlight Widget with Integrated Direct Voting */}
-      {nextUrgentEvent && (
-        <div
-          className="home-dday-hero"
-          style={{
-            margin: '0 0 20px 0',
-            padding: '18px',
-            background: 'linear-gradient(135deg, #064e3b 0%, #065f46 60%, #047857 100%)',
-            borderRadius: '20px',
-            color: '#ffffff',
-            boxShadow: '0 8px 24px rgba(6, 78, 59, 0.22)',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Subtle background glow */}
-          <div style={{
-            position: 'absolute',
-            right: '-20px',
-            bottom: '-20px',
-            width: '130px',
-            height: '130px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(52, 211, 153, 0.25) 0%, rgba(52, 211, 153, 0) 70%)',
-            pointerEvents: 'none'
-          }} />
-
-          {/* Top Row: D-Day, Vote Badge, Group Name */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '4px 10px',
-                background: getDDayInfo(nextUrgentEvent.date).isUrgent ? '#ef4444' : 'rgba(255, 255, 255, 0.2)',
-                borderRadius: '999px',
-                fontSize: '12px',
-                fontWeight: 800,
-                letterSpacing: '-0.2px'
-              }}>
-                {getDDayInfo(nextUrgentEvent.date).label}
-              </span>
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '3px 8px',
-                background: nextUrgentEvent.myVote ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)',
-                color: nextUrgentEvent.myVote ? '#6ee7b7' : '#fde047',
-                borderRadius: '999px',
-                fontSize: '11.5px',
-                fontWeight: 700,
-                border: `1px solid ${nextUrgentEvent.myVote ? 'rgba(110, 231, 183, 0.4)' : 'rgba(253, 224, 71, 0.4)'}`
-              }}>
-                {nextUrgentEvent.myVote ? `${VOTE_LABELS[nextUrgentEvent.myVote]} 완료` : '투표 필요'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Link
-                to={`/groups/${nextUrgentEvent.group.id}`}
-                style={{ fontSize: '13px', fontWeight: 700, color: '#a7f3d0', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
-              >
-                {nextUrgentEvent.group.name || '모임'} 〉
-              </Link>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowHeroShare(true);
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  background: '#fee500',
-                  border: '1px solid #e6cf00',
-                  color: '#191919',
-                  cursor: 'pointer',
-                  padding: 0,
-                  fontSize: '13px',
-                }}
-                title="일정 및 투표 공유"
-                aria-label="공유"
-              >
-                💬
-              </button>
-            </div>
-          </div>
-
-          {/* Event Title */}
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: 800,
-            margin: '0 0 8px 0',
-            letterSpacing: '-0.3px',
-            lineHeight: 1.3
-          }}>
-            <Link
-              to={`/events/${nextUrgentEvent.id}`}
-              style={{ color: '#ffffff', textDecoration: 'none' }}
-            >
-              {nextUrgentEvent.title}
-            </Link>
-          </h3>
-
-          {/* Date & Location */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#d1fae5' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>📅</span>
-              <span>{formatEventDate(nextUrgentEvent.date, nextUrgentEvent.startTime, nextUrgentEvent.endTime)}</span>
-            </div>
-            {nextUrgentEvent.location && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>📍</span>
-                <span>{nextUrgentEvent.location}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Direct 1-Tap Voting Card (세번째 카드처럼 바로 투표 가능하게 통합) */}
-          <div
-            style={{
-              marginTop: '14px',
-              padding: '12px 14px',
-              background: '#ffffff',
-              borderRadius: '16px',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '13px' }}>🗳️</span>
-                <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--ink-dark)' }}>
-                  {nextUrgentEvent.myVote ? (
-                    <span style={{ color: '#059669' }}>
-                      내 투표: <strong>{VOTE_LABELS[nextUrgentEvent.myVote]}</strong> ✅
-                    </span>
-                  ) : (
-                    <span style={{ color: '#d97706' }}>
-                      참석 여부를 바로 선택해 주세요!
-                    </span>
-                  )}
-                </span>
-              </div>
-              <Link
-                to={`/events/${nextUrgentEvent.id}`}
-                style={{ fontSize: '11.5px', fontWeight: '700', color: 'var(--ink-muted)', textDecoration: 'none' }}
-              >
-                상세보기 ›
-              </Link>
-            </div>
-
-            {/* Live Vote Progress Bar */}
-            <HomeVoteProgressBar event={nextUrgentEvent} />
-
-            {/* Direct Voting Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '10px' }}>
-              {VOTE_CHOICES.map((c) => {
-                const isSelected = nextUrgentEvent.myVote === c;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    disabled={heroVoting}
-                    onClick={() => handleHeroVote(nextUrgentEvent.id, c, nextUrgentEvent.myVote)}
-                    className={`home-vote-btn home-vote-btn--${c.toLowerCase()}${isSelected ? ' is-selected' : ''}`}
-                    style={{
-                      height: '42px',
-                      fontSize: '13.5px',
-                      fontWeight: '800',
-                      borderRadius: '12px',
-                    }}
-                  >
-                    <span className="home-vote-btn__label">{VOTE_LABELS[c]}</span>
-                    <span className="home-vote-btn__count">({nextUrgentEvent.voteCounts[c]})</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 지금 필요한 것 Action Cards (미납 회비 등 꼭 필요한 경우만 노출) */}
+      {/* 지금 필요한 것 Action Cards (미납 회비 등 꼭 필요한 경우만 노출 - 최상단 배치) */}
       {actionItems.length > 0 && (
-        <section style={{ marginBottom: '24px' }}>
+        <section style={{ marginBottom: '20px' }}>
           <h2 className="home-section__title" style={{ marginBottom: '12px', fontSize: '15px', color: 'var(--ink-dark)' }}>지금 필요한 것</h2>
           <div className="home-action-cards">
             {actionItems.map((item, i) => (
@@ -1064,7 +810,7 @@ function HomeDashboard() {
 
       {/* Loading Indicator */}
       {loading && (
-        <LoadingIndicator message="모임 일정을 불러오는 중입니다…" onRetry={load} />
+        <LoadingIndicator message="모임 일정을 불러오는 중입니다…" onRetry={() => load()} />
       )}
 
       {/* 진행 중인 일정이 아예 없을 때의 빈 상태 */}
@@ -1082,18 +828,18 @@ function HomeDashboard() {
         </div>
       )}
 
-      {/* 다음 진행 예정 일정 카드 목록 (Hero 카드 외에 추가 일정이 있는 경우) */}
-      {!loading && remainingUpcoming.length > 0 && (
-        <section className="home-section" style={{ marginTop: '20px' }}>
+      {/* 다음 진행 예정 일정 카드 목록 (모든 일정 노출) */}
+      {!loading && upcoming.length > 0 && (
+        <section className="home-section" style={{ marginTop: actionItems.length > 0 ? '8px' : '0px' }}>
           <h2 className="home-section__title" style={{ fontSize: '15px', color: 'var(--ink-dark)', marginBottom: '12px' }}>
             다음 진행 일정
             <span className="home-section__count" style={{ background: 'var(--accent-soft)', color: 'var(--accent)', marginLeft: '6px' }}>
-              {remainingUpcoming.length}
+              {upcoming.length}
             </span>
           </h2>
           <div className="home-event-list">
-            {remainingUpcoming.map((ev) => (
-              <HomeEventCard key={ev.id} event={ev} votable onVoted={load} />
+            {upcoming.map((ev) => (
+              <HomeEventCard key={ev.id} event={ev} votable onVoted={() => load(true)} />
             ))}
           </div>
         </section>
@@ -1177,23 +923,6 @@ function HomeDashboard() {
         </div>
       )}
 
-      {/* Hero Event Share Modal */}
-      {nextUrgentEvent && (
-        <EventShareModal
-          isOpen={showHeroShare}
-          onClose={() => setShowHeroShare(false)}
-          event={{
-            id: nextUrgentEvent.id,
-            title: nextUrgentEvent.title,
-            date: nextUrgentEvent.date,
-            startTime: nextUrgentEvent.startTime,
-            endTime: nextUrgentEvent.endTime,
-            location: nextUrgentEvent.location,
-            groupName: nextUrgentEvent.group.name,
-            groupProfileImageUrl: nextUrgentEvent.group.profileImageUrl,
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -200,25 +200,31 @@ export default function EventCard({
           radius={14}
         />
         <div className="home-event-card__content-right">
-          <h3>
-            <Link to={`/events/${event.id}`}>{event.title}</Link>
-          </h3>
-          <div className="home-event-card__meta">
-            <div className="home-event-card__meta-date">
-              📅 {formatEventDateTime(event.date, event.startTime, event.endTime)}
-            </div>
-            {event.location && (
-              <div className="home-event-card__meta-location">
-                📍 {event.location}
-                {event.myTeam && (
-                  <span className="home-event-card__team">
-                    {' '}
-                    · {formatTeamLabel(event.myTeam)}
-                  </span>
-                )}
+          <Link
+            to={`/groups/${event.group.id}`}
+            className="home-event-card__text-link"
+            style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+          >
+            <h3>
+              {event.title}
+            </h3>
+            <div className="home-event-card__meta">
+              <div className="home-event-card__meta-date">
+                📅 {formatEventDateTime(event.date, event.startTime, event.endTime)}
               </div>
-            )}
-          </div>
+              {event.location && (
+                <div className="home-event-card__meta-location">
+                  📍 {event.location}
+                  {event.myTeam && (
+                    <span className="home-event-card__team">
+                      {' '}
+                      · {formatTeamLabel(event.myTeam)}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </Link>
         </div>
       </div>
 
