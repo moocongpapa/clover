@@ -172,9 +172,9 @@
 
 .group-card-link {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 16px 4px;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 4px;
   text-decoration: none;
   color: inherit;
   width: 100%;
@@ -189,11 +189,11 @@
   background-color: rgba(0, 0, 0, 0.03);
 }
 
-/* Left: Square Thumbnail (당근 96x96 라운드 스퀘어) */
+/* Left: Square Thumbnail (균형 잡힌 76x76 라운드 스퀘어) */
 .group-card-thumb {
   flex-shrink: 0;
-  width: 96px;
-  height: 96px;
+  width: 76px;
+  height: 76px;
   border-radius: 16px;
   overflow: hidden;
   background: var(--grey-100, #f1f5f9);
@@ -287,27 +287,34 @@
 .group-card-meta {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 12.5px;
+  gap: 6px;
+  font-size: 12px;
   color: var(--ink-muted, #64748b);
   margin-top: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  width: 100%;
+  min-width: 0;
 }
 
 .group-card-location {
   color: #475569;
-  font-weight: 600;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .group-card-dot {
   color: #cbd5e1;
+  flex-shrink: 0;
 }
 
 .group-card-members {
-  color: var(--ink-muted, #64748b);
+  color: var(--ink-dark, #191f28);
   font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Action Badges & Buttons */

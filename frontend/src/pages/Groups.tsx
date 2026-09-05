@@ -106,12 +106,12 @@ function GroupCard({
         className="group-card-link"
         onClick={handleCardClick}
       >
-        {/* Left: Square Thumbnail (당근 스타일 96x96) */}
+        {/* Left: Square Thumbnail (균형 잡힌 76x76 라운드 스퀘어) */}
         <div className="group-card-thumb">
           <GroupAvatar
             src={group.profileImageUrl}
             name={group.name}
-            size={96}
+            size={76}
             radius={16}
             className="group-card-avatar"
           />
@@ -138,7 +138,7 @@ function GroupCard({
           )}
 
           <div className="group-card-meta">
-            <span className="group-card-location">
+            <span className="group-card-location" title={locationText}>
               📍 {locationText} {distanceStr ? `(${distanceStr})` : ''}
             </span>
             <span className="group-card-dot">·</span>
