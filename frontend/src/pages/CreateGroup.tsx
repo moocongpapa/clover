@@ -511,7 +511,7 @@ export default function CreateGroup() {
                 disabled={monthlyFee === 0}
               >
                 <option value="">{monthlyFee === 0 ? '회비 없음 (미설정)' : '미설정'}</option>
-                {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
                   <option key={day} value={day}>
                     매월 {day}일 마감
                   </option>

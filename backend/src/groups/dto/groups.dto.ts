@@ -16,6 +16,11 @@ import {
 import { Type } from 'class-transformer';
 import { MemberRole, MemberStatus } from '@prisma/client';
 
+const VALID_DUE_DAYS = [
+  ...Array.from({ length: 28 }, (_, index) => index + 1),
+  31,
+] as const;
+
 export class GroupArenaDto {
   @IsString()
   @IsNotEmpty()
@@ -97,7 +102,8 @@ export class CreateGroupDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(28)
+  @Max(31)
+  @IsIn(VALID_DUE_DAYS)
   dueDay?: number;
 
   @IsOptional()
@@ -180,7 +186,8 @@ export class UpdateGroupDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(28)
+  @Max(31)
+  @IsIn(VALID_DUE_DAYS)
   dueDay?: number | null;
 
   @IsOptional()

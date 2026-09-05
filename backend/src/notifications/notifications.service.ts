@@ -427,16 +427,22 @@ export class NotificationsService {
     for (const group of groups) {
       if (!group.dueDay) continue;
 
-      // Calculate check date (1 day before the due day of this month)
-      const targetDate = new Date(year, month - 1, group.dueDay);
+      // 31 is the "month end" sentinel. It must resolve to the final day of
+      // the current month instead of rolling into the following month.
+      const targetDate =
+        group.dueDay === 31
+          ? new Date(year, month, 0)
+          : new Date(year, month - 1, group.dueDay);
       const checkDate = new Date(targetDate.getTime() - 24 * 60 * 60 * 1000);
+      const dueDayLabel =
+        group.dueDay === 31 ? '매월 말일' : `매월 ${group.dueDay}일`;
 
       const isTodayOneDayBefore = localDayStart(now).getTime() === localDayStart(checkDate).getTime();
 
       if (isTodayOneDayBefore) {
         const pushTitle = `[${group.name}] 이번 달 회비 납부 안내 💰`;
-        const pushBody = `내일은 매월 ${group.dueDay}일 회비 마감일입니다. 계좌번호: ${group.bankName || ''} ${group.bankAccountNumber || ''}`;
-        const message = `[${group.name}] 회비 납부 안내: 회비 마감일(매월 ${group.dueDay}일) 하루 전입니다. 계좌번호: ${group.bankName || ''} ${group.bankAccountNumber || ''}로 납부를 부탁드립니다.`;
+        const pushBody = `내일은 ${dueDayLabel} 회비 마감일입니다. 계좌번호: ${group.bankName || ''} ${group.bankAccountNumber || ''}`;
+        const message = `[${group.name}] 회비 납부 안내: 회비 마감일(${dueDayLabel}) 하루 전입니다. 계좌번호: ${group.bankName || ''} ${group.bankAccountNumber || ''}로 납부를 부탁드립니다.`;
 
         for (const member of group.members) {
           // Check if exempt

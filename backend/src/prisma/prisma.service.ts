@@ -1,12 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { migrateLegacyCategories } from '../common/utils/category.utils';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
   async onModuleInit() {
     await this.$connect();
-    await migrateLegacyCategories(this);
     await this.backfillBirthDates();
   }
 

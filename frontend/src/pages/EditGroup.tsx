@@ -9,6 +9,11 @@ import BackButton from '../components/BackButton';
 import { api, CATEGORY_OPTIONS, isStaffRole, normalizeCategory } from '../api';
 import './CreateGroup.css';
 
+function toSupportedDueDay(dueDay?: number | null): number | undefined {
+  if (!dueDay) return undefined;
+  return dueDay <= 28 ? dueDay : 31;
+}
+
 export default function EditGroup() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -85,7 +90,10 @@ export default function EditGroup() {
         setMaxMembers(g.maxMembers || 50);
         setMonthlyFee(g.monthlyFee || undefined);
         setMonthlyFeeInput(g.monthlyFee ? g.monthlyFee.toLocaleString() : '');
-        setDueDay(g.dueDay || undefined);
+        // Legacy values 29 and 30 were selectable before the server validation
+        // was introduced. Preserve their month-end intent with the supported
+        // 31 (month end) value so unrelated edits can be saved.
+        setDueDay(toSupportedDueDay(g.dueDay));
         setOfficerFeeExempt(g.officerFeeExempt || false);
         setIsPublic(g.isPublic !== false);
 
@@ -598,7 +606,7 @@ export default function EditGroup() {
                 disabled={monthlyFee === 0}
               >
                 <option value="">{monthlyFee === 0 ? '회비 없음 (미설정)' : '미설정'}</option>
-                {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
                   <option key={day} value={day}>
                     매월 {day}일 마감
                   </option>
