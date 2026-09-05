@@ -937,12 +937,12 @@ function HomeDashboard() {
                   color: '#191919',
                   cursor: 'pointer',
                   padding: 0,
+                  fontSize: '13px',
                 }}
-                title="카카오톡으로 일정 및 투표 공유"
+                title="일정 및 투표 공유"
+                aria-label="공유"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
-                </svg>
+                💬
               </button>
             </div>
           </div>

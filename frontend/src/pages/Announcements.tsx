@@ -171,23 +171,21 @@ export default function Announcements() {
                         background: '#fee500',
                         border: 'none',
                         borderRadius: '8px',
-                        padding: '4px 8px',
-                        display: 'flex',
+                        width: '28px',
+                        height: '28px',
+                        display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
-                        fontWeight: 700,
+                        justifyContent: 'center',
+                        fontSize: '13px',
                         color: '#191919',
                         cursor: 'pointer',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                        padding: 0,
                       }}
-                      title="카카오톡 공유"
-                      aria-label="카카오톡 공유"
+                      title="공유하기"
+                      aria-label="공유하기"
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#000000">
-                        <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
-                      </svg>
-                      <span>공유</span>
+                      💬
                     </button>
 
                     {canManage && (

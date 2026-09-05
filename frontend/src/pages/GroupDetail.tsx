@@ -1496,23 +1496,21 @@ export default function GroupDetail() {
                               background: '#fee500',
                               border: 'none',
                               borderRadius: '8px',
-                              padding: '4px 9px',
+                              width: '28px',
+                              height: '28px',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
-                              fontSize: '12px',
-                              fontWeight: 700,
+                              justifyContent: 'center',
+                              fontSize: '13px',
                               color: '#191919',
                               cursor: 'pointer',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                              padding: 0,
                             }}
-                            title="카카오톡으로 공유하기"
-                            aria-label="카카오톡으로 공유하기"
+                            title="공유하기"
+                            aria-label="공유하기"
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#000000">
-                              <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
-                            </svg>
-                            <span>카톡 공유</span>
+                            💬
                           </button>
                         </div>
 
@@ -1700,23 +1698,23 @@ export default function GroupDetail() {
                                 marginLeft: 'auto',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '3px',
-                                padding: '4px 9px',
-                                borderRadius: '20px',
-                                fontSize: '11px',
-                                fontWeight: 700,
+                                justifyContent: 'center',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '8px',
+                                fontSize: '13px',
                                 background: '#fee500',
                                 color: '#191919',
                                 border: '1px solid #e6cf00',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
+                                padding: 0,
+                                flexShrink: 0,
                               }}
-                              title="카카오톡으로 일정 및 참석 투표 공유"
+                              title="일정 및 투표 공유"
+                              aria-label="일정 및 투표 공유"
                             >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.8-.8 3-1 3.5 0 .1 0 .2.1.2.1 0 .2 0 .3-.1.4-.3 3.4-2.3 4.7-3.2.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8s-4.5-8-10-8z" />
-                              </svg>
-                              <span>카톡 공유</span>
+                              💬
                             </button>
                           </div>
                         )}
