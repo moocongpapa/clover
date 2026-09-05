@@ -1,4 +1,4 @@
-const API_URL = process.env.API_URL ?? 'http://localhost:3000';
+const API_URL = process.env.API_URL ?? "http://localhost:3000";
 
 export interface AuthSession {
   accessToken: string;
@@ -11,7 +11,7 @@ async function request<T>(
   token?: string,
 ): Promise<T> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -20,15 +20,15 @@ async function request<T>(
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(
-      `${options.method ?? 'GET'} ${path} → ${res.status}: ${body.message ?? res.statusText}`,
+      `${options.method ?? "GET"} ${path} → ${res.status}: ${body.message ?? res.statusText}`,
     );
   }
   return res.json();
 }
 
 export async function devLogin(displayName: string): Promise<AuthSession> {
-  return request<AuthSession>('/auth/dev-login', {
-    method: 'POST',
+  return request<AuthSession>("/auth/dev-login", {
+    method: "POST",
     body: JSON.stringify({ displayName }),
   });
 }
@@ -44,15 +44,16 @@ export async function createGroup(
     activitySigungu?: string;
     activityDistrict?: string;
     activityTown?: string;
+    maxMembers?: number;
   },
 ) {
   return request<{ id: string; inviteCode: string }>(
-    '/groups',
+    "/groups",
     {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({
-        activitySido: '서울특별시',
-        activitySigungu: '강남구',
+        activitySido: "서울특별시",
+        activitySigungu: "강남구",
         ...data,
       }),
     },
@@ -61,7 +62,7 @@ export async function createGroup(
 }
 
 export async function joinGroup(token: string, groupId: string) {
-  return request(`/groups/${groupId}/join`, { method: 'POST' }, token);
+  return request(`/groups/${groupId}/join`, { method: "POST" }, token);
 }
 
 export async function approveMember(
@@ -71,7 +72,7 @@ export async function approveMember(
 ) {
   return request(
     `/groups/${groupId}/members/${userId}`,
-    { method: 'PATCH', body: JSON.stringify({ status: 'APPROVED' }) },
+    { method: "PATCH", body: JSON.stringify({ status: "APPROVED" }) },
     token,
   );
 }
@@ -89,7 +90,7 @@ export async function createEvent(
 ) {
   return request<{ id: string; title: string }>(
     `/groups/${groupId}/events`,
-    { method: 'POST', body: JSON.stringify(data) },
+    { method: "POST", body: JSON.stringify(data) },
     token,
   );
 }
@@ -107,23 +108,23 @@ export async function updateEvent(
 ) {
   return request(
     `/events/${eventId}`,
-    { method: 'PATCH', body: JSON.stringify(data) },
+    { method: "PATCH", body: JSON.stringify(data) },
     token,
   );
 }
 
 export async function cancelEvent(token: string, eventId: string) {
-  return request(`/events/${eventId}/cancel`, { method: 'POST' }, token);
+  return request(`/events/${eventId}/cancel`, { method: "POST" }, token);
 }
 
 export async function castVote(
   token: string,
   eventId: string,
-  choice: 'ATTEND' | 'ABSENT' | 'LATE',
+  choice: "ATTEND" | "ABSENT" | "LATE",
 ) {
   return request(
     `/events/${eventId}/votes`,
-    { method: 'POST', body: JSON.stringify({ choice }) },
+    { method: "POST", body: JSON.stringify({ choice }) },
     token,
   );
 }
@@ -139,19 +140,24 @@ export async function getVotes(token: string, eventId: string) {
 export async function getNotifications(token: string) {
   return request<
     Array<{ type: string; event: { title: string }; sentAt: string }>
-  >('/notifications', {}, token);
+  >("/notifications", {}, token);
 }
 
 export async function triggerReminders() {
-  return request<{ ok: boolean }>('/notifications/dev/trigger-reminders', {
-    method: 'POST',
+  const testSecret = process.env.E2E_TEST_SECRET;
+  if (!testSecret) {
+    throw new Error("E2E_TEST_SECRET is not configured.");
+  }
+  return request<{ ok: boolean }>("/notifications/dev/trigger-reminders", {
+    method: "POST",
+    headers: { "X-E2E-Test-Secret": testSecret },
   });
 }
 
 export function formatDate(d: Date): string {
   const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
@@ -172,10 +178,10 @@ export function today(): string {
 
 export function pastStartTime(): string {
   const d = new Date(Date.now() - 30 * 60 * 1000);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 export function futureStartTime(): string {
   const d = new Date(Date.now() + 2 * 3600 * 1000);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }

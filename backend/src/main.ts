@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { isAllowedOrigin } from './common/utils/origin.utils';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -38,7 +39,6 @@ async function bootstrap() {
     'FRONTEND_URL',
     'https://clover-gilt.vercel.app,http://localhost:5174',
   );
-  const allowedOrigins = frontendUrl.split(',').map((o) => o.trim());
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin) {
@@ -46,14 +46,11 @@ async function bootstrap() {
         return;
       }
       try {
-        const hostname = new URL(origin).hostname;
-        const isAllowed =
-          allowedOrigins.includes(origin) ||
-          (hostname.endsWith('.vercel.app') && hostname.includes('clover')) ||
-          hostname === 'localhost' ||
-          /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(
-            origin,
-          );
+        const isAllowed = isAllowedOrigin(
+          origin,
+          frontendUrl,
+          config.get<string>('NODE_ENV'),
+        );
         callback(null, isAllowed);
       } catch {
         callback(null, false);
@@ -61,7 +58,12 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+    ],
   });
 
   app.useGlobalPipes(

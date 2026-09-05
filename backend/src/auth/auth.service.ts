@@ -10,7 +10,12 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
-import { DevLoginDto, UpdateProfileDto, CreateProfileCardDto, UpdateProfileCardDto } from './dto/auth.dto';
+import {
+  DevLoginDto,
+  UpdateProfileDto,
+  CreateProfileCardDto,
+  UpdateProfileCardDto,
+} from './dto/auth.dto';
 import { Gender } from '@prisma/client';
 import { calculateUserCloverScore } from '../common/utils/clover.utils';
 
@@ -30,6 +35,17 @@ const USER_PROFILE_SELECT = {
   cloverScore: true,
   createdAt: true,
   role: true,
+} as const;
+
+const USER_PUBLIC_PROFILE_SELECT = {
+  id: true,
+  displayName: true,
+  profileImageUrl: true,
+  gender: true,
+  birthYear: true,
+  isEarlyYear: true,
+  bio: true,
+  cloverScore: true,
 } as const;
 
 interface KakaoTokenResponse {
@@ -65,24 +81,32 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async kakaoCallback(code: string, customRedirectUri?: string) {
+  async kakaoCallback(code: string) {
     const restApiKey = this.config.get<string>('KAKAO_REST_API_KEY');
-    const redirectUri = customRedirectUri || this.config.get<string>('KAKAO_REDIRECT_URI') || 'https://clover-gilt.vercel.app/login';
+    const redirectUri =
+      this.config.get<string>('KAKAO_REDIRECT_URI') ||
+      'https://clover-gilt.vercel.app/login';
 
-    const isDevLoginEnabled = this.config.get<string>('DEV_LOGIN_ENABLED') === 'true';
-    if (code.startsWith('mock_kakao_code') || (!restApiKey && isDevLoginEnabled)) {
+    const isDevLoginEnabled = this.isDevLoginEnabled();
+    if (
+      code.startsWith('mock_kakao_code') ||
+      (!restApiKey && isDevLoginEnabled)
+    ) {
       if (!isDevLoginEnabled) {
         throw new UnauthorizedException('개발 로그인이 비활성화되어 있습니다.');
       }
       const parts = code.split(':');
-      const nickname = parts[1] ? decodeURIComponent(parts[1]).trim() : '카카오 사용자';
+      const nickname = parts[1]
+        ? decodeURIComponent(parts[1]).trim()
+        : '카카오 사용자';
       const kakaoId = `kakao-${nickname.toLowerCase().replace(/\s+/g, '-')}`;
 
       const kakaoUser = {
         id: kakaoId,
         properties: {
           nickname: nickname || '카카오 사용자',
-          profile_image: 'https://k.kakaocdn.net/dn/dpk94b/btqmnhh2t6b/9g0i4k9Kk58k266000000/img_640x640.jpg',
+          profile_image:
+            'https://k.kakaocdn.net/dn/dpk94b/btqmnhh2t6b/9g0i4k9Kk58k266000000/img_640x640.jpg',
         },
       };
 
@@ -122,9 +146,17 @@ export class AuthService {
         },
       );
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error_description || err.response?.data?.error || err.message;
-      this.logger.error(`Kakao token request failed: ${errorMsg}`, err.response?.data);
-      throw new BadRequestException(`카카오 로그인 토큰 발급 실패: ${errorMsg}`);
+      const errorMsg =
+        err.response?.data?.error_description ||
+        err.response?.data?.error ||
+        err.message;
+      this.logger.error(
+        `Kakao token request failed: ${errorMsg}`,
+        err.response?.data,
+      );
+      throw new BadRequestException(
+        `카카오 로그인 토큰 발급 실패: ${errorMsg}`,
+      );
     }
 
     let userRes: { data: KakaoUserResponse };
@@ -140,19 +172,20 @@ export class AuthService {
     } catch (err: any) {
       const errorMsg = err.response?.data?.error_description || err.message;
       this.logger.error(`Kakao user profile request failed: ${errorMsg}`);
-      throw new UnauthorizedException(`카카오 사용자 정보 조회 실패: ${errorMsg}`);
+      throw new UnauthorizedException(
+        `카카오 사용자 정보 조회 실패: ${errorMsg}`,
+      );
     }
 
     // Sync Kakao Friends list talk UUIDs
     try {
-      const friendsRes = await axios.get<{ elements: Array<{ id: number; uuid: string }> }>(
-        'https://kapi.kakao.com/v1/api/talk/friends',
-        {
-          headers: {
-            Authorization: `Bearer ${tokenRes.data.access_token}`,
-          },
+      const friendsRes = await axios.get<{
+        elements: Array<{ id: number; uuid: string }>;
+      }>('https://kapi.kakao.com/v1/api/talk/friends', {
+        headers: {
+          Authorization: `Bearer ${tokenRes.data.access_token}`,
         },
-      );
+      });
       if (friendsRes.data?.elements) {
         for (const friend of friendsRes.data.elements) {
           await this.prisma.user.updateMany({
@@ -167,7 +200,10 @@ export class AuthService {
 
     const kakaoUser = userRes.data;
     const account = kakaoUser.kakao_account;
-    const nickname = kakaoUser.properties?.nickname || account?.profile?.nickname || '카카오 사용자';
+    const nickname =
+      kakaoUser.properties?.nickname ||
+      account?.profile?.nickname ||
+      '카카오 사용자';
 
     let gender: Gender | null = null;
     if (account?.gender === 'male') gender = Gender.MALE;
@@ -195,8 +231,13 @@ export class AuthService {
       }
     }
 
-    const rawImage = kakaoUser.properties?.profile_image || account?.profile?.profile_image_url || null;
-    const profileImageUrl = rawImage ? rawImage.replace(/^http:\/\//i, 'https://') : null;
+    const rawImage =
+      kakaoUser.properties?.profile_image ||
+      account?.profile?.profile_image_url ||
+      null;
+    const profileImageUrl = rawImage
+      ? rawImage.replace(/^http:\/\//i, 'https://')
+      : null;
 
     const user = await this.prisma.user.upsert({
       where: { kakaoId: String(kakaoUser.id) },
@@ -225,7 +266,7 @@ export class AuthService {
   }
 
   async devLogin(dto: DevLoginDto) {
-    const enabled = this.config.get<string>('DEV_LOGIN_ENABLED') === 'true';
+    const enabled = this.isDevLoginEnabled();
     if (!enabled) {
       throw new UnauthorizedException('개발 로그인이 비활성화되어 있습니다.');
     }
@@ -263,14 +304,16 @@ export class AuthService {
       select: USER_PROFILE_SELECT,
     });
     if (!user) {
-      throw new UnauthorizedException('사용자를 찾을 수 없습니다. 다시 로그인해 주세요.');
+      throw new UnauthorizedException(
+        '사용자를 찾을 수 없습니다. 다시 로그인해 주세요.',
+      );
     }
-    
+
     // Check if the user has any profile cards
     const cardsCount = await this.prisma.userProfileCard.count({
       where: { userId },
     });
-    
+
     if (cardsCount === 0) {
       // Create default profile card
       await this.prisma.userProfileCard.create({
@@ -281,47 +324,81 @@ export class AuthService {
         },
       });
     }
-    
+
     // Dynamically calculate clover score
     const currentScore = await calculateUserCloverScore(this.prisma, userId);
     if (user.cloverScore !== currentScore) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { cloverScore: currentScore },
-      }).catch(() => {});
+      await this.prisma.user
+        .update({
+          where: { id: userId },
+          data: { cloverScore: currentScore },
+        })
+        .catch(() => {});
       return { ...user, cloverScore: currentScore };
     }
 
     return user;
   }
 
-  async getUser(userId: string) {
+  async getUser(userId: string, requesterUserId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: USER_PROFILE_SELECT,
+      select: USER_PUBLIC_PROFILE_SELECT,
     });
     if (!user) {
       throw new NotFoundException('존재하지 않는 회원입니다.');
     }
 
+    const canViewContact =
+      userId === requesterUserId ||
+      Boolean(
+        await this.prisma.groupMember.findFirst({
+          where: {
+            userId,
+            status: 'APPROVED',
+            group: {
+              members: {
+                some: { userId: requesterUserId, status: 'APPROVED' },
+              },
+            },
+          },
+          select: { id: true },
+        }),
+      );
+
+    const contact = canViewContact
+      ? await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { phoneNumber: true },
+        })
+      : null;
+
     // Dynamically calculate clover score
     const currentScore = await calculateUserCloverScore(this.prisma, userId);
     if (user.cloverScore !== currentScore) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { cloverScore: currentScore },
-      }).catch(() => {});
-      return { ...user, cloverScore: currentScore };
+      await this.prisma.user
+        .update({
+          where: { id: userId },
+          data: { cloverScore: currentScore },
+        })
+        .catch(() => {});
+      return {
+        ...user,
+        phoneNumber: contact?.phoneNumber ?? null,
+        cloverScore: currentScore,
+      };
     }
 
-    return user;
+    return { ...user, phoneNumber: contact?.phoneNumber ?? null };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     return this.prisma.user.update({
       where: { id: userId },
       data: {
-        ...(dto.displayName !== undefined ? { displayName: dto.displayName } : {}),
+        ...(dto.displayName !== undefined
+          ? { displayName: dto.displayName }
+          : {}),
         ...(dto.profileImageUrl !== undefined
           ? { profileImageUrl: dto.profileImageUrl }
           : {}),
@@ -330,11 +407,19 @@ export class AuthService {
         ...(dto.birthDate !== undefined
           ? { birthDate: dto.birthDate ? new Date(dto.birthDate) : null }
           : {}),
-        ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber } : {}),
+        ...(dto.phoneNumber !== undefined
+          ? { phoneNumber: dto.phoneNumber }
+          : {}),
         ...(dto.gender !== undefined ? { gender: dto.gender } : {}),
-        ...(dto.isEarlyYear !== undefined ? { isEarlyYear: dto.isEarlyYear ?? false } : {}),
-        ...(dto.kakaoNotifyEnabled !== undefined ? { kakaoNotifyEnabled: dto.kakaoNotifyEnabled } : {}),
-        ...(dto.pushNotifyEnabled !== undefined ? { pushNotifyEnabled: dto.pushNotifyEnabled } : {}),
+        ...(dto.isEarlyYear !== undefined
+          ? { isEarlyYear: dto.isEarlyYear ?? false }
+          : {}),
+        ...(dto.kakaoNotifyEnabled !== undefined
+          ? { kakaoNotifyEnabled: dto.kakaoNotifyEnabled }
+          : {}),
+        ...(dto.pushNotifyEnabled !== undefined
+          ? { pushNotifyEnabled: dto.pushNotifyEnabled }
+          : {}),
       },
       select: USER_PROFILE_SELECT,
     });
@@ -381,7 +466,11 @@ export class AuthService {
     });
   }
 
-  async updateProfileCard(userId: string, cardId: string, dto: UpdateProfileCardDto) {
+  async updateProfileCard(
+    userId: string,
+    cardId: string,
+    dto: UpdateProfileCardDto,
+  ) {
     const card = await this.prisma.userProfileCard.findUnique({
       where: { id: cardId },
     });
@@ -392,7 +481,9 @@ export class AuthService {
       where: { id: cardId },
       data: {
         ...(dto.nickname !== undefined ? { nickname: dto.nickname } : {}),
-        ...(dto.profileImageUrl !== undefined ? { profileImageUrl: dto.profileImageUrl } : {}),
+        ...(dto.profileImageUrl !== undefined
+          ? { profileImageUrl: dto.profileImageUrl }
+          : {}),
       },
     });
   }
@@ -436,7 +527,9 @@ export class AuthService {
     );
 
     if (presidentGroupsWithOthers.length > 0) {
-      const groupNames = presidentGroupsWithOthers.map((m) => `「${m.group.name}」`).join(', ');
+      const groupNames = presidentGroupsWithOthers
+        .map((m) => `「${m.group.name}」`)
+        .join(', ');
       throw new BadRequestException(
         `회장으로 운영 중인 모임(${groupNames})이 있습니다. 다른 운영진에게 회장 권한을 양도하거나 모임을 정리한 후 탈퇴해 주세요.`,
       );
@@ -444,7 +537,9 @@ export class AuthService {
 
     for (const m of user.memberships) {
       if (m.group.members.length <= 1) {
-        await this.prisma.group.delete({ where: { id: m.groupId } }).catch(() => null);
+        await this.prisma.group
+          .delete({ where: { id: m.groupId } })
+          .catch(() => null);
       }
     }
 
@@ -454,7 +549,9 @@ export class AuthService {
 
   getKakaoLoginUrl() {
     const restApiKey = this.config.get<string>('KAKAO_REST_API_KEY');
-    const redirectUri = this.config.get<string>('KAKAO_REDIRECT_URI') || 'https://clover-gilt.vercel.app/login';
+    const redirectUri =
+      this.config.get<string>('KAKAO_REDIRECT_URI') ||
+      'https://clover-gilt.vercel.app/login';
 
     if (!restApiKey) {
       return null;
@@ -467,6 +564,14 @@ export class AuthService {
     });
 
     return `https://kauth.kakao.com/oauth/authorize?${params.toString()}`;
+  }
+
+  private isDevLoginEnabled() {
+    const environment = this.config.get<string>('NODE_ENV') ?? 'development';
+    return (
+      this.config.get<string>('DEV_LOGIN_ENABLED') === 'true' &&
+      (environment === 'development' || environment === 'test')
+    );
   }
 
   private issueToken(user: {

@@ -1,19 +1,42 @@
 import {
   IsBoolean,
+  IsArray,
   IsEnum,
+  IsIn,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
+  Max,
+  MaxLength,
+  Min,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { MemberRole, MemberStatus } from '@prisma/client';
+
+export class GroupArenaDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  placeName!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(300)
+  address!: string;
+}
 
 export class CreateGroupDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   name!: string;
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(2_000)
   description!: string;
 
   @IsOptional()
@@ -56,6 +79,9 @@ export class CreateGroupDto {
   bankAccountHolder?: string;
 
   @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1_000)
   maxMembers?: number;
 
   @IsOptional()
@@ -63,9 +89,15 @@ export class CreateGroupDto {
   customSportName?: string;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10_000_000)
   monthlyFee?: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(28)
   dueDay?: number;
 
   @IsOptional()
@@ -73,16 +105,21 @@ export class CreateGroupDto {
   officerFeeExempt?: boolean;
 
   @IsOptional()
-  arenas?: { placeName: string; address: string }[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GroupArenaDto)
+  arenas?: GroupArenaDto[];
 }
 
 export class UpdateGroupDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   name!: string;
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(2_000)
   description!: string;
 
   @IsOptional()
@@ -125,6 +162,9 @@ export class UpdateGroupDto {
   bankAccountHolder?: string | null;
 
   @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1_000)
   maxMembers?: number;
 
   @IsOptional()
@@ -132,9 +172,15 @@ export class UpdateGroupDto {
   customSportName?: string | null;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10_000_000)
   monthlyFee?: number | null;
 
   @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(28)
   dueDay?: number | null;
 
   @IsOptional()
@@ -142,7 +188,10 @@ export class UpdateGroupDto {
   officerFeeExempt?: boolean;
 
   @IsOptional()
-  arenas?: { placeName: string; address: string }[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GroupArenaDto)
+  arenas?: GroupArenaDto[];
 }
 
 export class UpdateMemberDto {
@@ -158,6 +207,7 @@ export class UpdateMemberDto {
 export class UpdateMyStatusDto {
   @IsString()
   @IsNotEmpty()
+  @IsIn(['HEALTHY', 'INJURED', 'UNAVAILABLE'])
   userStatus!: string; // HEALTHY, INJURED, UNAVAILABLE
 }
 
@@ -170,11 +220,13 @@ export class TransferPresidentDto {
 export class CreateGroupMediaDto {
   @IsString()
   @IsNotEmpty()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
   url!: string;
 
   @IsString()
   @IsNotEmpty()
-  fileType!: string; // IMAGE or VIDEO
+  @IsIn(['IMAGE', 'VIDEO'])
+  fileType!: 'IMAGE' | 'VIDEO';
 }
 
 export class LinkProfileCardDto {

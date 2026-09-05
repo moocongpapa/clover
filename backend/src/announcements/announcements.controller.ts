@@ -13,7 +13,10 @@ import { AnnouncementsService } from './announcements.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
-import { CreateAnnouncementDto, UpdateAnnouncementDto } from './announcements.dto';
+import {
+  CreateAnnouncementDto,
+  UpdateAnnouncementDto,
+} from './announcements.dto';
 
 @Controller('announcements')
 export class AnnouncementsController {
@@ -26,13 +29,18 @@ export class AnnouncementsController {
   }
 
   @Get()
-  async list(@Query('groupId') groupId?: string) {
-    return this.service.list(groupId);
+  @UseGuards(JwtAuthGuard)
+  async list(
+    @CurrentUser() user: AuthUser,
+    @Query('groupId') groupId?: string,
+  ) {
+    return this.service.list(user.id, groupId);
   }
 
   @Get(':id')
-  async getById(@Param('id') id: string) {
-    return this.service.getById(id);
+  @UseGuards(JwtAuthGuard)
+  async getById(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.service.getById(id, user.id);
   }
 
   @Post()
@@ -62,10 +70,7 @@ export class AnnouncementsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  async delete(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  async delete(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.service.delete(id, user.id);
   }
 }

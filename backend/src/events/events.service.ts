@@ -5,16 +5,21 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import { EventStatus, VoteChoice, Gender } from '@prisma/client';
+import { EventStatus, VoteChoice, Gender, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupsService } from '../groups/groups.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateEventDto, UpdateEventDto, SplitTeamsDto } from './dto/events.dto';
-import { isOfficer, parseEventDate, canSplitTeams } from '../common/utils/group.utils';
 import {
-  shuffleAndSplit,
-  teamLabelForIndex,
-} from '../common/utils/team.utils';
+  CreateEventDto,
+  UpdateEventDto,
+  SplitTeamsDto,
+} from './dto/events.dto';
+import {
+  isOfficer,
+  parseEventDate,
+  canSplitTeams,
+} from '../common/utils/group.utils';
+import { shuffleAndSplit, teamLabelForIndex } from '../common/utils/team.utils';
 
 @Injectable()
 export class EventsService {
@@ -27,23 +32,30 @@ export class EventsService {
   ) {}
 
   async listByGroup(groupId: string, userId: string) {
-    const membership = await this.groupsService.requireApprovedMember(groupId, userId);
+    const membership = await this.groupsService.requireApprovedMember(
+      groupId,
+      userId,
+    );
     const userIsOfficer = isOfficer(membership.role);
 
     const now = new Date();
     const whereCondition: any = { groupId };
     if (!userIsOfficer) {
-      whereCondition.OR = [
-        { publishAt: null },
-        { publishAt: { lte: now } },
-      ];
+      whereCondition.OR = [{ publishAt: null }, { publishAt: { lte: now } }];
     }
 
     const events = await this.prisma.event.findMany({
       where: whereCondition,
       include: {
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
         },
         _count: { select: { votes: true } },
       },
@@ -64,7 +76,14 @@ export class EventsService {
       include: {
         group: { select: { id: true, name: true } },
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
         },
       },
     });
@@ -74,11 +93,14 @@ export class EventsService {
     }
 
     await this.groupsService.requireApprovedMember(event.groupId, userId);
-    
+
     if (event.createdBy) {
-      await this.groupsService.resolveGroupProfileForUser(event.groupId, event.createdBy);
+      await this.groupsService.resolveGroupProfileForUser(
+        event.groupId,
+        event.createdBy,
+      );
     }
-    
+
     return event;
   }
 
@@ -112,7 +134,14 @@ export class EventsService {
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
         },
       },
     });
@@ -120,17 +149,29 @@ export class EventsService {
     await this.notifications.notifyGroupMembers(event.id, 'CREATED', userId);
 
     // Handle recurring events
-    if (dto.repeatType && dto.repeatType !== 'none' && dto.repeatCount && dto.repeatCount > 1) {
+    if (
+      dto.repeatType &&
+      dto.repeatType !== 'none' &&
+      dto.repeatCount &&
+      dto.repeatCount > 1
+    ) {
       const intervalDays = dto.repeatType === 'biweekly' ? 14 : 7;
       const baseDate = parseEventDate(dto.date);
-      const openDays = dto.openDaysBefore !== undefined ? dto.openDaysBefore : 3;
-      const [openHour, openMinute] = (dto.openTime || '12:00').split(':').map(Number);
-      
+      const openDays =
+        dto.openDaysBefore !== undefined ? dto.openDaysBefore : 3;
+      const [openHour, openMinute] = (dto.openTime || '12:00')
+        .split(':')
+        .map(Number);
+
       for (let i = 1; i < dto.repeatCount; i++) {
-        const nextDate = new Date(baseDate.getTime() + intervalDays * i * 24 * 60 * 60 * 1000);
-        
+        const nextDate = new Date(
+          baseDate.getTime() + intervalDays * i * 24 * 60 * 60 * 1000,
+        );
+
         // Calculate publishAt: openDays before nextDate at openHour:openMinute
-        const publishAt = new Date(nextDate.getTime() - openDays * 24 * 60 * 60 * 1000);
+        const publishAt = new Date(
+          nextDate.getTime() - openDays * 24 * 60 * 60 * 1000,
+        );
         publishAt.setHours(openHour, openMinute, 0, 0);
 
         // If publishAt is already in the past (e.g. registered less than openDays before), publish immediately
@@ -177,7 +218,14 @@ export class EventsService {
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
         },
       },
     });
@@ -204,7 +252,13 @@ export class EventsService {
   async getTeams(eventId: string, userId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, groupId: true, status: true, date: true, startTime: true },
+      select: {
+        id: true,
+        groupId: true,
+        status: true,
+        date: true,
+        startTime: true,
+      },
     });
 
     if (!event) {
@@ -221,12 +275,26 @@ export class EventsService {
       orderBy: { round: 'desc' },
       include: {
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
         },
         assignments: {
           include: {
             user: {
-              select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+              select: {
+                id: true,
+                displayName: true,
+                profileImageUrl: true,
+                gender: true,
+                birthYear: true,
+                isEarlyYear: true,
+              },
             },
           },
         },
@@ -234,7 +302,9 @@ export class EventsService {
     });
 
     const isUserOfficer = isOfficer(membership.role);
-    const formattedSplits = splits.map(s => this.formatTeamsResponse(s, userId, isUserOfficer));
+    const formattedSplits = splits.map((s) =>
+      this.formatTeamsResponse(s, userId, isUserOfficer),
+    );
     const latestSplit = formattedSplits[0] || null;
 
     return {
@@ -275,16 +345,48 @@ export class EventsService {
     }>;
 
     if (members && members.length > 0) {
+      if (members.some((member) => member.choice === VoteChoice.ABSENT)) {
+        throw new BadRequestException(
+          '그룹 나누기 대상에는 참석 또는 늦참 회원만 포함할 수 있습니다.',
+        );
+      }
+
       const userIds = members.map((m) => m.userId);
-      const dbUsers = await this.prisma.user.findMany({
-        where: { id: { in: userIds } },
-        select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+      const groupMembers = await this.prisma.groupMember.findMany({
+        where: {
+          groupId: event.groupId,
+          status: 'APPROVED',
+          userId: { in: userIds },
+        },
+        select: {
+          userId: true,
+          user: {
+            select: {
+              id: true,
+              displayName: true,
+              profileImageUrl: true,
+              gender: true,
+              birthYear: true,
+              isEarlyYear: true,
+            },
+          },
+        },
       });
 
-      attendeeVotes = dbUsers.map((user) => {
-        const matchingMember = members.find((m) => m.userId === user.id);
+      if (groupMembers.length !== userIds.length) {
+        throw new BadRequestException(
+          '그룹 나누기 대상에는 승인된 모임 회원만 포함할 수 있습니다.',
+        );
+      }
+
+      const userById = new Map(
+        groupMembers.map((member) => [member.userId, member.user]),
+      );
+
+      attendeeVotes = members.map((member) => {
+        const user = userById.get(member.userId)!;
         return {
-          choice: matchingMember ? matchingMember.choice : VoteChoice.ATTEND,
+          choice: member.choice,
           user,
         };
       });
@@ -296,7 +398,14 @@ export class EventsService {
         },
         include: {
           user: {
-            select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+            select: {
+              id: true,
+              displayName: true,
+              profileImageUrl: true,
+              gender: true,
+              birthYear: true,
+              isEarlyYear: true,
+            },
           },
         },
         orderBy: { votedAt: 'asc' },
@@ -320,16 +429,19 @@ export class EventsService {
     const attends = attendeeVotes.filter((v) => v.choice === VoteChoice.ATTEND);
     const lates = attendeeVotes.filter((v) => v.choice === VoteChoice.LATE);
 
-    let shuffledTeams: (typeof attendeeVotes[number])[][];
+    let shuffledTeams: (typeof attendeeVotes)[number][][];
     if (attends.length > 0) {
       // 1. 참석자들을 먼저 셔플하고 분할
       shuffledTeams = shuffleAndSplit(attends, teamCount);
-      
+
       // 2. 늦참자들을 셔플
       const shuffledLates = [...lates];
       for (let i = shuffledLates.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffledLates[i], shuffledLates[j]] = [shuffledLates[j], shuffledLates[i]];
+        [shuffledLates[i], shuffledLates[j]] = [
+          shuffledLates[j],
+          shuffledLates[i],
+        ];
       }
 
       // 3. 늦참자들을 기존 그룹들에 균등하게 분배
@@ -350,49 +462,72 @@ export class EventsService {
       shuffledTeams = shuffleAndSplit(lates, teamCount);
     }
 
-    const split = await this.prisma.$transaction(async (tx) => {
-      const latestSplit = await tx.eventTeamSplit.findFirst({
-        where: { eventId },
-        orderBy: { round: 'desc' },
-      });
-      const nextRound = latestSplit ? latestSplit.round + 1 : 1;
+    const split = await this.prisma.$transaction(
+      async (tx) => {
+        const latestSplit = await tx.eventTeamSplit.findFirst({
+          where: { eventId },
+          orderBy: { round: 'desc' },
+        });
+        const nextRound = latestSplit ? latestSplit.round + 1 : 1;
 
-      const created = await tx.eventTeamSplit.create({
-        data: {
-          eventId,
-          round: nextRound,
-          teamCount,
-          createdById: userId,
-          assignments: {
-            create: shuffledTeams.flatMap((teamVotes, index) =>
-              teamVotes.map((vote) => ({
-                userId: vote.user.id,
-                teamLabel: teamLabelForIndex(index),
-              })),
-            ),
+        const created = await tx.eventTeamSplit.create({
+          data: {
+            eventId,
+            round: nextRound,
+            teamCount,
+            createdById: userId,
+            assignments: {
+              create: shuffledTeams.flatMap((teamVotes, index) =>
+                teamVotes.map((vote) => ({
+                  userId: vote.user.id,
+                  teamLabel: teamLabelForIndex(index),
+                })),
+              ),
+            },
           },
-        },
-        include: {
-          createdBy: {
-            select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
-          },
-          assignments: {
-            include: {
-              user: {
-                select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+          include: {
+            createdBy: {
+              select: {
+                id: true,
+                displayName: true,
+                profileImageUrl: true,
+                gender: true,
+                birthYear: true,
+                isEarlyYear: true,
+              },
+            },
+            assignments: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    displayName: true,
+                    profileImageUrl: true,
+                    gender: true,
+                    birthYear: true,
+                    isEarlyYear: true,
+                  },
+                },
               },
             },
           },
-        },
-      });
+        });
 
-      return created;
-    }, { timeout: 30000 });
+        return created;
+      },
+      {
+        timeout: 30000,
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
 
     // Send KakaoTalk notifications to team split participants
     try {
       const usersToNotify = split.assignments.map((a) => a.user);
-      await this.groupsService.resolveGroupProfilesForUsers(event.groupId, usersToNotify);
+      await this.groupsService.resolveGroupProfilesForUsers(
+        event.groupId,
+        usersToNotify,
+      );
 
       const teamMap: Record<string, typeof usersToNotify> = {};
       for (const a of split.assignments) {
@@ -420,10 +555,17 @@ export class EventsService {
 
 * 전체 배정 결과는 앱에서 확인해주세요!`;
 
-        await this.notifications.sendEventNotification(user.id, event.id, 'CHANGED', message);
+        await this.notifications.sendEventNotification(
+          user.id,
+          event.id,
+          'CHANGED',
+          message,
+        );
       }
     } catch (err: any) {
-      this.logger.error(`Failed to send team split notifications for event ${eventId}: ${err.message}`);
+      this.logger.error(
+        `Failed to send team split notifications for event ${eventId}: ${err.message}`,
+      );
     }
 
     const splits = await this.prisma.eventTeamSplit.findMany({
@@ -431,19 +573,35 @@ export class EventsService {
       orderBy: { round: 'desc' },
       include: {
         createdBy: {
-          select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
         },
         assignments: {
           include: {
             user: {
-              select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true },
+              select: {
+                id: true,
+                displayName: true,
+                profileImageUrl: true,
+                gender: true,
+                birthYear: true,
+                isEarlyYear: true,
+              },
             },
           },
         },
       },
     });
 
-    const formattedSplits = splits.map(s => this.formatTeamsResponse(s, userId, true));
+    const formattedSplits = splits.map((s) =>
+      this.formatTeamsResponse(s, userId, true),
+    );
     const latestSplit = formattedSplits[0] || null;
 
     return {
@@ -468,7 +626,11 @@ export class EventsService {
       };
       assignments: Array<{
         teamLabel: string;
-        user: { id: string; displayName: string; profileImageUrl: string | null };
+        user: {
+          id: string;
+          displayName: string;
+          profileImageUrl: string | null;
+        };
       }>;
     } | null,
     userId: string,
@@ -488,9 +650,7 @@ export class EventsService {
       const members = split.assignments
         .filter((assignment) => assignment.teamLabel === label)
         .map((assignment) => assignment.user)
-        .sort((a, b) =>
-          a.displayName.localeCompare(b.displayName, 'ko'),
-        );
+        .sort((a, b) => a.displayName.localeCompare(b.displayName, 'ko'));
 
       return { label, members };
     });
@@ -529,7 +689,9 @@ export class EventsService {
 
     const isCreator = event.createdById === userId;
     if (!isOfficer(membership.role) && !isCreator) {
-      throw new ForbiddenException('운영진 또는 작성자만 이 작업을 수행할 수 있습니다.');
+      throw new ForbiddenException(
+        '운영진 또는 작성자만 이 작업을 수행할 수 있습니다.',
+      );
     }
 
     return event;
@@ -543,7 +705,10 @@ export class EventsService {
   }
 
   async getLatestEventTemplate(groupId: string, userId: string) {
-    const membership = await this.groupsService.requireApprovedMember(groupId, userId);
+    const membership = await this.groupsService.requireApprovedMember(
+      groupId,
+      userId,
+    );
     if (!isOfficer(membership.role)) {
       throw new ForbiddenException('운영진만 이전 일정을 조회할 수 있습니다.');
     }
@@ -554,7 +719,9 @@ export class EventsService {
   }
 
   async getComments(eventId: string, userId: string) {
-    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
     if (!event) throw new NotFoundException('이벤트를 찾을 수 없습니다.');
     await this.groupsService.requireApprovedMember(event.groupId, userId);
 
@@ -575,12 +742,17 @@ export class EventsService {
       },
     });
 
-    await this.groupsService.resolveGroupProfilesForUsers(event.groupId, comments.map(c => c.user));
+    await this.groupsService.resolveGroupProfilesForUsers(
+      event.groupId,
+      comments.map((c) => c.user),
+    );
     return comments;
   }
 
   async addComment(eventId: string, userId: string, content: string) {
-    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
     if (!event) throw new NotFoundException('이벤트를 찾을 수 없습니다.');
     await this.groupsService.requireApprovedMember(event.groupId, userId);
 
@@ -604,7 +776,10 @@ export class EventsService {
       },
     });
 
-    await this.groupsService.resolveGroupProfileForUser(event.groupId, comment.user);
+    await this.groupsService.resolveGroupProfileForUser(
+      event.groupId,
+      comment.user,
+    );
     return comment;
   }
 
@@ -648,7 +823,9 @@ export class EventsService {
     const event = await this.requireOfficerForEvent(eventId, userId);
 
     if (event.status !== 'ACTIVE') {
-      throw new BadRequestException('진행 중인 투표에만 독려 알림을 보낼 수 있습니다.');
+      throw new BadRequestException(
+        '진행 중인 투표에만 독려 알림을 보낼 수 있습니다.',
+      );
     }
 
     const groupMembers = await this.prisma.groupMember.findMany({
@@ -668,7 +845,11 @@ export class EventsService {
     const unvotedMembers = groupMembers.filter((m) => !votedSet.has(m.userId));
 
     if (unvotedMembers.length === 0) {
-      return { sentCount: 0, totalUnvoted: 0, message: '모든 회원이 투표를 완료했습니다.' };
+      return {
+        sentCount: 0,
+        totalUnvoted: 0,
+        message: '모든 회원이 투표를 완료했습니다.',
+      };
     }
 
     const group = await this.prisma.group.findUnique({
@@ -691,7 +872,9 @@ export class EventsService {
         );
         sentCount++;
       } catch (err: any) {
-        this.logger.warn(`Failed to send vote reminder to ${member.userId}: ${err.message}`);
+        this.logger.warn(
+          `Failed to send vote reminder to ${member.userId}: ${err.message}`,
+        );
       }
     }
 
@@ -701,7 +884,7 @@ export class EventsService {
   async getAttendanceStats(groupId: string, userId: string) {
     // Verify membership
     await this.groupsService.requireApprovedMember(groupId, userId);
-    
+
     // Get last 20 completed (past) events
     const pastEvents = await this.prisma.event.findMany({
       where: {
@@ -715,29 +898,47 @@ export class EventsService {
         votes: { select: { userId: true, choice: true } },
       },
     });
-    
+
     if (pastEvents.length === 0) return { events: 0, members: [] };
-    
+
     // Get all approved members
     const members = await this.prisma.groupMember.findMany({
       where: { groupId, status: 'APPROVED' },
       include: {
-        user: { select: { id: true, displayName: true, profileImageUrl: true, gender: true, birthYear: true, isEarlyYear: true } },
+        user: {
+          select: {
+            id: true,
+            displayName: true,
+            profileImageUrl: true,
+            gender: true,
+            birthYear: true,
+            isEarlyYear: true,
+          },
+        },
       },
     });
-    
+
     // Compute stats per member
     const stats = members.map((m) => {
-      let attended = 0, late = 0, absent = 0, noVote = 0;
+      let attended = 0,
+        late = 0,
+        absent = 0,
+        noVote = 0;
       for (const ev of pastEvents) {
         const vote = ev.votes.find((v) => v.userId === m.userId);
-        if (!vote) { noVote++; }
-        else if (vote.choice === 'ATTEND') { attended++; }
-        else if (vote.choice === 'LATE') { late++; }
-        else { absent++; }
+        if (!vote) {
+          noVote++;
+        } else if (vote.choice === 'ATTEND') {
+          attended++;
+        } else if (vote.choice === 'LATE') {
+          late++;
+        } else {
+          absent++;
+        }
       }
       const total = pastEvents.length;
-      const rate = total > 0 ? Math.round(((attended + late) / total) * 100) : 0;
+      const rate =
+        total > 0 ? Math.round(((attended + late) / total) * 100) : 0;
       return {
         userId: m.userId,
         user: m.user,
@@ -749,14 +950,20 @@ export class EventsService {
         rate,
       };
     });
-    
+
     stats.sort((a, b) => b.rate - a.rate);
     return { events: pastEvents.length, members: stats };
   }
 
   async searchPlaces(query: string) {
     if (!query || !query.trim()) return [];
-    const kakaoKey = process.env.KAKAO_REST_API_KEY || '48b4025d5f4f3087b3435862d6d67491';
+    const kakaoKey = process.env.KAKAO_REST_API_KEY;
+    if (!kakaoKey) {
+      this.logger.warn(
+        'Kakao place search is unavailable: KAKAO_REST_API_KEY is not configured.',
+      );
+      return [];
+    }
     try {
       const res = await fetch(
         `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query.trim())}&size=10`,
@@ -787,7 +994,13 @@ export class EventsService {
 
   async reverseGeocode(lat: number, lng: number) {
     if (isNaN(lat) || isNaN(lng)) return null;
-    const kakaoKey = process.env.KAKAO_REST_API_KEY || '48b4025d5f4f3087b3435862d6d67491';
+    const kakaoKey = process.env.KAKAO_REST_API_KEY;
+    if (!kakaoKey) {
+      this.logger.warn(
+        'Kakao reverse geocoding is unavailable: KAKAO_REST_API_KEY is not configured.',
+      );
+      return null;
+    }
     try {
       const res = await fetch(
         `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
@@ -805,8 +1018,10 @@ export class EventsService {
             address: road?.address_name || jibun?.address_name || '',
             buildingName: road?.building_name || '',
             sido: jibun?.region_1depth_name || road?.region_1depth_name || '',
-            sigungu: jibun?.region_2depth_name || road?.region_2depth_name || '',
-            eupmyeondong: jibun?.region_3depth_name || road?.region_3depth_name || '',
+            sigungu:
+              jibun?.region_2depth_name || road?.region_2depth_name || '',
+            eupmyeondong:
+              jibun?.region_3depth_name || road?.region_3depth_name || '',
           };
         }
       }

@@ -24,6 +24,7 @@ import {
   parseKoreanAddress,
   normalizeOptionalText,
   USER_MEMBER_SELECT,
+  USER_MEMBER_WITH_CONTACT_SELECT,
 } from '../common/utils/group.utils';
 
 @Injectable()
@@ -49,7 +50,9 @@ export class GroupsService {
             user: { select: { displayName: true, profileImageUrl: true } },
           },
         },
-        _count: { select: { members: { where: { status: MemberStatus.APPROVED } } } },
+        _count: {
+          select: { members: { where: { status: MemberStatus.APPROVED } } },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -67,9 +70,7 @@ export class GroupsService {
       const m = byGroup.get(g.id);
       return {
         ...g,
-        myMembership: m
-          ? { status: m.status, role: m.role }
-          : null,
+        myMembership: m ? { status: m.status, role: m.role } : null,
       };
     });
   }
@@ -102,7 +103,11 @@ export class GroupsService {
     let activityDistrict: string | null = dto.activityDistrict ?? null;
     let activityTown: string | null = dto.activityTown ?? null;
 
-    if ((!activitySido || activitySido.trim() === '') && dto.arenas && dto.arenas.length > 0) {
+    if (
+      (!activitySido || activitySido.trim() === '') &&
+      dto.arenas &&
+      dto.arenas.length > 0
+    ) {
       const parsed = parseKoreanAddress(dto.arenas[0].address);
       if (parsed) {
         activitySido = parsed.activitySido;
@@ -119,61 +124,65 @@ export class GroupsService {
       activityTown,
     });
 
-    const group = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.group.create({
-        data: {
-          name: dto.name,
-          description: dto.description,
-          profileImageUrl: dto.profileImageUrl,
-          category: dto.category,
-          customSportName: dto.category === '기타' ? dto.customSportName : null,
-          maxMembers: dto.maxMembers ?? 50,
-          monthlyFee: dto.monthlyFee ?? null,
-          dueDay: dto.dueDay ?? null,
-          officerFeeExempt: dto.officerFeeExempt ?? false,
-          isPublic: dto.isPublic,
-          activitySido,
-          activitySigungu,
-          activityDistrict,
-          activityTown,
-          activityRegion,
-          bankName: normalizeOptionalText(dto.bankName),
-          bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
-          bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
-          inviteCode: nanoid(10),
-          members: {
-            create: {
-              userId,
-              role: MemberRole.PRESIDENT,
-              status: MemberStatus.APPROVED,
+    const group = await this.prisma.$transaction(
+      async (tx) => {
+        const created = await tx.group.create({
+          data: {
+            name: dto.name,
+            description: dto.description,
+            profileImageUrl: dto.profileImageUrl,
+            category: dto.category,
+            customSportName:
+              dto.category === '기타' ? dto.customSportName : null,
+            maxMembers: dto.maxMembers ?? 50,
+            monthlyFee: dto.monthlyFee ?? null,
+            dueDay: dto.dueDay ?? null,
+            officerFeeExempt: dto.officerFeeExempt ?? false,
+            isPublic: dto.isPublic,
+            activitySido,
+            activitySigungu,
+            activityDistrict,
+            activityTown,
+            activityRegion,
+            bankName: normalizeOptionalText(dto.bankName),
+            bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
+            bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
+            inviteCode: nanoid(10),
+            members: {
+              create: {
+                userId,
+                role: MemberRole.PRESIDENT,
+                status: MemberStatus.APPROVED,
+              },
             },
           },
-        },
-      });
+        });
 
-      if (dto.arenas && dto.arenas.length > 0) {
-        for (const arena of dto.arenas) {
-          await tx.groupArena.create({
-            data: {
-              groupId: created.id,
-              placeName: arena.placeName,
-              address: arena.address,
-            },
-          });
+        if (dto.arenas && dto.arenas.length > 0) {
+          for (const arena of dto.arenas) {
+            await tx.groupArena.create({
+              data: {
+                groupId: created.id,
+                placeName: arena.placeName,
+                address: arena.address,
+              },
+            });
+          }
         }
-      }
 
-      await tx.officerHistory.create({
-        data: {
-          groupId: created.id,
-          userId,
-          role: MemberRole.PRESIDENT,
-          startDate: new Date(),
-        },
-      });
+        await tx.officerHistory.create({
+          data: {
+            groupId: created.id,
+            userId,
+            role: MemberRole.PRESIDENT,
+            startDate: new Date(),
+          },
+        });
 
-      return created;
-    }, { timeout: 30000 });
+        return created;
+      },
+      { timeout: 30000 },
+    );
 
     return group;
   }
@@ -193,7 +202,11 @@ export class GroupsService {
     let activityDistrict: string | null = dto.activityDistrict ?? null;
     let activityTown: string | null = dto.activityTown ?? null;
 
-    if ((!activitySido || activitySido.trim() === '') && dto.arenas && dto.arenas.length > 0) {
+    if (
+      (!activitySido || activitySido.trim() === '') &&
+      dto.arenas &&
+      dto.arenas.length > 0
+    ) {
       const parsed = parseKoreanAddress(dto.arenas[0].address);
       if (parsed) {
         activitySido = parsed.activitySido;
@@ -210,53 +223,68 @@ export class GroupsService {
       activityTown,
     });
 
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.group.update({
-        where: { id: groupId },
-        data: {
-          name: dto.name,
-          description: dto.description,
-          category: dto.category,
-          customSportName: dto.category === '기타' ? dto.customSportName : null,
-          maxMembers: dto.maxMembers ?? 50,
-          monthlyFee: dto.monthlyFee ?? null,
-          dueDay: dto.dueDay ?? null,
-          officerFeeExempt: dto.officerFeeExempt ?? false,
-          isPublic: dto.isPublic,
-          activitySido,
-          activitySigungu,
-          activityDistrict,
-          activityTown,
-          activityRegion,
-          bankName: normalizeOptionalText(dto.bankName),
-          bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
-          bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
-          ...(dto.profileImageUrl !== undefined
-            ? { profileImageUrl: dto.profileImageUrl }
-            : {}),
-        },
-        include: {
-          _count: { select: { members: true } },
-        },
-      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const lockedGroup = await this.lockGroupForCapacity(tx, groupId);
+        const approvedCount = await tx.groupMember.count({
+          where: { groupId, status: MemberStatus.APPROVED },
+        });
+        const nextMaxMembers = dto.maxMembers ?? lockedGroup.maxMembers;
+        if (nextMaxMembers < approvedCount) {
+          throw new BadRequestException(
+            `현재 승인 회원 수(${approvedCount}명)보다 정원을 작게 설정할 수 없습니다.`,
+          );
+        }
 
-      if (dto.arenas !== undefined) {
-        await tx.groupArena.deleteMany({ where: { groupId } });
-        if (dto.arenas && dto.arenas.length > 0) {
-          for (const arena of dto.arenas) {
-            await tx.groupArena.create({
-              data: {
-                groupId,
-                placeName: arena.placeName,
-                address: arena.address,
-              },
-            });
+        const updated = await tx.group.update({
+          where: { id: groupId },
+          data: {
+            name: dto.name,
+            description: dto.description,
+            category: dto.category,
+            customSportName:
+              dto.category === '기타' ? dto.customSportName : null,
+            maxMembers: nextMaxMembers,
+            monthlyFee: dto.monthlyFee ?? null,
+            dueDay: dto.dueDay ?? null,
+            officerFeeExempt: dto.officerFeeExempt ?? false,
+            isPublic: dto.isPublic,
+            activitySido,
+            activitySigungu,
+            activityDistrict,
+            activityTown,
+            activityRegion,
+            bankName: normalizeOptionalText(dto.bankName),
+            bankAccountNumber: normalizeOptionalText(dto.bankAccountNumber),
+            bankAccountHolder: normalizeOptionalText(dto.bankAccountHolder),
+            ...(dto.profileImageUrl !== undefined
+              ? { profileImageUrl: dto.profileImageUrl }
+              : {}),
+          },
+          include: {
+            _count: { select: { members: true } },
+          },
+        });
+
+        if (dto.arenas !== undefined) {
+          await tx.groupArena.deleteMany({ where: { groupId } });
+          if (dto.arenas && dto.arenas.length > 0) {
+            for (const arena of dto.arenas) {
+              await tx.groupArena.create({
+                data: {
+                  groupId,
+                  placeName: arena.placeName,
+                  address: arena.address,
+                },
+              });
+            }
           }
         }
-      }
 
-      return updated;
-    }, { timeout: 30000 });
+        return updated;
+      },
+      { timeout: 30000 },
+    );
   }
 
   async getById(groupId: string, userId?: string) {
@@ -280,7 +308,7 @@ export class GroupsService {
           where: { status: MemberStatus.APPROVED },
           include: {
             user: {
-              select: USER_MEMBER_SELECT,
+              select: USER_MEMBER_WITH_CONTACT_SELECT,
             },
             profileCard: true,
           },
@@ -331,7 +359,7 @@ export class GroupsService {
           where: { groupId, status: MemberStatus.PENDING },
           include: {
             user: {
-              select: USER_MEMBER_SELECT,
+              select: USER_MEMBER_WITH_CONTACT_SELECT,
             },
             profileCard: true,
           },
@@ -341,11 +369,21 @@ export class GroupsService {
       }
     }
 
-    if (!group.isPublic && !myMembership) {
+    const isApprovedMember = Boolean(
+      myMembership && isApproved(myMembership.status),
+    );
+
+    if (!group.isPublic && !isApprovedMember) {
       throw new ForbiddenException('비공개 모임입니다.');
     }
 
-    const resolvedMembers = group.members.map(resolveMemberProfile);
+    const resolvedMembers = group.members
+      .map(resolveMemberProfile)
+      .map((member) => {
+        if (isApprovedMember) return member;
+        const { phoneNumber: _phoneNumber, ...safeUser } = member.user;
+        return { ...member, user: safeUser };
+      });
 
     return {
       ...group,
@@ -356,7 +394,9 @@ export class GroupsService {
   }
 
   async joinByGroupId(groupId: string, userId: string) {
-    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+    });
     if (!group) {
       throw new NotFoundException('모임을 찾을 수 없습니다.');
     }
@@ -407,46 +447,46 @@ export class GroupsService {
   }
 
   async joinByInviteCode(inviteCode: string, userId: string) {
-    const group = await this.prisma.group.findUnique({
-      where: { inviteCode },
-      include: {
-        members: { where: { status: MemberStatus.APPROVED } },
+    const joined = await this.prisma.$transaction(
+      async (tx) => {
+        const group = await tx.group.findUnique({ where: { inviteCode } });
+        if (!group) {
+          throw new NotFoundException('유효하지 않은 초대 링크입니다.');
+        }
+
+        const lockedGroup = await this.lockGroupForCapacity(tx, group.id);
+
+        const existing = await tx.groupMember.findUnique({
+          where: { userId_groupId: { userId, groupId: group.id } },
+        });
+
+        if (existing?.status === MemberStatus.APPROVED) {
+          throw new BadRequestException('이미 가입된 모임입니다.');
+        }
+
+        await this.assertGroupHasCapacity(tx, group.id, lockedGroup.maxMembers);
+
+        const membership = existing
+          ? await tx.groupMember.update({
+              where: { id: existing.id },
+              data: { status: MemberStatus.APPROVED, role: MemberRole.MEMBER },
+            })
+          : await tx.groupMember.create({
+              data: {
+                userId,
+                groupId: group.id,
+                status: MemberStatus.APPROVED,
+                role: MemberRole.MEMBER,
+              },
+            });
+
+        return { groupId: group.id, membership };
       },
-    });
-    if (!group) {
-      throw new NotFoundException('유효하지 않은 초대 링크입니다.');
-    }
+      { timeout: 30000 },
+    );
 
-    if (group.members.length >= group.maxMembers) {
-      throw new BadRequestException('모임 정원이 초과되었습니다.');
-    }
-
-    const existing = await this.prisma.groupMember.findUnique({
-      where: { userId_groupId: { userId, groupId: group.id } },
-    });
-
-    let result;
-    if (existing) {
-      if (existing.status === MemberStatus.APPROVED) {
-        throw new BadRequestException('이미 가입된 모임입니다.');
-      }
-      result = await this.prisma.groupMember.update({
-        where: { id: existing.id },
-        data: { status: MemberStatus.APPROVED, role: MemberRole.MEMBER },
-      });
-    } else {
-      result = await this.prisma.groupMember.create({
-        data: {
-          userId,
-          groupId: group.id,
-          status: MemberStatus.APPROVED,
-          role: MemberRole.MEMBER,
-        },
-      });
-    }
-
-    await this.notifications.notifyJoinApproved(group.id, userId);
-    return result;
+    await this.notifications.notifyJoinApproved(joined.groupId, userId);
+    return joined.membership;
   }
 
   private async requestJoin(groupId: string, userId: string) {
@@ -511,26 +551,43 @@ export class GroupsService {
       throw new ForbiddenException('회장 역할은 양도 API를 사용하세요.');
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.groupMember.update({
-        where: { id: target.id },
-        data: {
-          ...(dto.status !== undefined ? { status: dto.status } : {}),
-          ...(dto.role !== undefined ? { role: dto.role } : {}),
-        },
-        include: {
-          user: {
-            select: USER_MEMBER_SELECT,
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        if (
+          dto.status === MemberStatus.APPROVED &&
+          target.status !== MemberStatus.APPROVED
+        ) {
+          const group = await this.lockGroupForCapacity(tx, groupId);
+          await this.assertGroupHasCapacity(tx, groupId, group.maxMembers);
+        }
+
+        const updated = await tx.groupMember.update({
+          where: { id: target.id },
+          data: {
+            ...(dto.status !== undefined ? { status: dto.status } : {}),
+            ...(dto.role !== undefined ? { role: dto.role } : {}),
           },
-        },
-      });
+          include: {
+            user: {
+              select: USER_MEMBER_SELECT,
+            },
+          },
+        });
 
-      if (dto.role !== undefined && dto.role !== target.role) {
-        await this.updateOfficerHistory(tx, groupId, targetUserId, target.role, dto.role);
-      }
+        if (dto.role !== undefined && dto.role !== target.role) {
+          await this.updateOfficerHistory(
+            tx,
+            groupId,
+            targetUserId,
+            target.role,
+            dto.role,
+          );
+        }
 
-      return updated;
-    }, { timeout: 30000 });
+        return updated;
+      },
+      { timeout: 30000 },
+    );
 
     if (dto.status === MemberStatus.APPROVED) {
       await this.notifications.notifyJoinApproved(groupId, targetUserId);
@@ -557,19 +614,34 @@ export class GroupsService {
       throw new NotFoundException('대상 회원을 찾을 수 없습니다.');
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.groupMember.update({
-        where: { id: actor.id },
-        data: { role: MemberRole.MEMBER },
-      });
-      await tx.groupMember.update({
-        where: { id: target.id },
-        data: { role: MemberRole.PRESIDENT },
-      });
+    await this.prisma.$transaction(
+      async (tx) => {
+        await tx.groupMember.update({
+          where: { id: actor.id },
+          data: { role: MemberRole.MEMBER },
+        });
+        await tx.groupMember.update({
+          where: { id: target.id },
+          data: { role: MemberRole.PRESIDENT },
+        });
 
-      await this.updateOfficerHistory(tx, groupId, actorUserId, MemberRole.PRESIDENT, MemberRole.MEMBER);
-      await this.updateOfficerHistory(tx, groupId, dto.newPresidentUserId, target.role, MemberRole.PRESIDENT);
-    }, { timeout: 30000 });
+        await this.updateOfficerHistory(
+          tx,
+          groupId,
+          actorUserId,
+          MemberRole.PRESIDENT,
+          MemberRole.MEMBER,
+        );
+        await this.updateOfficerHistory(
+          tx,
+          groupId,
+          dto.newPresidentUserId,
+          target.role,
+          MemberRole.PRESIDENT,
+        );
+      },
+      { timeout: 30000 },
+    );
 
     return { success: true };
   }
@@ -638,15 +710,19 @@ export class GroupsService {
       },
     });
 
-    const paymentMap = new Map(payments.map(p => [p.userId, p]));
+    const paymentMap = new Map(payments.map((p) => [p.userId, p]));
 
-    const list = group.members.map(member => {
+    const list = group.members.map((member) => {
       const isExempt = group.officerFeeExempt && isOfficer(member.role);
       const paymentRecord = paymentMap.get(member.userId);
       const isPaid = isExempt || Boolean(paymentRecord);
-      const paidByName = isExempt ? '임원 면제' : paymentRecord?.paidBy?.displayName || null;
-      const displayName = member.profileCard?.nickname || member.user.displayName;
-      const profileImageUrl = member.profileCard?.profileImageUrl || member.user.profileImageUrl;
+      const paidByName = isExempt
+        ? '임원 면제'
+        : paymentRecord?.paidBy?.displayName || null;
+      const displayName =
+        member.profileCard?.nickname || member.user.displayName;
+      const profileImageUrl =
+        member.profileCard?.profileImageUrl || member.user.profileImageUrl;
       return {
         userId: member.userId,
         displayName,
@@ -785,10 +861,17 @@ export class GroupsService {
     month: number,
   ) {
     await this.requireOfficer(groupId, actorUserId);
-    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+    });
     if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
 
-    const paymentsData = await this.getPayments(groupId, actorUserId, year, month);
+    const paymentsData = await this.getPayments(
+      groupId,
+      actorUserId,
+      year,
+      month,
+    );
     const unpaidMembers = paymentsData.payments.filter((p: any) => !p.isPaid);
 
     const message = `[회비 납부 안내] 「${group.name}」 ${month}월 회비 미납 내역이 있습니다. [MY] 탭에서 토스/카카오페이로 1초 간편 송금해 주세요!`;
@@ -908,6 +991,30 @@ export class GroupsService {
     return membership;
   }
 
+  private async lockGroupForCapacity(tx: any, groupId: string) {
+    const groups = await tx.$queryRaw<
+      Array<{ id: string; maxMembers: number }>
+    >`
+      SELECT "id", "maxMembers" FROM "Group" WHERE "id" = ${groupId} FOR UPDATE
+    `;
+    const group = groups[0];
+    if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
+    return group;
+  }
+
+  private async assertGroupHasCapacity(
+    tx: any,
+    groupId: string,
+    maxMembers: number,
+  ) {
+    const approvedCount = await tx.groupMember.count({
+      where: { groupId, status: MemberStatus.APPROVED },
+    });
+    if (approvedCount >= maxMembers) {
+      throw new BadRequestException('모임 정원이 초과되었습니다.');
+    }
+  }
+
   async getGroupMedia(groupId: string, userId: string) {
     await this.requireApprovedMember(groupId, userId);
     return this.prisma.groupMedia.findMany({
@@ -925,7 +1032,11 @@ export class GroupsService {
     });
   }
 
-  async createGroupMedia(groupId: string, userId: string, dto: CreateGroupMediaDto) {
+  async createGroupMedia(
+    groupId: string,
+    userId: string,
+    dto: CreateGroupMediaDto,
+  ) {
     await this.requireApprovedMember(groupId, userId);
     return this.prisma.groupMedia.create({
       data: {
@@ -956,7 +1067,8 @@ export class GroupsService {
       throw new NotFoundException('미디어를 찾을 수 없습니다.');
     }
 
-    const canDelete = isOfficer(membership.role) || media.uploadedById === userId;
+    const canDelete =
+      isOfficer(membership.role) || media.uploadedById === userId;
     if (!canDelete) {
       throw new ForbiddenException('사진을 삭제할 권한이 없습니다.');
     }
@@ -968,7 +1080,11 @@ export class GroupsService {
     return { ok: true };
   }
 
-  async linkProfileCard(groupId: string, userId: string, profileCardId: string | null) {
+  async linkProfileCard(
+    groupId: string,
+    userId: string,
+    profileCardId: string | null,
+  ) {
     const membership = await this.prisma.groupMember.findUnique({
       where: { userId_groupId: { userId, groupId } },
     });
@@ -989,16 +1105,22 @@ export class GroupsService {
     });
   }
 
-  async resolveGroupProfilesForUsers<T extends { id: string; displayName: string; profileImageUrl: string | null }>(
-    groupId: string,
-    users: T[]
-  ): Promise<T[]> {
+  async resolveGroupProfilesForUsers<
+    T extends {
+      id: string;
+      displayName: string;
+      profileImageUrl: string | null;
+    },
+  >(groupId: string, users: T[]): Promise<T[]> {
     if (users.length === 0) return users;
     const members = await this.prisma.groupMember.findMany({
-      where: { groupId, userId: { in: users.map(u => u.id) } },
+      where: { groupId, userId: { in: users.map((u) => u.id) } },
       include: { profileCard: true },
     });
-    const map = new Map<string, { nickname: string; profileImageUrl: string | null }>();
+    const map = new Map<
+      string,
+      { nickname: string; profileImageUrl: string | null }
+    >();
     for (const m of members) {
       if (m.profileCard) {
         map.set(m.userId, {
@@ -1018,10 +1140,13 @@ export class GroupsService {
     return users;
   }
 
-  async resolveGroupProfileForUser<T extends { id: string; displayName: string; profileImageUrl: string | null }>(
-    groupId: string,
-    user: T
-  ): Promise<T> {
+  async resolveGroupProfileForUser<
+    T extends {
+      id: string;
+      displayName: string;
+      profileImageUrl: string | null;
+    },
+  >(groupId: string, user: T): Promise<T> {
     if (!user) return user;
     const [resolved] = await this.resolveGroupProfilesForUsers(groupId, [user]);
     return resolved;
@@ -1039,7 +1164,9 @@ export class GroupsService {
     const actor = await this.requireOfficer(groupId, actorUserId);
 
     if (targetUserId === actorUserId) {
-      throw new BadRequestException('자기 자신은 강제 탈퇴시킬 수 없습니다. 모임 탈퇴 기능을 이용해 주세요.');
+      throw new BadRequestException(
+        '자기 자신은 강제 탈퇴시킬 수 없습니다. 모임 탈퇴 기능을 이용해 주세요.',
+      );
     }
 
     const target = await this.prisma.groupMember.findUnique({
@@ -1051,11 +1178,15 @@ export class GroupsService {
     }
 
     if (target.role === MemberRole.PRESIDENT) {
-      throw new ForbiddenException('모임의 회장은 강제 탈퇴시킬 수 없습니다. 회장직 위임 또는 해체 기능을 사용하세요.');
+      throw new ForbiddenException(
+        '모임의 회장은 강제 탈퇴시킬 수 없습니다. 회장직 위임 또는 해체 기능을 사용하세요.',
+      );
     }
 
     if (isOfficer(target.role) && actor.role !== MemberRole.PRESIDENT) {
-      throw new ForbiddenException('일반 운영진은 다른 운영진을 강제 탈퇴시킬 수 없습니다. 회장만 운영진을 강퇴할 수 있습니다.');
+      throw new ForbiddenException(
+        '일반 운영진은 다른 운영진을 강제 탈퇴시킬 수 없습니다. 회장만 운영진을 강퇴할 수 있습니다.',
+      );
     }
 
     await this.prisma.groupMember.delete({
@@ -1073,16 +1204,58 @@ export class GroupsService {
       try {
         const parsed = JSON.parse(setting.value);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+          return parsed.sort(
+            (a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+          );
         }
       } catch {}
     }
     return [
-      { id: 'role_pres', key: 'PRESIDENT', label: '회장', isStaff: true, isDefault: true, canDelete: false, sortOrder: 0 },
-      { id: 'role_vp', key: 'VICE_PRESIDENT', label: '부회장', isStaff: true, isDefault: true, canDelete: false, sortOrder: 1 },
-      { id: 'role_sec', key: 'SECRETARY', label: '총무', isStaff: true, isDefault: true, canDelete: false, sortOrder: 2 },
-      { id: 'role_off', key: 'OFFICER', label: '스태프', isStaff: true, isDefault: true, canDelete: false, sortOrder: 3 },
-      { id: 'role_member', key: 'MEMBER', label: '일반 회원', isStaff: false, isDefault: true, canDelete: false, sortOrder: 4 },
+      {
+        id: 'role_pres',
+        key: 'PRESIDENT',
+        label: '회장',
+        isStaff: true,
+        isDefault: true,
+        canDelete: false,
+        sortOrder: 0,
+      },
+      {
+        id: 'role_vp',
+        key: 'VICE_PRESIDENT',
+        label: '부회장',
+        isStaff: true,
+        isDefault: true,
+        canDelete: false,
+        sortOrder: 1,
+      },
+      {
+        id: 'role_sec',
+        key: 'SECRETARY',
+        label: '총무',
+        isStaff: true,
+        isDefault: true,
+        canDelete: false,
+        sortOrder: 2,
+      },
+      {
+        id: 'role_off',
+        key: 'OFFICER',
+        label: '스태프',
+        isStaff: true,
+        isDefault: true,
+        canDelete: false,
+        sortOrder: 3,
+      },
+      {
+        id: 'role_member',
+        key: 'MEMBER',
+        label: '일반 회원',
+        isStaff: false,
+        isDefault: true,
+        canDelete: false,
+        sortOrder: 4,
+      },
     ];
   }
 }

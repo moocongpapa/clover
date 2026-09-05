@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -12,7 +13,12 @@ import { EventsService } from './events.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
-import { CreateEventDto, SplitTeamsDto, UpdateEventDto, CreateCommentDto } from './dto/events.dto';
+import {
+  CreateEventDto,
+  SplitTeamsDto,
+  UpdateEventDto,
+  CreateCommentDto,
+} from './dto/events.dto';
 import { Delete } from '@nestjs/common';
 
 @Controller()
@@ -28,7 +34,19 @@ export class EventsController {
   @Get('events/places/reverse')
   @UseGuards(JwtAuthGuard)
   reverseGeocode(@Query('lat') lat: string, @Query('lng') lng: string) {
-    return this.eventsService.reverseGeocode(parseFloat(lat), parseFloat(lng));
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      throw new BadRequestException('유효한 위도와 경도를 입력해주세요.');
+    }
+    return this.eventsService.reverseGeocode(latitude, longitude);
   }
 
   @Get('groups/:groupId/events/latest')

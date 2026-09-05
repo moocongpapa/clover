@@ -1,14 +1,19 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength, IsInt, IsEnum, IsDateString, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  IsInt,
+  IsEnum,
+  IsDateString,
+  IsBoolean,
+} from 'class-validator';
 import { Gender } from '@prisma/client';
 
 export class KakaoCallbackDto {
   @IsString()
   @IsNotEmpty()
   code!: string;
-
-  @IsOptional()
-  @IsString()
-  redirectUri?: string;
 }
 
 export class DevLoginDto {
