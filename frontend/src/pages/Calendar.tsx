@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type CalendarEvent } from '../api';
 import EventCard from '../components/EventCard';
@@ -76,7 +76,8 @@ export default function Calendar() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [selectedDate, setSelectedDate] = useState<Date | null>(() => new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const hasSetDefaultDate = useRef(false);
 
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
@@ -131,6 +132,22 @@ export default function Calendar() {
         .sort((a, b) => eventEndAt(b).getTime() - eventEndAt(a).getTime()),
     [events, threeMonthsAgo],
   );
+
+  useEffect(() => {
+    if (loading || hasSetDefaultDate.current) return;
+
+    const today = new Date();
+    const todayEvents = eventsByDate.get(toDateKey(today)) ?? [];
+    const defaultDate = todayEvents.length > 0
+      ? today
+      : upcoming[0]
+        ? new Date(upcoming[0].date)
+        : today;
+
+    setSelectedDate(defaultDate);
+    setCurrentMonth(new Date(defaultDate.getFullYear(), defaultDate.getMonth(), 1));
+    hasSetDefaultDate.current = true;
+  }, [eventsByDate, loading, upcoming]);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
