@@ -32,6 +32,7 @@ export default function AnnouncementShareModal({
         setToast(msg);
         onSuccess?.(msg);
         setTimeout(() => setToast(null), 3000);
+        setTimeout(onClose, 1200);
       },
       (err) => {
         setToast(err);
@@ -60,33 +61,48 @@ export default function AnnouncementShareModal({
     <div
       className="invite-modal-backdrop"
       onClick={onClose}
-      style={{ animation: 'fadeIn 0.2s ease-out' }}
+      role="dialog"
+      aria-modal="true"
     >
       <div
-        className="invite-modal-sheet"
+        className="invite-modal-card"
         onClick={(e) => e.stopPropagation()}
-        style={{ animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
       >
         <div className="invite-modal-handle" />
 
         {/* Header */}
         <div className="invite-modal-header">
-          <div className="invite-modal-avatar-wrapper">
-            <GroupAvatar
-              name={announcement.groupName || announcement.title}
-              src={announcement.groupProfileImageUrl}
-              size={56}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '20px' }}>📢</span>
+            <h3 className="invite-modal-title">공지 공유하기</h3>
           </div>
-          <div className="invite-modal-header-text">
-            <span className="invite-modal-group-name">
+          <button
+            type="button"
+            className="invite-modal-close"
+            onClick={onClose}
+            aria-label="닫기"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Preview Card */}
+        <div className="invite-modal-preview" style={{ alignItems: 'flex-start' }}>
+          <GroupAvatar
+            name={announcement.groupName || announcement.title}
+            src={announcement.groupProfileImageUrl}
+            size={48}
+            radius={14}
+          />
+          <div className="invite-modal-preview-text">
+            <span className="invite-modal-group-name" style={{ fontSize: '13px', color: 'var(--ink-muted)' }}>
               {announcement.isPinned && '📌 '}
               {announcement.groupName || '공지사항'}
             </span>
-            <h3 className="invite-modal-title" style={{ fontSize: '17px', margin: '2px 0 4px', wordBreak: 'break-word' }}>
+            <h4 className="invite-modal-group-name" style={{ fontSize: '15px', color: 'var(--ink-dark)', margin: '2px 0 0' }}>
               {announcement.title}
-            </h3>
-            <p className="invite-modal-subtitle" style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
+            </h4>
+            <p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: 'var(--accent)', fontWeight: 700 }}>
               카톡 단톡방에 공지글을 공유해 회원들에게 빠르게 알려보세요!
             </p>
           </div>
@@ -165,6 +181,26 @@ export default function AnnouncementShareModal({
             {copied ? '복사됨' : '복사'}
           </button>
         </div>
+
+        {/* Bottom Close Button */}
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            marginTop: '12px',
+            width: '100%',
+            padding: '12px',
+            borderRadius: '12px',
+            background: 'var(--grey-100, #f1f5f9)',
+            border: 'none',
+            color: 'var(--ink-muted, #64748b)',
+            fontSize: '14px',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          닫기
+        </button>
 
         {toast && (
           <div className="invite-share-toast">

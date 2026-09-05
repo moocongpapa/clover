@@ -31,6 +31,7 @@ export default function EventShareModal({
         setToast(msg);
         onSuccess?.(msg);
         setTimeout(() => setToast(null), 3000);
+        setTimeout(onClose, 1200);
       },
       (err) => {
         setToast(err);
@@ -156,6 +157,26 @@ export default function EventShareModal({
             {copied ? '복사됨' : '복사'}
           </button>
         </div>
+
+        {/* Bottom Close Button */}
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            marginTop: '12px',
+            width: '100%',
+            padding: '12px',
+            borderRadius: '12px',
+            background: 'var(--grey-100, #f1f5f9)',
+            border: 'none',
+            color: 'var(--ink-muted, #64748b)',
+            fontSize: '14px',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          닫기
+        </button>
 
         {toast && (
           <div className="invite-share-toast">

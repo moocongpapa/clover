@@ -2862,6 +2862,26 @@ export default function GroupDetail() {
               </button>
             </div>
 
+            {/* Bottom Close Button */}
+            <button
+              type="button"
+              onClick={() => setShowInviteModal(false)}
+              style={{
+                marginTop: '12px',
+                width: '100%',
+                padding: '12px',
+                borderRadius: '12px',
+                background: 'var(--grey-100, #f1f5f9)',
+                border: 'none',
+                color: 'var(--ink-muted, #64748b)',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              닫기
+            </button>
+
             {shareToast && (
               <div className="invite-share-toast">
                 {shareToast}
