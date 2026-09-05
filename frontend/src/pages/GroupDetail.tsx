@@ -418,90 +418,99 @@ export default function GroupDetail() {
     }
   };
 
+  const [isSharingInvite, setIsSharingInvite] = useState(false);
+
   const handleKakaoShare = async () => {
-    if (!group) return;
-    const inviteUrl = `${window.location.origin}/invite/${group.inviteCode}`;
-    const shareTitle = `🍀 [Clover] "${group.name}" 모임 초대장`;
-    const shareText = `"${group.name}" 모임에서 함께해요!\n초대 링크를 누르면 별도 승인 없이 바로 가입하실 수 있습니다.`;
-    const fullMessage = `${shareTitle}\n\n${shareText}\n\n👉 모임 바로 참여하기:\n${inviteUrl}`;
+    if (!group || isSharingInvite) return;
+    setIsSharingInvite(true);
+    try {
+      const inviteUrl = `${window.location.origin}/invite/${group.inviteCode}`;
+      const shareTitle = `🍀 [Clover] "${group.name}" 모임 초대장`;
+      const shareText = `"${group.name}" 모임에서 함께해요!\n초대 링크를 누르면 별도 승인 없이 바로 가입하실 수 있습니다.`;
+      const fullMessage = `${shareTitle}\n\n${shareText}\n\n👉 모임 바로 참여하기:\n${inviteUrl}`;
 
-    // 1. Mobile devices: Prefer native Web Share API (opens KakaoTalk & native share sheet directly)
-    const isMobile =
-      typeof navigator !== 'undefined' &&
-      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+      // 1. Mobile devices: Prefer native Web Share API (opens KakaoTalk & native share sheet directly)
+      const isMobile =
+        typeof navigator !== 'undefined' &&
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
 
-    if (isMobile && typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          text: fullMessage,
-          url: inviteUrl,
-        });
-        setShareToast('카카오톡 채팅방 또는 원하는 앱으로 공유되었습니다!');
-        setTimeout(() => setShareToast(null), 3000);
-        return;
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return;
+      if (isMobile && typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          await navigator.share({
+            title: shareTitle,
+            text: `${shareTitle}\n\n${shareText}`,
+            url: inviteUrl,
+          });
+          setShareToast('카카오톡 채팅방 또는 원하는 앱으로 공유되었습니다!');
+          setTimeout(() => setShareToast(null), 3000);
+          return;
+        } catch (err: any) {
+          if (err?.name === 'AbortError') return;
+        }
       }
-    }
 
-    // 2. If Kakao JS SDK is available, use Kakao.Share.sendDefault
-    const kakao = (window as any).Kakao;
-    const isSdkReady = initKakaoSdk();
-    if (kakao && isSdkReady) {
-      try {
-        kakao.Share.sendDefault({
-          objectType: 'feed',
-          content: {
-            title: `🍀 [Clover] ${group.name}`,
-            description: group.description || `${group.name} 모임에 초대합니다! 링크를 누르면 바로 가입됩니다.`,
-            imageUrl: group.profileImageUrl || `${window.location.origin}/favicon.png`,
-            link: {
-              mobileWebUrl: inviteUrl,
-              webUrl: inviteUrl,
-            },
-          },
-          buttons: [
-            {
-              title: '모임 바로 가입하기',
+      // 2. If Kakao JS SDK is available, use Kakao.Share.sendDefault
+      const kakao = (window as any).Kakao;
+      const isSdkReady = initKakaoSdk();
+      if (kakao && isSdkReady) {
+        try {
+          kakao.Share.sendDefault({
+            objectType: 'feed',
+            content: {
+              title: `🍀 [Clover] ${group.name}`,
+              description: group.description || `${group.name} 모임에 초대합니다! 링크를 누르면 바로 가입됩니다.`,
+              imageUrl: group.profileImageUrl || `${window.location.origin}/favicon.png`,
               link: {
                 mobileWebUrl: inviteUrl,
                 webUrl: inviteUrl,
               },
             },
-          ],
-        });
-        setShareToast('카카오톡 공유창이 열렸습니다!');
-        setTimeout(() => setShareToast(null), 3000);
-        return;
-      } catch (e) {
-        console.warn('Kakao.Share.sendDefault failed, falling back:', e);
+            buttons: [
+              {
+                title: '모임 바로 가입하기',
+                link: {
+                  mobileWebUrl: inviteUrl,
+                  webUrl: inviteUrl,
+                },
+              },
+            ],
+          });
+          setShareToast('카카오톡 공유창이 열렸습니다!');
+          setTimeout(() => setShareToast(null), 3000);
+          return;
+        } catch (e) {
+          console.warn('Kakao.Share.sendDefault failed, falling back:', e);
+        }
       }
-    }
 
-    // 3. Desktop or non-mobile navigator.share if available
-    if (typeof navigator !== 'undefined' && navigator.share) {
+      // 3. Desktop or non-mobile navigator.share if available
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          await navigator.share({
+            title: shareTitle,
+            text: `${shareTitle}\n\n${shareText}`,
+            url: inviteUrl,
+          });
+          setShareToast('카카오톡 채팅방 또는 원하는 앱으로 공유되었습니다!');
+          setTimeout(() => setShareToast(null), 3000);
+          return;
+        } catch (err: any) {
+          if (err?.name === 'AbortError') return;
+        }
+      }
+
+      // 4. Fallback: Copy rich message with URL to clipboard and show guide
       try {
-        await navigator.share({
-          title: shareTitle,
-          text: fullMessage,
-          url: inviteUrl,
-        });
-        setShareToast('카카오톡 채팅방 또는 원하는 앱으로 공유되었습니다!');
-        setTimeout(() => setShareToast(null), 3000);
-        return;
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return;
+        await navigator.clipboard.writeText(fullMessage);
+        setShareToast('카톡 단톡방에 바로 붙여넣을 수 있도록 초대장 문구가 복사되었습니다!');
+        setTimeout(() => setShareToast(null), 4000);
+      } catch {
+        setError('초대장 복사에 실패했습니다.');
       }
-    }
-
-    // 4. Fallback: Copy rich message with URL to clipboard and show guide
-    try {
-      await navigator.clipboard.writeText(fullMessage);
-      setShareToast('카톡 단톡방에 바로 붙여넣을 수 있도록 초대장 문구가 복사되었습니다!');
-      setTimeout(() => setShareToast(null), 4000);
-    } catch {
-      setError('초대장 복사에 실패했습니다.');
+    } finally {
+      setTimeout(() => {
+        setIsSharingInvite(false);
+      }, 1000);
     }
   };
 
