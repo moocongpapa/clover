@@ -50,6 +50,16 @@ export default class ErrorBoundary extends Component<Props, State> {
             일시적인 오류가 발생했습니다.<br />
             아래 버튼을 눌러 다시 시도해 주세요.
           </p>
+          {this.state.error && (
+            <details style={{ textAlign: 'left', marginBottom: '20px', maxWidth: '400px', width: '100%', background: '#fff', border: '1px solid #fed7aa', borderRadius: '8px', padding: '10px', fontSize: '12px', color: '#c2410c' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 600 }}>오류 상세 정보 보기</summary>
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginTop: '8px', fontSize: '11px' }}>
+                {this.state.error.message}
+                {'\n'}
+                {this.state.error.stack}
+              </pre>
+            </details>
+          )}
           <button
             onClick={this.handleReset}
             style={{

@@ -355,9 +355,10 @@ export default function GroupDetail() {
 
   const handleTransfer = async () => {
     if (!transferTargetId) return;
-    const target = group.members.find((m: any) => m.user.id === transferTargetId);
+    const target = group?.members?.find((m: any) => (m.user?.id || m.userId) === transferTargetId);
     if (!target) return;
-    if (!confirm(`${target.user.displayName}님에게 회장직을 양도하시겠습니까?`)) {
+    const targetName = target.user?.displayName || target.user?.nickname || '해당 회원';
+    if (!confirm(`${targetName}님에게 회장직을 양도하시겠습니까?`)) {
       return;
     }
     try {
@@ -576,7 +577,7 @@ export default function GroupDetail() {
 
   const renderUserDisplayWithBadge = (userObj: any) => {
     if (!userObj) return null;
-    const member = group?.members?.find((m: any) => m.user.id === userObj.id);
+    const member = group?.members?.find((m: any) => (m.user?.id || m.userId) === userObj.id);
     const roleKey = member ? member.role : userObj.role;
     const roleLabel = roleKey ? getRoleLabel(roleKey) : '회원';
     const formattedName = formatUserDisplayName(userObj);
@@ -615,8 +616,8 @@ export default function GroupDetail() {
   };
 
   const getMemberHeaderInfo = (userObj: any) => {
-    if (!group || !group.members) return formatUserDisplayName(userObj);
-    const member = group.members.find((m: any) => m.user.id === userObj.id);
+    if (!group || !group.members || !userObj) return formatUserDisplayName(userObj);
+    const member = group.members.find((m: any) => (m.user?.id || m.userId) === userObj.id);
     const roleLabel = member ? getRoleLabel(member.role) : '회원';
     return `${formatUserDisplayName(userObj)}/${roleLabel}`;
   };
@@ -676,7 +677,7 @@ export default function GroupDetail() {
     }
   };
 
-  const sortedMembers = [...group.members].sort((a: any, b: any) => {
+  const sortedMembers = [...(group.members || [])].sort((a: any, b: any) => {
     const customIndexA = customRoles.findIndex((r) => r.key === a.role);
     const customIndexB = customRoles.findIndex((r) => r.key === b.role);
     const orderA = customIndexA !== -1 ? customIndexA : (ROLE_SORT_ORDER[a.role] ?? 99);
@@ -690,7 +691,9 @@ export default function GroupDetail() {
       return scoreB - scoreA;
     }
 
-    return a.user.displayName.localeCompare(b.user.displayName, 'ko');
+    const nameA = a.user?.displayName || a.user?.nickname || '';
+    const nameB = b.user?.displayName || b.user?.nickname || '';
+    return nameA.localeCompare(nameB, 'ko');
   });
 
   const transferCandidates = sortedMembers.filter(
@@ -965,10 +968,10 @@ export default function GroupDetail() {
               <span className="separator-dot">·</span>
               <span className="leader-info">
                 {(() => {
-                  const president = group.members.find((m: any) => m.role === 'PRESIDENT');
-                  if (president) {
+                  const president = group?.members?.find((m: any) => m.role === 'PRESIDENT');
+                  if (president?.user) {
                     const birthText = president.user.birthYear ? `${String(president.user.birthYear % 100).padStart(2, '0')}년생` : '';
-                    return `👑 ${president.user.displayName}${birthText ? ` (${birthText})` : ''}`;
+                    return `👑 ${president.user.displayName || president.user.nickname || '모임장'}${birthText ? ` (${birthText})` : ''}`;
                   }
                   return '리더 없음';
                 })()}
@@ -1030,7 +1033,7 @@ export default function GroupDetail() {
               <div className="info-detail-row">
                 <span className="info-detail-label">👥 회원 수</span>
                 <span className="info-detail-val">
-                  {group.members.length}명
+                  {group.members?.length ?? 0}명
                   {group.maxMembers ? ` (정원 ${group.maxMembers}명)` : ''}
                 </span>
               </div>
@@ -1411,10 +1414,10 @@ export default function GroupDetail() {
                       <div key={`${item.feedType}-${item.id}`} className="feed-card">
                         {/* Post Header */}
                         <div className="feed-card-header">
-                          {item.author.profileImageUrl ? (
+                          {item.author?.profileImageUrl ? (
                             <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={item.author.profileImageUrl} alt="" className="feed-card-avatar" />
                           ) : (
-                            <div className="feed-card-avatar-fallback">{item.author.displayName[0]}</div>
+                            <div className="feed-card-avatar-fallback">{(item.author?.displayName || item.author?.nickname || '?')[0]}</div>
                           )}
                           <div className="feed-card-meta">
                             <span className="feed-card-author-name">
@@ -1841,7 +1844,7 @@ export default function GroupDetail() {
             <div className="tab-content-members">
               {/* 1. My Activity Status */}
               {(() => {
-                const myMembershipRecord = group.members.find((m: any) => m.userId === user?.id);
+                const myMembershipRecord = group.members?.find((m: any) => m.userId === user?.id);
                 const rawStatus = myMembershipRecord?.userStatus || 'ACTIVE';
                 const isInactive = rawStatus.startsWith('INACTIVE_') || rawStatus === 'INJURED' || rawStatus === 'UNAVAILABLE';
 
@@ -1925,13 +1928,13 @@ export default function GroupDetail() {
                   </div>
                   <p className="section-desc">회장/운영진이 승인·거절할 수 있어요.</p>
                   <ul className="member-list">
-                    {group.pendingRequests.map((m: any) => (
+                    {(group.pendingRequests || []).map((m: any) => (
                       <li key={m.id} className="member-item-card">
-                        <Link to={`/profile/${m.user.id}`} className="member-item-card__left">
-                          {m.user.profileImageUrl ? (
+                        <Link to={`/profile/${m.user?.id || m.userId}`} className="member-item-card__left">
+                          {m.user?.profileImageUrl ? (
                             <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={m.user.profileImageUrl} alt="" className="member-item-card__avatar" />
                           ) : (
-                            <div className="member-item-card__avatar-fallback">{m.user.displayName[0]}</div>
+                            <div className="member-item-card__avatar-fallback">{(m.user?.displayName || m.user?.nickname || '?')[0]}</div>
                           )}
                           <div className="member-item-card__info">
                             <div className="member-item-card__name-row">
@@ -1939,7 +1942,7 @@ export default function GroupDetail() {
                                 {formatMemberNameWithEmoji(m.user)}
                               </span>
                             </div>
-                            {m.user.phoneNumber && (
+                            {m.user?.phoneNumber && (
                               <span className="member-item-card__phone">
                                 {formatPhoneNumber(m.user.phoneNumber)}
                               </span>
@@ -1950,14 +1953,14 @@ export default function GroupDetail() {
                           <button
                             type="button"
                             className="btn-sm btn-primary"
-                            onClick={() => handleApprove(m.user.id, 'APPROVED')}
+                            onClick={() => handleApprove(m.user?.id || m.userId, 'APPROVED')}
                           >
                             승인
                           </button>
                           <button
                             type="button"
                             className="btn-sm btn-ghost"
-                            onClick={() => handleApprove(m.user.id, 'REJECTED')}
+                            onClick={() => handleApprove(m.user?.id || m.userId, 'REJECTED')}
                           >
                             거절
                           </button>
@@ -2059,11 +2062,11 @@ export default function GroupDetail() {
 
                     return (
                       <li key={m.id} className="member-item-card">
-                        <Link to={`/profile/${m.user.id}`} className="member-item-card__left">
-                          {m.user.profileImageUrl ? (
+                        <Link to={`/profile/${m.user?.id || m.userId}`} className="member-item-card__left">
+                          {m.user?.profileImageUrl ? (
                             <img loading="lazy" decoding="async" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} src={m.user.profileImageUrl} alt="" className="member-item-card__avatar" />
                           ) : (
-                            <div className="member-item-card__avatar-fallback">{m.user.displayName[0]}</div>
+                            <div className="member-item-card__avatar-fallback">{(m.user?.displayName || m.user?.nickname || '?')[0]}</div>
                           )}
                           <div className="member-item-card__info">
                             <div className="member-item-card__name-row">
@@ -2096,7 +2099,7 @@ export default function GroupDetail() {
                                   {userStatusLabels[m.userStatus] || '🔴 장기 불참'}
                                 </span>
                               )}
-                              {m.user.phoneNumber && (
+                              {m.user?.phoneNumber && (
                                 <span className="member-item-card__phone">
                                   {isMemberInactive ? '· ' : ''}{formatPhoneNumber(m.user.phoneNumber)}
                                 </span>
@@ -2125,8 +2128,8 @@ export default function GroupDetail() {
                                   >
                                     <option value="">회원 선택</option>
                                     {transferCandidates.map((c) => (
-                                      <option key={c.id} value={c.user.id}>
-                                        {formatMemberDisplayName(c.user)}
+                                      <option key={c.id} value={c.user?.id || c.userId}>
+                                        {formatMemberDisplayName(c.user || { displayName: '회원' })}
                                       </option>
                                     ))}
                                   </select>
@@ -2156,8 +2159,8 @@ export default function GroupDetail() {
                             <select
                               className="role-select"
                               value={m.role}
-                              onChange={(e) => handleSetRole(m.user.id, e.target.value)}
-                              aria-label={`${m.user.displayName} 역할 변경`}
+                              onChange={(e) => handleSetRole(m.user?.id || m.userId, e.target.value)}
+                              aria-label={`${m.user?.displayName || m.user?.nickname || '회원'} 역할 변경`}
                             >
                               {(customRoles.length > 0
                                 ? customRoles.filter((r) => r.key !== 'PRESIDENT').map((r) => ({ value: r.key, label: r.label }))
@@ -2169,7 +2172,7 @@ export default function GroupDetail() {
                               ))}
                             </select>
                           )}
-                          {isOfficer && m.user.id !== user?.id && m.role !== 'PRESIDENT' && (isPresident || m.role === 'MEMBER') && (
+                          {isOfficer && (m.user?.id || m.userId) !== user?.id && m.role !== 'PRESIDENT' && (isPresident || m.role === 'MEMBER') && (
                             <button
                               type="button"
                               className="btn-sm btn-outline"
@@ -2181,7 +2184,7 @@ export default function GroupDetail() {
                                 fontWeight: 'bold',
                                 cursor: 'pointer'
                               }}
-                              onClick={() => handleKick(m.user.id, m.user.displayName)}
+                              onClick={() => handleKick(m.user?.id || m.userId, m.user?.displayName || m.user?.nickname || '회원')}
                             >
                               강퇴
                             </button>
